@@ -21,26 +21,29 @@ const CENTER = { x: 0.5, y: 0.5 }
 /**
  * Rotate a point around center (0.5, 0.5) by given degrees (90, 180, 270)
  * 
- * For 90° CW rotation about center:
- *   - (0, 0) [top-left] → (0, 1) [bottom-left]
- *   - (1, 0) [top-right] → (0, 0) [top-left]
- *   - (1, 1) [bottom-right] → (1, 0) [top-right]
- *   - (0, 1) [bottom-left] → (1, 1) [bottom-right]
- * Formula: (x, y) → (y, 1 - x)
+ * IMPORTANT: This matches canvas ctx.rotate() visual behavior where positive angles
+ * appear clockwise on screen (because canvas Y-axis points down).
+ * 
+ * For 90° CW rotation about center (as it appears on screen):
+ *   - (0, 0) [top-left] → (1, 0) [top-right]
+ *   - (1, 0) [top-right] → (1, 1) [bottom-right]
+ *   - (1, 1) [bottom-right] → (0, 1) [bottom-left]
+ *   - (0, 1) [bottom-left] → (0, 0) [top-left]
+ * Formula: (x, y) → (1 - y, x)
  */
 function rotatePoint(point: Point, degrees: number): Point {
   const normalized = ((degrees % 360) + 360) % 360
   
   switch (normalized) {
     case 90:
-      // 90° CW: top-left goes to bottom-left
-      return { x: point.y, y: 1 - point.x }
+      // 90° CW (visual): top-left goes to top-right
+      return { x: 1 - point.y, y: point.x }
     case 180:
       // 180°: top-left goes to bottom-right
       return { x: 1 - point.x, y: 1 - point.y }
     case 270:
-      // 270° CW (= 90° CCW): top-left goes to top-right
-      return { x: 1 - point.y, y: point.x }
+      // 270° CW (= 90° CCW visual): top-left goes to bottom-left
+      return { x: point.y, y: 1 - point.x }
     default:
       return point
   }

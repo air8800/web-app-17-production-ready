@@ -1,0 +1,908 @@
+🔍 [PagePreviewService] getPreview(27) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(27) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(27) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(27) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(28) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(28) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(28, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(28, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(28) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(28) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(28) - PENDING, waiting...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(27) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(27) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(27) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(27) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(28, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(28, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(28) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(27) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(27) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(27) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(27) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(28, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(28, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(28) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(27) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(27) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(27) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(27) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(27) - SUCCESS, dataURL length: 5983
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(28) START
+injected.js:37 🔍 [PagePreviewService] getPreview(28, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(28, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(28) - Waiting for previous render...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(28) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(28) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(28) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(28) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(29) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(29) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(29, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(29, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(29) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(29) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(29) - PENDING, waiting...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(28) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(28) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(29, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(29, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(29) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(28) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(28) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(29, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(29, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(29) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(28) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(28) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(28) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(28) - SUCCESS, dataURL length: 6319
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(29) START
+injected.js:37 🔍 [PagePreviewService] getPreview(29, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(29, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(29) - Waiting for previous render...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(29) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(29) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(29) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(29) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(30) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(30) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(30, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(30, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(30) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(30) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(30) - PENDING, waiting...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 Edit clicked: Object
+injected.js:37 OrderPage.handleDirectEditPage: Object
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [PDFEditorPopup] Rendering preview with transforms: Object
+injected.js:37 📄 [ModernAdapter] getPreviewWithFixedPage(1, 1200x558.75) START
+injected.js:37 📄 [PagePreviewService] getPreviewWithFixedPage(1) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1, scale=0.93863392017202) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1) - Canvas: 790x558
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(29) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(29) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(30, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(30, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(30) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(29) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(29) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(30, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(30, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(30) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(29) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(29) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(29) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(29) - SUCCESS, dataURL length: 5723
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(30) START
+injected.js:37 🔍 [PagePreviewService] getPreview(30, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(30, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(30) - Waiting for previous render...
+4injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(30) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(30) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(30) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(30) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(31) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(31) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(31, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(31, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(31) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(31) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(31) - PENDING, waiting...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1) COMPLETE
+injected.js:37 📄 [PagePreviewService] getPreviewWithFixedPage(1) COMPLETE - 790x559
+injected.js:37 📄 [ModernAdapter] getPreviewWithFixedPage(1) - SUCCESS, canvas: 790x559
+injected.js:37 📄 [PDFEditorPopup] Preview ready: 790x559
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(30) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(30) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(31, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(31, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(31) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(30) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(30) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(31, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(31, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(31) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(30) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(30) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(30) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(30) - SUCCESS, dataURL length: 5423
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(31) START
+injected.js:37 🔍 [PagePreviewService] getPreview(31, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(31, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(31) - Waiting for previous render...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(31) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(31) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(31) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(31) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(32) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(32) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(32, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(32, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(32) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(32) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(32) - PENDING, waiting...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(31) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(31) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(32, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(32, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(32) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(31) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(31) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(32, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(32, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(32) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(31) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(31) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(31) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(31) - SUCCESS, dataURL length: 5979
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(32) START
+injected.js:37 🔍 [PagePreviewService] getPreview(32, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(32, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(32) - Waiting for previous render...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(32) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(32) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(32) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(32) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(33) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(33) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(33, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(33, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(33) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(33) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(33) - PENDING, waiting...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(32) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(32) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(33, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(33, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(33) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(32) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(32) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(33, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(33, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(33) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(32) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(32) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(32) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(32) - SUCCESS, dataURL length: 6391
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(33) START
+injected.js:37 🔍 [PagePreviewService] getPreview(33, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(33, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(33) - Waiting for previous render...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(33) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(33) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(33) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(33) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(34) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(34) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(34, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(34, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(34) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(34) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(34) - PENDING, waiting...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(33) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(33) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(34, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(34, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(34) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(33) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(33) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(34, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(34, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(34) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(33) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(33) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(33) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(33) - SUCCESS, dataURL length: 5087
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(34) START
+injected.js:37 🔍 [PagePreviewService] getPreview(34, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(34, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(34) - Waiting for previous render...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(34) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(34) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(34) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(34) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(35) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(35) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(35, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(35, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(35) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(35) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(35) - PENDING, waiting...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(34) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(34) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(35, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(35, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(35) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(34) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(34) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(35, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(35, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(35) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(34) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(34) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(34) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(34) - SUCCESS, dataURL length: 4331
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(35) START
+injected.js:37 🔍 [PagePreviewService] getPreview(35, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(35, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(35) - Waiting for previous render...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(35) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(35) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(35) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(35) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(36) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(36) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(36, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(36, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(36) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(36) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(36) - PENDING, waiting...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(35) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(35) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(36, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(36, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(36) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(35) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(35) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(36, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(36, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(36) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(35) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(35) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(35) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(35) - SUCCESS, dataURL length: 3391
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(36) START
+injected.js:37 🔍 [PagePreviewService] getPreview(36, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(36, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(36) - Waiting for previous render...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(36) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(36) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(36) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(36) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(37) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(37) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(37, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(37, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(37) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(37) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(37) - PENDING, waiting...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(36) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(36) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(37, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(37, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(37) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(36) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(36) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(37, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(37, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(37) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(36) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(36) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(36) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(36) - SUCCESS, dataURL length: 4411
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(37) START
+injected.js:37 🔍 [PagePreviewService] getPreview(37, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(37, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(37) - Waiting for previous render...
+4injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(37) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(37) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(37) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(37) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(38) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(38) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(38, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(38, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(38) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(38) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(38) - PENDING, waiting...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(37) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(37) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(38, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(38, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(38) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(37) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(37) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(38, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(38, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(38) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(37) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(37) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(37) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(37) - SUCCESS, dataURL length: 3215
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(38) START
+injected.js:37 🔍 [PagePreviewService] getPreview(38, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(38, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(38) - Waiting for previous render...
+4injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(38) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(38) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(38) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(38) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(39) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(39) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(39, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(39, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(39) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(39) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(39) - PENDING, waiting...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(38) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(38) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(39, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(39, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(39) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(38) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(38) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(39, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(39, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(39) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(38) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(38) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(38) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(38) - SUCCESS, dataURL length: 4331
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(39) START
+injected.js:37 🔍 [PagePreviewService] getPreview(39, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(39, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(39) - Waiting for previous render...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(39) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(39) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(39) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(39) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(40) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(40) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(40, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(40, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(40) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(40) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(40) - PENDING, waiting...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(39) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(39) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(40, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(40, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(40) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(39) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(39) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(40, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(40, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(40) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(39) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(39) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(39) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(39) - SUCCESS, dataURL length: 3219
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(40) START
+injected.js:37 🔍 [PagePreviewService] getPreview(40, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(40, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(40) - Waiting for previous render...
+4injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(40) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(40) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(40) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(40) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(41) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(41) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(41, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(41, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(41) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(41) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(41) - PENDING, waiting...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(40) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(40) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(41, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(41, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(41) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(40) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(40) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(41, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(41, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(41) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(40) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(40) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(40) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(40) - SUCCESS, dataURL length: 4123
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(41) START
+injected.js:37 🔍 [PagePreviewService] getPreview(41, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(41, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(41) - Waiting for previous render...
+4injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(41) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(41) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(41) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(41) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(42) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(42) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(42, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(42, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(42) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(42) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(42) - PENDING, waiting...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(41) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(41) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(42, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(42, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(42) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(41) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(41) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(42, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(42, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(42) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(41) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(41) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(41) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(41) - SUCCESS, dataURL length: 3263
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(42) START
+injected.js:37 🔍 [PagePreviewService] getPreview(42, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(42, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(42) - Waiting for previous render...
+4injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(42) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(42) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(42) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(42) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(43) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(43) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(43, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(43, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(43) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(43) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(43) - PENDING, waiting...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(42) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(42) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(43, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(43, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(43) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(42) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(42) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(43, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(43, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(43) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(42) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(42) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(42) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(42) - SUCCESS, dataURL length: 4099
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(43) START
+injected.js:37 🔍 [PagePreviewService] getPreview(43, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(43, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(43) - Waiting for previous render...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(43) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(43) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(43) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(43) - CACHED, size: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(44) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(44) - RENDERING (version: 0)...
+injected.js:37 🔍 [PagePreviewService] getPreview(44, 800x600) START
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Scale: 0.9502429058428061
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(44, scale=0.9502429058428061) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(44) - Canvas: 800x565
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(44) START
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(44) - PENDING, waiting...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(43) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(43) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(44, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(44, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(44) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(43) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(43) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(44, 150x200) START
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(44, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(44) - Waiting for previous render...
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(43) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(43) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(43) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(43) - SUCCESS, dataURL length: 3223
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(44) START
+injected.js:37 🔍 [PagePreviewService] getPreview(44, 150x210) START
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Rendering base page...
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Scale: 0.17817054484552614
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(44, scale=0.17817054484552614) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(44) - Waiting for previous render...
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(44) COMPLETE
+3injected.js:37 📄 [DocumentLoader] renderPageToCanvas(44) - Canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Base canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Transformed canvas: 800x565
+injected.js:37 🔍 [PagePreviewService] getPreview(44) COMPLETE
+injected.js:37 🖼️ [ModernAdapter] ensurePreview(44) - CACHED, size: 800x565
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+stallwart.build.js:1 stallwart: failed ping 1
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(44) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(44) COMPLETE
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(44) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(44) COMPLETE
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(44) COMPLETE
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Base canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(44) - Transformed canvas: 150x106
+injected.js:37 🔍 [PagePreviewService] getPreview(44) COMPLETE
+injected.js:37 📷 [ModernAdapter] getThumbnailAsync(44) - SUCCESS, dataURL length: 3179
+4injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+stallwart.build.js:1 stallwart: failed ping 2
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+stallwart.build.js:1 stallwart: failed ping 3
+stallwart.build.js:1 stallwart: failed ping 4
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+stallwart.build.js:1 stallwart: failed ping 5
+stallwart.build.js:1 stallwart: session stalled
+6injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+2injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.708
+injected.js:37 📄 [PDFEditorPopup] Rendering preview with transforms: Object
+injected.js:37 📄 [ModernAdapter] getPreviewWithFixedPage(1, 468.75x583.75) START
+injected.js:37 📄 [PagePreviewService] getPreviewWithFixedPage(1) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1, scale=0.5567829526422692) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1) - Canvas: 468x331
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1) COMPLETE
+injected.js:37 📐 [PagePreviewService] Auto-fit scale for 90° rotation: 0.707
+injected.js:37 📐 [PagePreviewService] Final scale: 0.707 (user: 1, auto-fit: 0.707)
+injected.js:37 📄 [PagePreviewService] getPreviewWithFixedPage(1) COMPLETE - 469x331
+injected.js:37 📄 [ModernAdapter] getPreviewWithFixedPage(1) - SUCCESS, canvas: 469x331
+injected.js:37 📄 [PDFEditorPopup] Preview ready: 469x331
+2injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.708
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+4injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+4injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+2injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+2injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+2injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+2injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+2injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 ✅ [PDFEditorPopup] Confirming crop at rotation=90°:
+injected.js:37   Draft: {x:0.100, y:0.100, w:0.800, h:0.800} (VERTICAL)
+injected.js:37   Final: {x:0.100, y:0.100, w:0.800, h:0.800} (VERTICAL)
+2injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📄 [PDFEditorPopup] Rendering preview with transforms: Object
+injected.js:37 📄 [ModernAdapter] getPreviewWithFixedPage(1, 468.75x583.75) START
+injected.js:37 📄 [PagePreviewService] getPreviewWithFixedPage(1) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1, scale=0.5567829526422692) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1) - Canvas: 468x331
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1) COMPLETE
+injected.js:37 📐 [PagePreviewService] Auto-fit scale for 90° rotation: 0.707
+injected.js:37 📐 [PagePreviewService] Final scale: 0.707 (user: 1, auto-fit: 0.707)
+injected.js:37 🖼️ [PagePreviewService] Rendering with crop at rotation=90°:
+injected.js:37   Crop: {x:0.100, y:0.100, w:0.800, h:0.800} (VERTICAL)
+injected.js:37   Source region: sx=47, sy=33, sw=374, sh=265 (WIDE)
+injected.js:37 📄 [PagePreviewService] getPreviewWithFixedPage(1) COMPLETE - 469x331
+injected.js:37 📄 [ModernAdapter] getPreviewWithFixedPage(1) - SUCCESS, canvas: 469x331
+injected.js:37 📄 [PDFEditorPopup] Preview ready: 469x331
+2injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+2injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+2injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+2injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+2injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+2injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+4injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 Edit applied to page: 0 Object
+3injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 Warning: Cannot update a component (`OrderPage`) while rendering a different component (`PDFEditorNew`). To locate the bad setState() call inside `PDFEditorNew`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
+    at https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/src/components/PDFEditorNew.jsx:36:3
+    at Suspense
+    at div
+    at div
+    at div
+    at PDFPageSelector (https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/src/components/PDFPageSelector.jsx:54:28)
+    at div
+    at div
+    at div
+    at div
+    at div
+    at OrderPage (https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/src/pages/OrderPage.jsx:36:22)
+    at RenderedRoute (https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=0d81ba33:4088:5)
+    at Routes (https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=0d81ba33:4558:5)
+    at Router (https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=0d81ba33:4501:15)
+    at BrowserRouter (https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=0d81ba33:5247:5)
+    at App
+(anonymous) @ injected.js:37Understand this error
+9injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1

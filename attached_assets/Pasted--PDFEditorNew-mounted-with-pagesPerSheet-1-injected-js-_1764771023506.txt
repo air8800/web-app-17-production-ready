@@ -1,0 +1,221 @@
+📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📤 Upload progress: 51.8% (1.42 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.708
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.708
+injected.js:37 📄 [PDFEditorPopup] Rendering preview with transforms: {rotation: 90, scale: 100, crop: null, offsetX: 0, offsetY: 0}
+injected.js:37 📄 [ModernAdapter] getPreviewWithFixedPage(1, 468.75x583.75) START
+injected.js:37 📄 [PagePreviewService] getPreviewWithFixedPage(1) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1, scale=0.5567829526422692) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1) - Canvas: 468x331
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1) COMPLETE
+injected.js:37 📐 [PagePreviewService] Auto-fit scale for 90° rotation: 0.707
+injected.js:37 📐 [PagePreviewService] Final scale: 0.707 (user: 1, auto-fit: 0.707)
+injected.js:37 📄 [PagePreviewService] getPreviewWithFixedPage(1) COMPLETE - 469x331
+injected.js:37 📄 [ModernAdapter] getPreviewWithFixedPage(1) - SUCCESS, canvas: 469x331
+injected.js:37 📄 [PDFEditorPopup] Preview ready: 469x331
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.708
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.708
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📤 Upload progress: 52.3% (1.44 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📤 Upload progress: 52.9% (1.45 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📤 Upload progress: 53.5% (1.47 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📤 Upload progress: 54.1% (1.48 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📤 Upload progress: 55.2% (1.51 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 🎯 [PDFEditorPopup] Starting crop with rotation=90°, scale=100
+injected.js:37   Initial draft: {"x":0.1,"y":0.1,"width":0.8,"height":0.8}
+injected.js:37   Committed crop: null
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [CropOverlay] RECEIVED rotation=90°, scale=0.7057569296375267
+injected.js:37 🔄 [forwardTransformBox] INPUT: rotation=90°, scale=0.7057569296375267, content={"x":0.1,"y":0.1,"width":0.8,"height":0.8}
+injected.js:37 🔄 [forwardTransformBox] OUTPUT: screen={"x":0.21769722814498932,"y":0.21769722814498932,"width":0.5646055437100213,"height":0.5646055437100213}
+injected.js:37 📐 [CropOverlay] RECEIVED rotation=90°, scale=0.7057569296375267
+injected.js:37 🔄 [forwardTransformBox] INPUT: rotation=90°, scale=0.7057569296375267, content={"x":0.1,"y":0.1,"width":0.8,"height":0.8}
+injected.js:37 🔄 [forwardTransformBox] OUTPUT: screen={"x":0.21769722814498932,"y":0.21769722814498932,"width":0.5646055437100213,"height":0.5646055437100213}
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [CropOverlay] RECEIVED rotation=90°, scale=0.7057569296375267
+injected.js:37 🔄 [forwardTransformBox] INPUT: rotation=90°, scale=0.7057569296375267, content={"x":0.1,"y":0.1,"width":0.8,"height":0.8}
+injected.js:37 🔄 [forwardTransformBox] OUTPUT: screen={"x":0.21769722814498932,"y":0.21769722814498932,"width":0.5646055437100213,"height":0.5646055437100213}
+injected.js:37 📐 [CropOverlay] RECEIVED rotation=90°, scale=0.7057569296375267
+injected.js:37 🔄 [forwardTransformBox] INPUT: rotation=90°, scale=0.7057569296375267, content={"x":0.1,"y":0.1,"width":0.8,"height":0.8}
+injected.js:37 🔄 [forwardTransformBox] OUTPUT: screen={"x":0.21769722814498932,"y":0.21769722814498932,"width":0.5646055437100213,"height":0.5646055437100213}
+injected.js:37 ✅ [PDFEditorPopup] Confirming crop at rotation=90°:
+injected.js:37   Draft: {x:0.100, y:0.100, w:0.800, h:0.800} (VERTICAL)
+injected.js:37   Final: {x:0.100, y:0.100, w:0.800, h:0.800} (VERTICAL)
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📄 [PDFEditorPopup] Rendering preview with transforms: {rotation: 90, scale: 100, crop: {…}, offsetX: 0, offsetY: 0}
+injected.js:37 📄 [ModernAdapter] getPreviewWithFixedPage(1, 468.75x583.75) START
+injected.js:37 📄 [PagePreviewService] getPreviewWithFixedPage(1) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1, scale=0.5567829526422692) START
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1) - Canvas: 468x331
+injected.js:37 📄 [DocumentLoader] renderPageToCanvas(1) COMPLETE
+injected.js:37 📐 [PagePreviewService] Auto-fit scale for 90° rotation: 0.707
+injected.js:37 📐 [PagePreviewService] Final scale: 0.707 (user: 1, auto-fit: 0.707)
+injected.js:37 🖼️ [PagePreviewService] Rendering with crop at rotation=90°:
+injected.js:37   Crop: {x:0.100, y:0.100, w:0.800, h:0.800} (VERTICAL)
+injected.js:37   Source region: sx=47, sy=33, sw=374, sh=265 (WIDE)
+injected.js:37 📄 [PagePreviewService] getPreviewWithFixedPage(1) COMPLETE - 469x331
+injected.js:37 📄 [ModernAdapter] getPreviewWithFixedPage(1) - SUCCESS, canvas: 469x331
+injected.js:37 📄 [PDFEditorPopup] Preview ready: 469x331
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📤 Upload progress: 55.8% (1.53 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📤 Upload progress: 56.3% (1.55 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📤 Upload progress: 56.9% (1.56 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 📐 [PDFEditorPopup] Auto-fit scale for 90° rotation: 0.706
+injected.js:37 Edit applied to all pages: {rotation: 90, scale: 100, crop: {…}, offsetX: 0, offsetY: 0}
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 Warning: Cannot update a component (`OrderPage`) while rendering a different component (`PDFEditorNew`). To locate the bad setState() call inside `PDFEditorNew`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
+    at https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/src/components/PDFEditorNew.jsx:36:3
+    at Suspense
+    at div
+    at div
+    at div
+    at PDFPageSelector (https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/src/components/PDFPageSelector.jsx:54:28)
+    at div
+    at div
+    at div
+    at div
+    at div
+    at OrderPage (https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/src/pages/OrderPage.jsx:36:22)
+    at RenderedRoute (https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=253e5206:4088:5)
+    at Routes (https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=253e5206:4558:5)
+    at Router (https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=253e5206:4501:15)
+    at BrowserRouter (https://18f4ea26-510f-4b23-8f2d-c3c5d9ddbb22-00-xofyv6rb3105.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=253e5206:5247:5)
+    at App
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+printWarning @ chunk-NFC5BX5N.js?v=253e5206:521
+error @ chunk-NFC5BX5N.js?v=253e5206:505
+warnAboutRenderPhaseUpdatesInDEV @ chunk-NFC5BX5N.js?v=253e5206:19793
+scheduleUpdateOnFiber @ chunk-NFC5BX5N.js?v=253e5206:18546
+dispatchSetState @ chunk-NFC5BX5N.js?v=253e5206:12403
+(anonymous) @ PDFEditorNew.jsx:246
+basicStateReducer @ chunk-NFC5BX5N.js?v=253e5206:11703
+updateReducer @ chunk-NFC5BX5N.js?v=253e5206:11794
+updateState @ chunk-NFC5BX5N.js?v=253e5206:12021
+useState @ chunk-NFC5BX5N.js?v=253e5206:12753
+useState @ chunk-CMM6OKGN.js?v=253e5206:1066
+(anonymous) @ PDFEditorNew.jsx:51
+renderWithHooks @ chunk-NFC5BX5N.js?v=253e5206:11548
+updateForwardRef @ chunk-NFC5BX5N.js?v=253e5206:14325
+beginWork @ chunk-NFC5BX5N.js?v=253e5206:15946
+beginWork$1 @ chunk-NFC5BX5N.js?v=253e5206:19753
+performUnitOfWork @ chunk-NFC5BX5N.js?v=253e5206:19198
+workLoopSync @ chunk-NFC5BX5N.js?v=253e5206:19137
+renderRootSync @ chunk-NFC5BX5N.js?v=253e5206:19116
+performConcurrentWorkOnRoot @ chunk-NFC5BX5N.js?v=253e5206:18678
+workLoop @ chunk-NFC5BX5N.js?v=253e5206:197
+flushWork @ chunk-NFC5BX5N.js?v=253e5206:176
+performWorkUntilDeadline @ chunk-NFC5BX5N.js?v=253e5206:384Understand this error
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📤 Upload progress: 57.5% (1.58 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📤 Upload progress: 58.0% (1.59 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📤 Upload progress: 58.6% (1.61 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📤 Upload progress: 59.2% (1.62 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📤 Upload progress: 59.7% (1.64 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📤 Upload progress: 60.3% (1.66 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📤 Upload progress: 60.9% (1.67 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📤 Upload progress: 61.4% (1.69 MB / 2.74 MB)
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1
+injected.js:37 📄 PDFEditorNew mounted with pagesPerSheet: 1

@@ -147,6 +147,8 @@ export function forwardTransformBox(
   scaleFactor: number,
   offset: Point = { x: 0, y: 0 }
 ): Box {
+  console.log(`🔄 [forwardTransformBox] INPUT: rotation=${rotationDeg}°, scale=${scaleFactor}, content=${JSON.stringify(contentBox)}`)
+  
   const corners = boxToCorners(contentBox)
   
   // Transform each corner: ROTATE -> SCALE -> OFFSET
@@ -158,7 +160,9 @@ export function forwardTransformBox(
   })
   
   // Return axis-aligned bounding box
-  return getBoundingBox(transformedCorners)
+  const result = getBoundingBox(transformedCorners)
+  console.log(`🔄 [forwardTransformBox] OUTPUT: screen=${JSON.stringify(result)}`)
+  return result
 }
 
 /**
@@ -171,6 +175,8 @@ export function inverseTransformBox(
   scaleFactor: number,
   offset: Point = { x: 0, y: 0 }
 ): Box {
+  console.log(`🔄 [inverseTransformBox] INPUT: rotation=${rotationDeg}°, scale=${scaleFactor}, screen=${JSON.stringify(screenBox)}`)
+  
   const corners = boxToCorners(screenBox)
   
   // Transform each corner: remove OFFSET -> UNSCALE -> UNROTATE
@@ -182,7 +188,9 @@ export function inverseTransformBox(
   })
   
   // Return axis-aligned bounding box
-  return getBoundingBox(transformedCorners)
+  const result = getBoundingBox(transformedCorners)
+  console.log(`🔄 [inverseTransformBox] OUTPUT: content=${JSON.stringify(result)}`)
+  return result
 }
 
 /**

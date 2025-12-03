@@ -21,6 +21,9 @@ const CropOverlay = ({
   const [dragStart, setDragStart] = useState(null)
   const [initialCrop, setInitialCrop] = useState(null)
   
+  // DEBUG: Log the rotation value received
+  console.log(`📐 [CropOverlay] RECEIVED rotation=${rotation}°, scale=${scale}`)
+  
   // Step 1: Compose draft crop with committed crop to get absolute content coordinates
   // cropArea is relative to visible area (committedCrop), we need absolute for transforms
   const absoluteCrop = cropArea ? composeCrop(committedCrop, cropArea) : null

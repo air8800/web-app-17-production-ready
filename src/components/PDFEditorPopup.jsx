@@ -130,9 +130,14 @@ const PDFEditorPopup = ({
     const initialDraftCrop = cropArea 
       ? { ...FULL_PAGE_BOX }  // Re-crop: start as full visible area (relative)
       : cropHandler.createCenteredCrop(0.1)  // New crop: centered default (absolute)
+    
+    console.log(`🎯 [PDFEditorPopup] Starting crop with rotation=${rotation}°, scale=${scale}`)
+    console.log(`  Initial draft: ${JSON.stringify(initialDraftCrop)}`)
+    console.log(`  Committed crop: ${JSON.stringify(cropArea)}`)
+    
     setDraftCropArea(initialDraftCrop)
     setCropMode(true)
-  }, [cropArea])
+  }, [cropArea, rotation, scale])
   
   const applyCropAction = useCallback(() => {
     // Apply draft crop to actual crop

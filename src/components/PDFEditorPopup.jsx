@@ -246,12 +246,10 @@ const PDFEditorPopup = ({
 
   const pageLabel = totalPages > 1 ? `Page ${pageNumber}-${totalPages}` : `Page ${pageNumber}`
   
-  // Calculate auto-fit scale for rotated content at 100% user scale
+  // Calculate auto-fit scale for rotated content
   // When rotation is 90° or 270°, dimensions are swapped, so we need to scale down to fit
-  // This ONLY applies when user scale is exactly 100% (original size)
+  // This applies regardless of user scale - auto-fit ensures content fits in the paper
   const calculateAutoFitScale = () => {
-    if (scale !== 100) return 1.0
-    
     // Normalize rotation to 0-359 range (handle negative rotations)
     const normalizedRotation = ((rotation % 360) + 360) % 360
     

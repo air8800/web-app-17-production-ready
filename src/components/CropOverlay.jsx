@@ -25,9 +25,6 @@ const CropOverlay = ({
   // cropArea is relative to visible area (committedCrop), we need absolute for transforms
   const absoluteCrop = cropArea ? composeCrop(committedCrop, cropArea) : null
   
-  // Debug log the received props
-  console.log(`📐 [CropOverlay] Props: rotation=${rotation}°, scale=${scale}, cropArea=${JSON.stringify(cropArea)}, committedCrop=${JSON.stringify(committedCrop)}`)
-  
   // Step 2: Forward transform to screen space for display
   const rawScreenCrop = absoluteCrop ? forwardTransformBox(absoluteCrop, rotation, scale) : null
   

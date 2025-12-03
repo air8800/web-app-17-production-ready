@@ -158,16 +158,7 @@ export function forwardTransformBox(
   })
   
   // Return axis-aligned bounding box
-  const result = getBoundingBox(transformedCorners)
-  
-  // Debug logging
-  const contentOrientation = contentBox.width > contentBox.height ? 'HORIZONTAL' : 'VERTICAL'
-  const screenOrientation = result.width > result.height ? 'HORIZONTAL' : 'VERTICAL'
-  console.log(`🔄 [forwardTransformBox] rotation=${rotationDeg}°, scale=${scaleFactor.toFixed(3)}:`)
-  console.log(`   Content: {x:${contentBox.x.toFixed(3)}, y:${contentBox.y.toFixed(3)}, w:${contentBox.width.toFixed(3)}, h:${contentBox.height.toFixed(3)}} (${contentOrientation})`)
-  console.log(`   Screen:  {x:${result.x.toFixed(3)}, y:${result.y.toFixed(3)}, w:${result.width.toFixed(3)}, h:${result.height.toFixed(3)}} (${screenOrientation})`)
-  
-  return result
+  return getBoundingBox(transformedCorners)
 }
 
 /**
@@ -191,16 +182,7 @@ export function inverseTransformBox(
   })
   
   // Return axis-aligned bounding box
-  const result = getBoundingBox(transformedCorners)
-  
-  // Debug logging
-  const screenOrientation = screenBox.width > screenBox.height ? 'HORIZONTAL' : 'VERTICAL'
-  const contentOrientation = result.width > result.height ? 'HORIZONTAL' : 'VERTICAL'
-  console.log(`🔄 [inverseTransformBox] rotation=${rotationDeg}°, scale=${scaleFactor.toFixed(3)}:`)
-  console.log(`   Screen:  {x:${screenBox.x.toFixed(3)}, y:${screenBox.y.toFixed(3)}, w:${screenBox.width.toFixed(3)}, h:${screenBox.height.toFixed(3)}} (${screenOrientation})`)
-  console.log(`   Content: {x:${result.x.toFixed(3)}, y:${result.y.toFixed(3)}, w:${result.width.toFixed(3)}, h:${result.height.toFixed(3)}} (${contentOrientation})`)
-  
-  return result
+  return getBoundingBox(transformedCorners)
 }
 
 /**

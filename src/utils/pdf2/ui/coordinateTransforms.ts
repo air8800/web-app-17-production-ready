@@ -62,19 +62,25 @@ export function getContentBounds(
     //   - width = (H * scaleFactor) / W = scaleFactor / AR
     //   - height = (W * scaleFactor) / H = scaleFactor * AR
     //
-    // Example: AR=1.417, scaleFactor=0.706
+    // Example: AR=1.417, scaleFactor=0.706 (100% at 90° rotation)
     //   contentWidth = 0.706 / 1.417 = 0.498 (content is narrower than canvas)
     //   contentHeight = 0.706 * 1.417 = 1.0 (content fills canvas height)
+    //
+    // Example: AR=1.417, scaleFactor=0.882 (125% at 90° rotation)
+    //   contentWidth = 0.882 / 1.417 = 0.622 (wider than at 100%)
+    //   contentHeight = 0.882 * 1.417 = 1.25 (extends BEYOND canvas by 25%)
+    //   x = (1 - 0.622) / 2 = 0.189
+    //   y = (1 - 1.25) / 2 = -0.125 (negative = extends above canvas)
+    //
+    // NOTE: We do NOT clamp to 1.0 here. When scale > 100%, content extends
+    // beyond the canvas. The overlay needs these true bounds to correctly
+    // map coordinates. CropOverlay has its own clamping for visible handles.
     
     contentWidth = scaleFactor / aspectRatio
     contentHeight = scaleFactor * aspectRatio
-    
-    // Clamp to 1.0 (content can't exceed canvas)
-    contentWidth = Math.min(contentWidth, 1.0)
-    contentHeight = Math.min(contentHeight, 1.0)
   }
   
-  // Center the content in the canvas
+  // Center the content in the canvas (may result in negative x/y when content overflows)
   const x = (1 - contentWidth) / 2
   const y = (1 - contentHeight) / 2
   

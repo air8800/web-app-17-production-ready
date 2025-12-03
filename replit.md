@@ -24,6 +24,17 @@ The application follows a modular adapter system for PDF processing, transitioni
 
 The PDF editor now opens as a separate popup modal (`PDFEditorModal.jsx`) for enhanced user experience, especially on mobile, maximizing preview area with minimal controls. The `CropOverlay` component provides interactive cropping with coordinate transformation, handling rotations and scales, and supporting nested crops. The system employs a "fixed paper" rendering concept where the page boundary stays fixed, and content transforms within it.
 
+**Coordinate Transform System (pdf2/ui/coordinateTransforms.ts):**
+- `getContentBounds()`: Calculates where rotated/scaled content appears on canvas. Allows bounds to extend beyond [0,1] when scale > 100%.
+- `forwardTransformBox()`: Transforms from content space to screen space (aspect-ratio aware).
+- `inverseTransformBox()`: Transforms from screen space back to content space.
+- Auto-fit scale is always calculated for 90°/270° rotations, regardless of user scale.
+
+**Thumbnail Refresh System:**
+- `ModernAdapter.refreshThumbnail(pageNum, transforms)`: Invalidates cache and regenerates thumbnail with applied transforms.
+- `ModernAdapter.refreshAllThumbnails(totalPages, transforms)`: Batch refreshes all thumbnails.
+- Thumbnails automatically update in the page list after Apply/Apply All in the editor.
+
 **Environment Configuration:**
 The application requires `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables.
 

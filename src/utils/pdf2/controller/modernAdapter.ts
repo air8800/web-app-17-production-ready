@@ -319,6 +319,83 @@ export class ModernAdapter implements PdfController {
   }
 
   /**
+   * Refresh thumbnail for a page after edits are applied
+   * This invalidates the cache and regenerates the thumbnail with the new transforms
+   * 
+   * @param pageNum - Page number to refresh
+   * @param transforms - Optional transforms to apply (if not provided, uses current metadata)
+   * @returns The new thumbnail data URL
+   */
+  async refreshThumbnail(
+    pageNum: number,
+    transforms?: { rotation: number; scale: number; crop: any; offsetX?: number; offsetY?: number }
+  ): Promise<string> {
+    console.log(`🔄 [ModernAdapter] refreshThumbnail(${pageNum}) START`)
+    
+    try {
+      // Invalidate all caches for this page
+      this.incrementPageVersion(pageNum)
+      this.previewCache.delete(pageNum)
+      this.pendingRenders.delete(pageNum)
+      this.pagePreviewService.clearPageCache(pageNum)
+      this.thumbnailService.invalidate(pageNum)
+      
+      // Generate new thumbnail with transforms applied
+      // Use the fixed-page preview which applies transforms correctly
+      const thumbnailSize = this.options.thumbnailSize || 150
+      const canvas = await this.pagePreviewService.getPreviewWithFixedPage(
+        pageNum,
+        thumbnailSize,
+        thumbnailSize * 1.4, // ~A4 ratio
+        transforms as any
+      )
+      
+      // Convert to data URL
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
+      
+      console.log(`🔄 [ModernAdapter] refreshThumbnail(${pageNum}) - SUCCESS, dataURL length: ${dataUrl.length}`)
+      return dataUrl
+    } catch (e) {
+      console.error(`🔄 [ModernAdapter] refreshThumbnail(${pageNum}) - FAILED:`, e)
+      throw e
+    }
+  }
+
+  /**
+   * Refresh thumbnails for all pages after bulk edits
+   * 
+   * @param totalPages - Total number of pages
+   * @param transforms - Transforms to apply to all pages
+   * @param onProgress - Optional progress callback (pageNum, total)
+   * @returns Map of page numbers to new thumbnail data URLs
+   */
+  async refreshAllThumbnails(
+    totalPages: number,
+    transforms: { rotation: number; scale: number; crop: any; offsetX?: number; offsetY?: number },
+    onProgress?: (pageNum: number, total: number) => void
+  ): Promise<Map<number, string>> {
+    console.log(`🔄 [ModernAdapter] refreshAllThumbnails(${totalPages} pages) START`)
+    
+    const result = new Map<number, string>()
+    
+    for (let i = 1; i <= totalPages; i++) {
+      try {
+        const thumbnail = await this.refreshThumbnail(i, transforms)
+        result.set(i, thumbnail)
+        
+        if (onProgress) {
+          onProgress(i, totalPages)
+        }
+      } catch (e) {
+        console.warn(`🔄 [ModernAdapter] Failed to refresh thumbnail for page ${i}:`, e)
+      }
+    }
+    
+    console.log(`🔄 [ModernAdapter] refreshAllThumbnails - COMPLETE, ${result.size}/${totalPages} thumbnails refreshed`)
+    return result
+  }
+
+  /**
    * Export recipe for desktop cpdf
    */
   exportRecipe(): Recipe {

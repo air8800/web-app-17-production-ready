@@ -205,8 +205,10 @@ const PDFEditorNew = forwardRef(({
   }, [controller, isReady, pages.length])
   
   useEffect(() => {
-    const handlePageEdited = (e) => {
+    const handlePageEdited = async (e) => {
       const { pageIndex, edits } = e.detail
+      
+      // Update edit history immediately
       setPages(prev => prev.map((p, idx) => 
         idx === pageIndex ? {
           ...p,
@@ -220,6 +222,21 @@ const PDFEditorNew = forwardRef(({
           edited: true
         } : p
       ))
+      
+      // Refresh thumbnail to reflect edits
+      if (controller && controller.refreshThumbnail) {
+        try {
+          const pageNumber = pageIndex + 1
+          const thumbnail = await controller.refreshThumbnail(pageNumber, edits)
+          setPages(prev => prev.map((p, idx) => 
+            idx === pageIndex ? { ...p, thumbnail } : p
+          ))
+          setThumbnail(pageNumber, thumbnail)
+        } catch (err) {
+          console.warn('Failed to refresh thumbnail:', err)
+        }
+      }
+      
       if (onPagesLoaded) {
         setPages(prev => {
           onPagesLoaded(prev)
@@ -228,8 +245,10 @@ const PDFEditorNew = forwardRef(({
       }
     }
     
-    const handleAllPagesEdited = (e) => {
+    const handleAllPagesEdited = async (e) => {
       const { edits } = e.detail
+      
+      // Update edit history immediately for all pages
       setPages(prev => {
         const updated = prev.map(p => ({
           ...p,
@@ -247,6 +266,27 @@ const PDFEditorNew = forwardRef(({
         }
         return updated
       })
+      
+      // Refresh all thumbnails to reflect edits
+      if (controller && controller.refreshAllThumbnails) {
+        try {
+          const totalPages = controller.getPageCount()
+          const thumbnails = await controller.refreshAllThumbnails(totalPages, edits)
+          
+          // Update all thumbnails in state
+          setPages(prev => prev.map((p, idx) => {
+            const pageNum = idx + 1
+            const newThumbnail = thumbnails.get(pageNum)
+            if (newThumbnail) {
+              setThumbnail(pageNum, newThumbnail)
+              return { ...p, thumbnail: newThumbnail }
+            }
+            return p
+          }))
+        } catch (err) {
+          console.warn('Failed to refresh thumbnails:', err)
+        }
+      }
     }
     
     window.addEventListener('pdfPageEdited', handlePageEdited)
@@ -256,7 +296,7 @@ const PDFEditorNew = forwardRef(({
       window.removeEventListener('pdfPageEdited', handlePageEdited)
       window.removeEventListener('pdfAllPagesEdited', handleAllPagesEdited)
     }
-  }, [onPagesLoaded])
+  }, [controller, onPagesLoaded, setThumbnail])
 
   const openEditPopup = useCallback(async (pageIndex) => {
     const page = pages[pageIndex]

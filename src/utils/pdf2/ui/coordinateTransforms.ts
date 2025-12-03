@@ -21,10 +21,16 @@ const CENTER = { x: 0.5, y: 0.5 }
 /**
  * Rotate a point around center (0.5, 0.5) by given degrees (90, 180, 270)
  * 
- * IMPORTANT: This matches canvas ctx.rotate() visual behavior where positive angles
- * appear clockwise on screen (because canvas Y-axis points down).
+ * CRITICAL: This must match how ctx.rotate() displays content on screen.
+ * ctx.rotate(+90°) makes content appear rotated 90° CLOCKWISE visually.
  * 
- * For 90° CW rotation about center (as it appears on screen):
+ * For 90° CW visual rotation:
+ *   Content's LEFT edge → appears at TOP of screen
+ *   Content's TOP edge → appears at RIGHT of screen
+ *   Content's RIGHT edge → appears at BOTTOM of screen
+ *   Content's BOTTOM edge → appears at LEFT of screen
+ * 
+ * Corner mappings for 90° CW:
  *   - (0, 0) [top-left] → (1, 0) [top-right]
  *   - (1, 0) [top-right] → (1, 1) [bottom-right]
  *   - (1, 1) [bottom-right] → (0, 1) [bottom-left]
@@ -36,13 +42,13 @@ function rotatePoint(point: Point, degrees: number): Point {
   
   switch (normalized) {
     case 90:
-      // 90° CW (visual): top-left goes to top-right
+      // 90° CW: content left → screen top
       return { x: 1 - point.y, y: point.x }
     case 180:
       // 180°: top-left goes to bottom-right
       return { x: 1 - point.x, y: 1 - point.y }
     case 270:
-      // 270° CW (= 90° CCW visual): top-left goes to bottom-left
+      // 270° CW (= 90° CCW): content left → screen bottom
       return { x: point.y, y: 1 - point.x }
     default:
       return point
@@ -152,7 +158,16 @@ export function forwardTransformBox(
   })
   
   // Return axis-aligned bounding box
-  return getBoundingBox(transformedCorners)
+  const result = getBoundingBox(transformedCorners)
+  
+  // Debug logging
+  const contentOrientation = contentBox.width > contentBox.height ? 'HORIZONTAL' : 'VERTICAL'
+  const screenOrientation = result.width > result.height ? 'HORIZONTAL' : 'VERTICAL'
+  console.log(`🔄 [forwardTransformBox] rotation=${rotationDeg}°, scale=${scaleFactor.toFixed(3)}:`)
+  console.log(`   Content: {x:${contentBox.x.toFixed(3)}, y:${contentBox.y.toFixed(3)}, w:${contentBox.width.toFixed(3)}, h:${contentBox.height.toFixed(3)}} (${contentOrientation})`)
+  console.log(`   Screen:  {x:${result.x.toFixed(3)}, y:${result.y.toFixed(3)}, w:${result.width.toFixed(3)}, h:${result.height.toFixed(3)}} (${screenOrientation})`)
+  
+  return result
 }
 
 /**
@@ -176,7 +191,16 @@ export function inverseTransformBox(
   })
   
   // Return axis-aligned bounding box
-  return getBoundingBox(transformedCorners)
+  const result = getBoundingBox(transformedCorners)
+  
+  // Debug logging
+  const screenOrientation = screenBox.width > screenBox.height ? 'HORIZONTAL' : 'VERTICAL'
+  const contentOrientation = result.width > result.height ? 'HORIZONTAL' : 'VERTICAL'
+  console.log(`🔄 [inverseTransformBox] rotation=${rotationDeg}°, scale=${scaleFactor.toFixed(3)}:`)
+  console.log(`   Screen:  {x:${screenBox.x.toFixed(3)}, y:${screenBox.y.toFixed(3)}, w:${screenBox.width.toFixed(3)}, h:${screenBox.height.toFixed(3)}} (${screenOrientation})`)
+  console.log(`   Content: {x:${result.x.toFixed(3)}, y:${result.y.toFixed(3)}, w:${result.width.toFixed(3)}, h:${result.height.toFixed(3)}} (${contentOrientation})`)
+  
+  return result
 }
 
 /**

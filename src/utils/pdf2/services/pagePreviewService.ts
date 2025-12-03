@@ -299,29 +299,28 @@ export class PagePreviewService {
       ctx.rotate((pageTransforms.rotation * Math.PI) / 180)
     }
     
-    // Calculate auto-fit scale for rotated content at 100% user scale
+    // Calculate auto-fit scale for rotated content
     // When rotation is 90° or 270°, dimensions are swapped, so we need to scale down to fit
-    // This ONLY applies when user scale is exactly 100% (original size)
+    // This applies regardless of user scale - auto-fit ensures content fits in the paper
     let autoFitScale = 1.0
-    if (pageTransforms.scale === 100) {
-      // Normalize rotation to 0-359 range (handle negative rotations)
-      const rotation = ((pageTransforms.rotation % 360) + 360) % 360
-      if (rotation === 90 || rotation === 270) {
-        // Dimensions are swapped after rotation
-        const contentWidth = contentCanvas.width
-        const contentHeight = contentCanvas.height
-        const pageWidth = pageCanvas.width
-        const pageHeight = pageCanvas.height
-        
-        // After rotation, content's width becomes page's height dimension and vice versa
-        // So we need to fit: contentWidth into pageHeight, contentHeight into pageWidth
-        autoFitScale = Math.min(
-          pageWidth / contentHeight,
-          pageHeight / contentWidth,
-          1.0 // Never scale up, only down to fit
-        )
-        console.log(`📐 [PagePreviewService] Auto-fit scale for ${rotation}° rotation: ${autoFitScale.toFixed(3)}`)
-      }
+    
+    // Normalize rotation to 0-359 range (handle negative rotations)
+    const rotation = ((pageTransforms.rotation % 360) + 360) % 360
+    if (rotation === 90 || rotation === 270) {
+      // Dimensions are swapped after rotation
+      const contentWidth = contentCanvas.width
+      const contentHeight = contentCanvas.height
+      const pageWidth = pageCanvas.width
+      const pageHeight = pageCanvas.height
+      
+      // After rotation, content's width becomes page's height dimension and vice versa
+      // So we need to fit: contentWidth into pageHeight, contentHeight into pageWidth
+      autoFitScale = Math.min(
+        pageWidth / contentHeight,
+        pageHeight / contentWidth,
+        1.0 // Never scale up, only down to fit
+      )
+      console.log(`📐 [PagePreviewService] Auto-fit scale for ${rotation}° rotation: ${autoFitScale.toFixed(3)}`)
     }
     
     // Apply content scale (user scale * auto-fit scale)

@@ -30,7 +30,7 @@ const CENTER = { x: 0.5, y: 0.5 }
  * so it may not fill the entire canvas and needs to be centered.
  * 
  * @param rotationDeg - Rotation in degrees (0, 90, 180, 270)
- * @param scaleFactor - Scale factor applied to content
+ * @param scaleFactor - Scale factor applied to content (includes auto-fit for rotation)
  * @param aspectRatio - Content aspect ratio (width/height), e.g., 1.42 for landscape
  */
 export function getContentBounds(
@@ -39,26 +39,39 @@ export function getContentBounds(
   aspectRatio: number = 1
 ): Box {
   const normalized = ((rotationDeg % 360) + 360) % 360
-  
-  // After 90°/270° rotation, the content's effective aspect ratio is inverted
   const isRotated90or270 = normalized === 90 || normalized === 270
-  const effectiveAR = isRotated90or270 ? (1 / aspectRatio) : aspectRatio
   
-  // Canvas has the original aspect ratio
-  const canvasAR = aspectRatio
-  
-  // Calculate how much of the canvas the content fills after rotation and scale
   let contentWidth: number
   let contentHeight: number
   
-  if (effectiveAR > canvasAR) {
-    // Content is wider than canvas (relative to AR), constrained by width
+  if (!isRotated90or270) {
+    // 0° or 180°: content dimensions match canvas, scale uniformly
     contentWidth = scaleFactor
-    contentHeight = scaleFactor * canvasAR / effectiveAR
-  } else {
-    // Content is taller than canvas (relative to AR), constrained by height
     contentHeight = scaleFactor
-    contentWidth = scaleFactor * effectiveAR / canvasAR
+  } else {
+    // 90° or 270°: content dimensions are swapped
+    // 
+    // For a landscape page (AR > 1) rotated 90°:
+    // - Original: W x H (e.g., 841.9 x 595.3)
+    // - After rotation: H x W (595.3 x 841.9) - now portrait in landscape canvas
+    // - scaleFactor = 1/AR to fit the taller dimension
+    // 
+    // After scaling by scaleFactor:
+    // - Content size in pixels: (H * scaleFactor) x (W * scaleFactor)
+    // - In normalized canvas coords:
+    //   - width = (H * scaleFactor) / W = scaleFactor / AR
+    //   - height = (W * scaleFactor) / H = scaleFactor * AR
+    //
+    // Example: AR=1.417, scaleFactor=0.706
+    //   contentWidth = 0.706 / 1.417 = 0.498 (content is narrower than canvas)
+    //   contentHeight = 0.706 * 1.417 = 1.0 (content fills canvas height)
+    
+    contentWidth = scaleFactor / aspectRatio
+    contentHeight = scaleFactor * aspectRatio
+    
+    // Clamp to 1.0 (content can't exceed canvas)
+    contentWidth = Math.min(contentWidth, 1.0)
+    contentHeight = Math.min(contentHeight, 1.0)
   }
   
   // Center the content in the canvas
@@ -206,9 +219,6 @@ export function forwardTransformBox(
   aspectRatio: number = 1,
   offset: Point = { x: 0, y: 0 }
 ): Box {
-  const normalized = ((rotationDeg % 360) + 360) % 360
-  const isRotated90or270 = normalized === 90 || normalized === 270
-  
   // Calculate content bounds on canvas
   const contentBounds = getContentBounds(rotationDeg, scaleFactor, aspectRatio)
   

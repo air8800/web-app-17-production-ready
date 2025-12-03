@@ -285,6 +285,18 @@ const PDFEditorPopup = ({
   const autoFitScale = calculateAutoFitScale()
   const effectiveScale = (scale / 100) * autoFitScale
   
+  // Calculate aspect ratio of the page content
+  const calculateAspectRatio = () => {
+    if (previewImageRef.current) {
+      const width = previewImageRef.current.naturalWidth || previewImageRef.current.width
+      const height = previewImageRef.current.naturalHeight || previewImageRef.current.height
+      return width / height
+    }
+    return 1 // Default to square if unknown
+  }
+  
+  const aspectRatio = calculateAspectRatio()
+  
   const content = (
     <div className="fixed inset-0 z-[9999] bg-white flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 bg-blue-600 text-white">
@@ -321,6 +333,7 @@ const PDFEditorPopup = ({
                   imageRef={previewImageRef}
                   rotation={rotation}
                   scale={effectiveScale}
+                  aspectRatio={aspectRatio}
                   committedCrop={cropArea}
                 />
               )}

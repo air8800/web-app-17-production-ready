@@ -14,6 +14,7 @@ const CropOverlay = ({
   imageRef,
   rotation = 0,
   scale = 1,
+  aspectRatio = 1,
   disabled = false,
   committedCrop = null
 }) => {
@@ -21,15 +22,15 @@ const CropOverlay = ({
   const [dragStart, setDragStart] = useState(null)
   const [initialCrop, setInitialCrop] = useState(null)
   
-  // DEBUG: Log the rotation value received
-  console.log(`📐 [CropOverlay] RECEIVED rotation=${rotation}°, scale=${scale}`)
+  // DEBUG: Log the received props
+  console.log(`📐 [CropOverlay] RECEIVED rotation=${rotation}°, scale=${scale}, AR=${aspectRatio.toFixed(3)}`)
   
   // Step 1: Compose draft crop with committed crop to get absolute content coordinates
   // cropArea is relative to visible area (committedCrop), we need absolute for transforms
   const absoluteCrop = cropArea ? composeCrop(committedCrop, cropArea) : null
   
-  // Step 2: Forward transform to screen space for display
-  const rawScreenCrop = absoluteCrop ? forwardTransformBox(absoluteCrop, rotation, scale) : null
+  // Step 2: Forward transform to screen space for display (aspect-ratio aware)
+  const rawScreenCrop = absoluteCrop ? forwardTransformBox(absoluteCrop, rotation, scale, aspectRatio) : null
   
   // Step 3: Clamp to [0,1] to prevent handles from going outside page at high scales
   const screenCrop = rawScreenCrop ? {
@@ -105,8 +106,8 @@ const CropOverlay = ({
       }
     }
     
-    // Step 1: Inverse transform screen crop back to absolute content space
-    const absoluteContentCrop = inverseTransformBox(newScreenCrop, rotation, scale)
+    // Step 1: Inverse transform screen crop back to absolute content space (aspect-ratio aware)
+    const absoluteContentCrop = inverseTransformBox(newScreenCrop, rotation, scale, aspectRatio)
     
     // Step 2: Decompose absolute crop back to relative coordinates within committed crop
     const relativeCrop = decomposeCrop(committedCrop, absoluteContentCrop)
@@ -115,12 +116,12 @@ const CropOverlay = ({
     const clampedCrop = clampBox(relativeCrop, 0.05)
     
     // Debug logging
-    console.log(`🎯 [CropOverlay] Drag at rotation=${rotation}°:`)
+    console.log(`🎯 [CropOverlay] Drag at rotation=${rotation}°, AR=${aspectRatio.toFixed(3)}:`)
     console.log(`  Screen: {x:${newScreenCrop.x.toFixed(3)}, y:${newScreenCrop.y.toFixed(3)}, w:${newScreenCrop.width.toFixed(3)}, h:${newScreenCrop.height.toFixed(3)}} (${newScreenCrop.width > newScreenCrop.height ? 'HORIZONTAL' : 'VERTICAL'})`)
     console.log(`  Content: {x:${absoluteContentCrop.x.toFixed(3)}, y:${absoluteContentCrop.y.toFixed(3)}, w:${absoluteContentCrop.width.toFixed(3)}, h:${absoluteContentCrop.height.toFixed(3)}} (${absoluteContentCrop.width > absoluteContentCrop.height ? 'HORIZONTAL' : 'VERTICAL'})`)
     
     onCropChange(clampedCrop)
-  }, [activeHandle, dragStart, initialCrop, getPointerPosition, onCropChange, rotation, scale, committedCrop])
+  }, [activeHandle, dragStart, initialCrop, getPointerPosition, onCropChange, rotation, scale, aspectRatio, committedCrop])
   
   const handlePointerUp = useCallback(() => {
     setActiveHandle(null)

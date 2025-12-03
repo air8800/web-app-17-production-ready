@@ -2,6 +2,10 @@
  * Coordinate transformation utilities for mapping between content space and screen space
  * Content space: original page coordinates (0-1 range) before any transforms
  * Screen space: coordinates after rotation/scale/offset transforms are applied
+ * 
+ * IMPORTANT: These transforms account for aspect ratio changes when rotating non-square content.
+ * When content is rotated 90°/270°, its effective dimensions are swapped, affecting how it
+ * fits within the fixed-size canvas.
  */
 
 interface Point {
@@ -17,6 +21,52 @@ interface Box {
 }
 
 const CENTER = { x: 0.5, y: 0.5 }
+
+/**
+ * Calculate where the rotated, scaled content appears on the canvas.
+ * Returns the content bounds in normalized canvas coordinates [0,1].
+ * 
+ * When content is rotated 90°/270°, its dimensions are effectively swapped,
+ * so it may not fill the entire canvas and needs to be centered.
+ * 
+ * @param rotationDeg - Rotation in degrees (0, 90, 180, 270)
+ * @param scaleFactor - Scale factor applied to content
+ * @param aspectRatio - Content aspect ratio (width/height), e.g., 1.42 for landscape
+ */
+export function getContentBounds(
+  rotationDeg: number,
+  scaleFactor: number,
+  aspectRatio: number = 1
+): Box {
+  const normalized = ((rotationDeg % 360) + 360) % 360
+  
+  // After 90°/270° rotation, the content's effective aspect ratio is inverted
+  const isRotated90or270 = normalized === 90 || normalized === 270
+  const effectiveAR = isRotated90or270 ? (1 / aspectRatio) : aspectRatio
+  
+  // Canvas has the original aspect ratio
+  const canvasAR = aspectRatio
+  
+  // Calculate how much of the canvas the content fills after rotation and scale
+  let contentWidth: number
+  let contentHeight: number
+  
+  if (effectiveAR > canvasAR) {
+    // Content is wider than canvas (relative to AR), constrained by width
+    contentWidth = scaleFactor
+    contentHeight = scaleFactor * canvasAR / effectiveAR
+  } else {
+    // Content is taller than canvas (relative to AR), constrained by height
+    contentHeight = scaleFactor
+    contentWidth = scaleFactor * effectiveAR / canvasAR
+  }
+  
+  // Center the content in the canvas
+  const x = (1 - contentWidth) / 2
+  const y = (1 - contentHeight) / 2
+  
+  return { x, y, width: contentWidth, height: contentHeight }
+}
 
 /**
  * Rotate a point around center (0.5, 0.5) by given degrees (90, 180, 270)
@@ -137,59 +187,105 @@ function boxToCorners(box: Box): Point[] {
 }
 
 /**
- * Forward transform: content space -> screen space
- * Apply rotation, then scale, then offset
- * (Skip crop since crop defines the region we're transforming)
+ * Forward transform: content space -> screen space (aspect-ratio aware)
+ * 
+ * This transform accounts for the fact that when content is rotated 90°/270°,
+ * the content doesn't fill the entire canvas. Instead, it's scaled down and 
+ * centered within the canvas.
+ * 
+ * @param contentBox - Box in content normalized coords [0,1]
+ * @param rotationDeg - Rotation in degrees (0, 90, 180, 270)
+ * @param scaleFactor - Scale factor (includes auto-fit adjustment)
+ * @param aspectRatio - Content aspect ratio (width/height), e.g., 1.42 for landscape
+ * @param offset - Additional offset (default {0,0})
  */
 export function forwardTransformBox(
   contentBox: Box,
   rotationDeg: number,
   scaleFactor: number,
+  aspectRatio: number = 1,
   offset: Point = { x: 0, y: 0 }
 ): Box {
-  console.log(`🔄 [forwardTransformBox] INPUT: rotation=${rotationDeg}°, scale=${scaleFactor}, content=${JSON.stringify(contentBox)}`)
+  const normalized = ((rotationDeg % 360) + 360) % 360
+  const isRotated90or270 = normalized === 90 || normalized === 270
   
+  // Calculate content bounds on canvas
+  const contentBounds = getContentBounds(rotationDeg, scaleFactor, aspectRatio)
+  
+  // Step 1: Rotate the content box corners
   const corners = boxToCorners(contentBox)
+  const rotatedCorners = corners.map(corner => rotatePoint(corner, rotationDeg))
+  const rotatedBox = getBoundingBox(rotatedCorners)
   
-  // Transform each corner: ROTATE -> SCALE -> OFFSET
-  const transformedCorners = corners.map(corner => {
-    let p = rotatePoint(corner, rotationDeg)
-    p = scalePoint(p, scaleFactor)
-    p = offsetPoint(p, offset)
-    return p
-  })
+  // Step 2: Map from [0,1] content-relative to content bounds on canvas
+  // The rotated box is in [0,1] of the rotated content
+  // We need to map it to the actual content bounds on the canvas
+  const screenBox: Box = {
+    x: contentBounds.x + rotatedBox.x * contentBounds.width,
+    y: contentBounds.y + rotatedBox.y * contentBounds.height,
+    width: rotatedBox.width * contentBounds.width,
+    height: rotatedBox.height * contentBounds.height
+  }
   
-  // Return axis-aligned bounding box
-  const result = getBoundingBox(transformedCorners)
-  console.log(`🔄 [forwardTransformBox] OUTPUT: screen=${JSON.stringify(result)}`)
+  // Apply offset
+  const result: Box = {
+    x: screenBox.x + offset.x,
+    y: screenBox.y + offset.y,
+    width: screenBox.width,
+    height: screenBox.height
+  }
+  
+  console.log(`🔄 [forwardTransformBox] rotation=${rotationDeg}°, AR=${aspectRatio.toFixed(3)}:`)
+  console.log(`   Content: ${JSON.stringify(contentBox)}`)
+  console.log(`   Bounds: ${JSON.stringify(contentBounds)}`)
+  console.log(`   Screen: ${JSON.stringify(result)}`)
+  
   return result
 }
 
 /**
- * Inverse transform: screen space -> content space
- * Remove offset, then unscale, then unrotate
+ * Inverse transform: screen space -> content space (aspect-ratio aware)
+ * 
+ * Reverses the forward transform, mapping from screen/canvas coordinates
+ * back to content coordinates.
  */
 export function inverseTransformBox(
   screenBox: Box,
   rotationDeg: number,
   scaleFactor: number,
+  aspectRatio: number = 1,
   offset: Point = { x: 0, y: 0 }
 ): Box {
-  console.log(`🔄 [inverseTransformBox] INPUT: rotation=${rotationDeg}°, scale=${scaleFactor}, screen=${JSON.stringify(screenBox)}`)
+  // Calculate content bounds on canvas
+  const contentBounds = getContentBounds(rotationDeg, scaleFactor, aspectRatio)
   
-  const corners = boxToCorners(screenBox)
+  // Step 1: Remove offset
+  const unoffseted: Box = {
+    x: screenBox.x - offset.x,
+    y: screenBox.y - offset.y,
+    width: screenBox.width,
+    height: screenBox.height
+  }
   
-  // Transform each corner: remove OFFSET -> UNSCALE -> UNROTATE
-  const transformedCorners = corners.map(corner => {
-    let p = unoffsetPoint(corner, offset)
-    p = unscalePoint(p, scaleFactor)
-    p = unrotatePoint(p, rotationDeg)
-    return p
-  })
+  // Step 2: Map from canvas space to [0,1] content-relative (rotated) space
+  // Inverse of: screenBox = bounds.x + rotatedBox.x * bounds.width
+  const rotatedBox: Box = {
+    x: contentBounds.width > 0 ? (unoffseted.x - contentBounds.x) / contentBounds.width : 0,
+    y: contentBounds.height > 0 ? (unoffseted.y - contentBounds.y) / contentBounds.height : 0,
+    width: contentBounds.width > 0 ? unoffseted.width / contentBounds.width : 0,
+    height: contentBounds.height > 0 ? unoffseted.height / contentBounds.height : 0
+  }
   
-  // Return axis-aligned bounding box
-  const result = getBoundingBox(transformedCorners)
-  console.log(`🔄 [inverseTransformBox] OUTPUT: content=${JSON.stringify(result)}`)
+  // Step 3: Unrotate the corners to get content coordinates
+  const corners = boxToCorners(rotatedBox)
+  const contentCorners = corners.map(corner => unrotatePoint(corner, rotationDeg))
+  const result = getBoundingBox(contentCorners)
+  
+  console.log(`🔄 [inverseTransformBox] rotation=${rotationDeg}°, AR=${aspectRatio.toFixed(3)}:`)
+  console.log(`   Screen: ${JSON.stringify(screenBox)}`)
+  console.log(`   Bounds: ${JSON.stringify(contentBounds)}`)
+  console.log(`   Content: ${JSON.stringify(result)}`)
+  
   return result
 }
 

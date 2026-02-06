@@ -23,7 +23,7 @@ export class MetadataStore {
    */
   initPage(pageNumber: number, dimensions: PageDimensions): void {
     this.originalDimensions.set(pageNumber, { ...dimensions })
-    
+
     if (!this.metadata.has(pageNumber)) {
       this.metadata.set(pageNumber, {
         pageNumber,
@@ -49,7 +49,7 @@ export class MetadataStore {
   getTransforms(pageNumber: number): PageTransforms {
     const meta = this.metadata.get(pageNumber)
     if (!meta) return { ...DEFAULT_TRANSFORMS }
-    
+
     // Deep clone to prevent external mutation of store state
     return {
       crop: meta.transforms.crop ? { ...meta.transforms.crop } : null,
@@ -180,6 +180,22 @@ export class MetadataStore {
   }
 
   // ============================================
+  // NORMALIZATION OPERATIONS
+  // ============================================
+
+  setNormalization(pageNumber: number, normalization: { scale: number; offsetX: number; offsetY: number; rotation?: number; targetWidth?: number; targetHeight?: number }): void {
+    const meta = this.metadata.get(pageNumber)
+    if (!meta) return
+
+    meta.normalization = { ...normalization }
+  }
+
+  getNormalization(pageNumber: number): { scale: number; offsetX: number; offsetY: number; rotation?: number; targetWidth?: number; targetHeight?: number } | null {
+    const meta = this.metadata.get(pageNumber)
+    return meta?.normalization || null
+  }
+
+  // ============================================
   // RESET OPERATIONS
   // ============================================
 
@@ -188,14 +204,15 @@ export class MetadataStore {
     if (!meta) return
 
     const originalDims = this.originalDimensions.get(pageNumber)
-    
+
     this.metadata.set(pageNumber, {
       pageNumber,
       originalDimensions: originalDims ? { ...originalDims } : meta.originalDimensions,
       transforms: { ...DEFAULT_TRANSFORMS },
       edited: false,
       isCropped: false,
-      fitCropToPage: false
+      fitCropToPage: false,
+      normalization: undefined
     })
   }
 
@@ -254,7 +271,7 @@ export class MetadataStore {
   cloneTransforms(fromPage: number, toPage: number): void {
     const source = this.metadata.get(fromPage)
     const target = this.metadata.get(toPage)
-    
+
     if (!source || !target) return
 
     target.transforms = { ...source.transforms }

@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables (IMPORTANT: Never commit these!)
+.env
+.env.local
+.env.production
+
+# Local development files
+.local/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.log
+*.tmp
+*.timestamp-*
+
+# Test/debug files
+job_matches.json
+match_results.json
+owned_shops.json
+profile_matches.json

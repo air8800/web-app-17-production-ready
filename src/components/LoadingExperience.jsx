@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { FileText, Loader2, Sparkles } from 'lucide-react'
 
 const LOADING_MESSAGES = [
   "Loading your document...",
@@ -7,69 +8,132 @@ const LOADING_MESSAGES = [
   "Setting up workspace..."
 ]
 
-const LoadingExperience = ({ loadingStage, loadedCount, totalPages }) => {
+const LARGE_PDF_MESSAGES = [
+  "Reading large document...",
+  "Optimizing for performance...",
+  "This might take a moment...",
+  "Processing high-resolution pages..."
+]
+
+const LoadingExperience = ({ loadingStage, loadedCount, totalPages, isLargePdf }) => {
   const [messageIndex, setMessageIndex] = useState(0)
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const [showLargePdfMessage, setShowLargePdfMessage] = useState(false)
   const showLoader = loadingStage === 'parsing' || loadingStage === 'loading'
-  
+
   const progress = totalPages > 0 ? (loadedCount / totalPages) * 100 : 0
 
+  // Switch to large PDF messages after 3 seconds if isLargePdf is true, or if it takes too long
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setPrefersReducedMotion(mediaQuery.matches)
-
-    const handleChange = (e) => setPrefersReducedMotion(e.matches)
-    mediaQuery.addEventListener('change', handleChange)
-    
-    return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [])
+    if (isLargePdf) {
+      setShowLargePdfMessage(true)
+    } else {
+      const timer = setTimeout(() => {
+        // If still loading after 4 seconds, show generic "large file" hints
+        setShowLargePdfMessage(true)
+      }, 4000)
+      return () => clearTimeout(timer)
+    }
+  }, [isLargePdf])
 
   useEffect(() => {
-    if (!showLoader || prefersReducedMotion) return
+    if (!showLoader) return
 
+    const messages = showLargePdfMessage ? LARGE_PDF_MESSAGES : LOADING_MESSAGES
     const interval = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length)
+      setMessageIndex((prev) => (prev + 1) % messages.length)
     }, 2500)
 
     return () => clearInterval(interval)
-  }, [showLoader, prefersReducedMotion])
+  }, [showLoader, showLargePdfMessage])
 
   if (!showLoader) return null
 
+  const currentMessage = showLargePdfMessage
+    ? LARGE_PDF_MESSAGES[messageIndex % LARGE_PDF_MESSAGES.length]
+    : LOADING_MESSAGES[messageIndex % LOADING_MESSAGES.length]
+
   return (
-    <div className="mb-4 flex justify-center">
-      <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex-shrink-0">
-            <svg className="w-5 h-5 text-slate-400 loading-spinner" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    <div className="flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-300">
+      {/* Animated Icon Container */}
+      <div className="relative mb-6">
+        {/* Background Glow */}
+        <div className="absolute inset-0 bg-blue-100 dark:bg-blue-900/30 rounded-full blur-xl animate-pulse"></div>
+
+        <div className="relative w-24 h-24 flex items-center justify-center bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-blue-100 dark:border-slate-700 overflow-hidden">
+          {/* Document Icon with float animation */}
+          <div className="animate-bounce" style={{ animationDuration: '3s' }}>
+            <FileText className="w-10 h-10 text-blue-500" />
+          </div>
+
+          {/* Overlay Spinner */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg className="w-20 h-20 text-blue-600 animate-spin-slow" viewBox="0 0 100 100">
+              <circle
+                className="opacity-20"
+                cx="50" cy="50" r="45"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <circle
+                className="opacity-100"
+                cx="50" cy="50" r="45"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeDasharray="283"
+                strokeDashoffset="200"
+                strokeLinecap="round"
+              />
             </svg>
           </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <h3 className="text-sm font-medium text-slate-700 dark:text-slate-200 message-fade-in" key={messageIndex}>
-                {LOADING_MESSAGES[messageIndex]}
-              </h3>
-              {loadingStage === 'loading' && totalPages > 0 && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 progress-pulse">
-                  {totalPages} pages
-                </span>
-              )}
-            </div>
-
-            {loadingStage === 'loading' && (
-              <div className="h-1 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-slate-400 dark:bg-slate-500 rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${progress}%` }}
-                ></div>
-              </div>
-            )}
+          {/* Sparkles for "magic" feel */}
+          <div className="absolute top-2 right-2">
+            <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
           </div>
         </div>
       </div>
+
+      {/* Text Content */}
+      <div className="max-w-xs mx-auto space-y-3">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white min-h-[28px] transition-all duration-300">
+          {currentMessage}
+        </h3>
+
+        {/* Secondary Info */}
+        {showLargePdfMessage && (
+          <p className="text-sm text-blue-600 dark:text-blue-400 font-medium animate-pulse">
+            {isLargePdf ? "Large PDF detected" : "Processing..."}
+          </p>
+        )}
+
+        {/* Progress Bar */}
+        {loadingStage === 'loading' && totalPages > 0 && (
+          <div className="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden mt-4">
+            <div
+              className="bg-blue-600 h-full rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        )}
+
+        {loadingStage === 'loading' && totalPages > 0 && (
+          <p className="text-xs text-gray-400 mt-2">
+            {loadedCount} / {totalPages} pages ready
+          </p>
+        )}
+      </div>
+
+      <style jsx>{`
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 3s linear infinite;
+        }
+      `}</style>
     </div>
   )
 }

@@ -10,20 +10,11 @@ import {
   RecipeSource,
   RecipePrint,
   RecipePage,
-  PagesPerSheet
+  RecipeOptions,
+  CropBox
 } from '../types'
 import { MetadataStore } from '../state/metadataStore'
 import { PageState } from './pageState'
-
-export interface RecipeOptions {
-  paperSize: string
-  colorMode: string
-  duplex: boolean
-  copies: number
-  pagesPerSheet: PagesPerSheet
-  quality: string
-  shopId: string | null
-}
 
 const DEFAULT_OPTIONS: RecipeOptions = {
   paperSize: 'A4',
@@ -85,16 +76,25 @@ export class RecipeService {
       const metadata = this.metadataStore.get(pageInfo.pageNumber)
       const transforms = this.metadataStore.getTransforms(pageInfo.pageNumber)
 
+      // 1. Crop is now already in RAW coordinates (visual raw page space)
+      // because PDFEditorPopup uses getRawPreview(..., true) which disables A4 normalization.
+      // So no denormalization is needed.
+      let exportedCrop = transforms.crop ? { ...transforms.crop } : null
+
       return {
         pageNumber: pageInfo.pageNumber,
         originalDimensions: metadata?.originalDimensions || {
           width: pageInfo.width,
           height: pageInfo.height
         },
-        transforms,
+        transforms: {
+          ...transforms,
+          crop: exportedCrop
+        },
         hasEdits: this.metadataStore.isEdited(pageInfo.pageNumber),
         isCropped: metadata?.isCropped || false,
-        fitCropToPage: metadata?.fitCropToPage || false
+        fitCropToPage: metadata?.fitCropToPage || false,
+        normalization: metadata?.normalization
       }
     })
 
@@ -145,7 +145,7 @@ export class RecipeService {
     const included = this.pageState.getIncluded()
     for (const page of included) {
       const transforms = this.metadataStore.getTransforms(page.pageNumber)
-      
+
       if (transforms.crop) {
         const { x, y, width, height } = transforms.crop
         if (x < 0 || y < 0 || width <= 0 || height <= 0 || x + width > 1 || y + height > 1) {
@@ -174,7 +174,7 @@ export class RecipeService {
     printSettings: string
   } {
     const included = this.pageState.getIncluded()
-    const editedCount = included.filter(p => 
+    const editedCount = included.filter(p =>
       this.metadataStore.isEdited(p.pageNumber)
     ).length
 
@@ -192,4 +192,7 @@ export class RecipeService {
   resetOptions(): void {
     this.options = { ...DEFAULT_OPTIONS }
   }
+
+
+
 }

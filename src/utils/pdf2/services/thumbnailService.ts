@@ -33,7 +33,8 @@ export class ThumbnailService {
   }
 
   /**
-   * Get thumbnail data URL for a page
+   * Get thumbnail Blob URL for a page (YouTube-style memory optimization)
+   * Returns a blob: URL instead of data: URL to save ~800MB RAM on large PDFs
    */
   async getThumbnail(
     pageNumber: number,
@@ -58,13 +59,55 @@ export class ThumbnailService {
     // Scale to thumbnail size
     const thumbnailCanvas = this.scaleToThumbnail(previewCanvas, opts)
 
-    // Convert to data URL
-    const dataUrl = thumbnailCanvas.toDataURL('image/jpeg', opts.quality)
+    // Convert to Blob URL (YouTube-style: saves ~800MB RAM)
+    const blobUrl = await this.canvasToBlobUrl(thumbnailCanvas, opts.quality)
 
     // Cache
-    this.addToCache(cacheKey, dataUrl)
+    this.addToCache(cacheKey, blobUrl)
 
-    return dataUrl
+    return blobUrl
+  }
+
+  /**
+   * Get RAW thumbnail WITHOUT any transforms applied (Blob URL version)
+   * Use this for TransformThumbnail component which applies transforms at display time
+   */
+  async getRawThumbnail(
+    pageNumber: number,
+    options: Partial<ThumbnailOptions> = {}
+  ): Promise<string> {
+    const opts = { ...DEFAULT_OPTIONS, ...options }
+    const cacheKey = `raw-${pageNumber}-${opts.maxWidth}x${opts.maxHeight}`
+
+    // Check cache
+    if (this.thumbnailCache.has(cacheKey)) {
+      return this.thumbnailCache.get(cacheKey)!
+    }
+
+    // Get page dimensions to calculate optimal scale
+    const dimensions = this.previewService.getPageDimensions(pageNumber)
+    let scale = 0.3 // Fallback
+
+    if (dimensions) {
+      const scaleX = opts.maxWidth / dimensions.width
+      const scaleY = opts.maxHeight / dimensions.height
+      // Use slightly larger scale (1.2x) to ensure crispness before downscaling
+      scale = Math.min(scaleX, scaleY) * 1.2
+    }
+
+    // Get RAW preview without transforms
+    const rawCanvas = await this.previewService.getRawPreview(pageNumber, scale)
+
+    // Scale to thumbnail size
+    const thumbnailCanvas = this.scaleToThumbnail(rawCanvas, opts)
+
+    // Convert to Blob URL (saves RAM)
+    const blobUrl = await this.canvasToBlobUrl(thumbnailCanvas, opts.quality)
+
+    // Cache
+    this.addToCache(cacheKey, blobUrl)
+
+    return blobUrl
   }
 
   /**
@@ -94,12 +137,16 @@ export class ThumbnailService {
   }
 
   /**
-   * Invalidate thumbnail for a page
+   * Invalidate thumbnail for a page (revokes blob URLs to free memory)
    */
   invalidate(pageNumber: number): void {
     const keysToDelete: string[] = []
-    this.thumbnailCache.forEach((_, key) => {
-      if (key.startsWith(`${pageNumber}-`)) {
+    this.thumbnailCache.forEach((url, key) => {
+      if (key.startsWith(`${pageNumber}-`) || key.startsWith(`raw-${pageNumber}-`)) {
+        // Revoke blob URL to free memory
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url)
+        }
         keysToDelete.push(key)
       }
     })
@@ -107,9 +154,15 @@ export class ThumbnailService {
   }
 
   /**
-   * Invalidate all thumbnails
+   * Invalidate all thumbnails (revokes all blob URLs)
    */
   invalidateAll(): void {
+    // Revoke all blob URLs before clearing
+    this.thumbnailCache.forEach((url) => {
+      if (url.startsWith('blob:')) {
+        URL.revokeObjectURL(url)
+      }
+    })
     this.thumbnailCache.clear()
   }
 
@@ -150,15 +203,42 @@ export class ThumbnailService {
   }
 
   /**
-   * Add to cache with LRU eviction
+   * Add to cache with LRU eviction (revokes old blob URLs)
    */
-  private addToCache(key: string, dataUrl: string): void {
+  private addToCache(key: string, url: string): void {
     if (this.thumbnailCache.size >= this.maxCacheSize) {
       const firstKey = this.thumbnailCache.keys().next().value
       if (firstKey) {
+        // Revoke old blob URL before evicting
+        const oldUrl = this.thumbnailCache.get(firstKey)
+        if (oldUrl && oldUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(oldUrl)
+        }
         this.thumbnailCache.delete(firstKey)
       }
     }
-    this.thumbnailCache.set(key, dataUrl)
+    this.thumbnailCache.set(key, url)
+  }
+
+  /**
+   * Convert canvas to Blob URL (YouTube-style memory optimization)
+   * Returns blob: URL instead of data: URL
+   */
+  private canvasToBlobUrl(canvas: HTMLCanvasElement, quality: number): Promise<string> {
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            const blobUrl = URL.createObjectURL(blob)
+            resolve(blobUrl)
+          } else {
+            // Fallback to data URL if toBlob fails
+            resolve(canvas.toDataURL('image/jpeg', quality))
+          }
+        },
+        'image/jpeg',
+        quality
+      )
+    })
   }
 }

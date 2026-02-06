@@ -61,6 +61,14 @@ export interface PageMetadata {
   edited: boolean
   isCropped: boolean
   fitCropToPage: boolean
+  normalization?: {
+    scale: number
+    offsetX: number
+    offsetY: number
+    rotation?: number
+    targetWidth?: number
+    targetHeight?: number
+  }
 }
 
 export interface PageData {
@@ -106,7 +114,12 @@ export interface ResetCommand {
   type: 'reset'
 }
 
-export type EditCommand = CropCommand | RotateCommand | ScaleCommand | TranslateCommand | ResetCommand
+export interface SetRotationCommand {
+  type: 'setRotation'
+  value: RotationDegrees
+}
+
+export type EditCommand = CropCommand | RotateCommand | ScaleCommand | TranslateCommand | ResetCommand | SetRotationCommand
 
 // ============================================
 // RECIPE TYPES (for desktop cpdf)
@@ -135,6 +148,24 @@ export interface RecipePage {
   hasEdits: boolean
   isCropped: boolean
   fitCropToPage: boolean
+  normalization?: {
+    scale: number
+    offsetX: number
+    offsetY: number
+    rotation?: number
+    targetWidth?: number
+    targetHeight?: number
+  }
+}
+
+export interface RecipeOptions {
+  paperSize: string
+  colorMode: string
+  duplex: boolean
+  copies: number
+  pagesPerSheet: PagesPerSheet
+  quality: string
+  shopId: string | null
 }
 
 export interface Recipe {
@@ -165,28 +196,37 @@ export interface PdfControllerOptions {
 export interface PdfController {
   // 1. Load PDF document
   loadDocument(file: File): Promise<void>
-  
+
   // 2. Get page preview canvas
   getPagePreview(pageNum: number): HTMLCanvasElement | null
-  
+
   // 3. Apply edit to page
   applyEdit(pageNum: number, edit: EditCommand): void
-  
+
   // 4. Get thumbnail
   getThumbnail(pageNum: number): string | null
-  
+
   // 5. Export recipe for desktop cpdf
   exportRecipe(): Recipe
-  
+
+  // 7. Sync selection
+  setSelectedPages(pageNumbers: number[]): void
+
+  // 8. Update print options
+  setOptions(options: Partial<RecipeOptions>): void
+
   // 6. Progress callback
   onProgress(callback: ProgressCallback): () => void
-  
+
   // Additional helpers
   getPageCount(): number
   getPageMetadata(pageNum: number): PageMetadata | null
   resetPage(pageNum: number): void
   resetAll(): void
   destroy(): void
+  isLoaded(): boolean
+  getInternalPdfDoc(): any
+  getRawThumbnailAsync?(pageNum: number): Promise<string>
 }
 
 // ============================================

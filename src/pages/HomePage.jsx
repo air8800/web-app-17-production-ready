@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { getAllActiveShops } from '../utils/supabase'
-import { Printer, Search, Store, Clock, Star, MapPin, Phone, ArrowRight, Zap, Shield, Award, Globe, Upload, Settings, FileCheck, Package, Mail, Facebook, Twitter, Instagram, Linkedin, Sparkles } from 'lucide-react'
+import { Printer, Search, Store, Clock, Star, MapPin, Phone, ArrowRight, Zap, Shield, Award, Globe, Upload, Settings, FileCheck, Package, Mail, Facebook, Twitter, Instagram, Linkedin, Sparkles, ChevronDown, Check } from 'lucide-react'
 
 const HomePage = () => {
   const [shops, setShops] = useState([])
@@ -9,12 +9,24 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCity, setSelectedCity] = useState(() => {
+    return localStorage.getItem('printflow_selected_city') || null
+  })
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const howItWorksRef = useRef(null)
 
   useEffect(() => {
     loadShops()
     loadRecentShops()
   }, [])
+
+  useEffect(() => {
+    if (selectedCity) {
+      localStorage.setItem('printflow_selected_city', selectedCity)
+    } else {
+      localStorage.removeItem('printflow_selected_city')
+    }
+  }, [selectedCity])
 
   const loadShops = async () => {
     try {
@@ -50,10 +62,20 @@ const HomePage = () => {
     howItWorksRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const filteredShops = shops.filter(shop => 
-    shop.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    shop.address.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredShops = shops.filter(shop => {
+    // 1. City Filter (Primary)
+    if (selectedCity && selectedCity !== 'All Cities' && !shop.address.toLowerCase().includes(selectedCity.toLowerCase())) {
+      return false
+    }
+
+    // 2. Search Filter (Secondary)
+    if (searchTerm && !shop.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      !shop.address.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false
+    }
+
+    return true
+  })
 
   const features = [
     {
@@ -93,10 +115,7 @@ const HomePage = () => {
         <div className="relative max-w-7xl mx-auto px-4 py-20 sm:py-32">
           <div className="text-center animate-fadeInUp">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full border border-blue-200/50 mb-8">
-              <Sparkles className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-700">Trusted by 50,000+ users</span>
-            </div>
+
 
             {/* Main Heading */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
@@ -108,29 +127,15 @@ const HomePage = () => {
               Connect with local print shops. Upload and collect your documents instantly.
             </p>
 
-            {/* Search Bar */}
-            <div className="max-w-2xl mx-auto mb-12">
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Search className="h-6 w-6 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-                </div>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search print shops by name or location..."
-                  className="w-full pl-12 pr-6 py-4 text-lg bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-2xl shadow-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 placeholder-gray-400"
-                />
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
-              </div>
-            </div>
-
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4">
-              <a href="#all-shops" className="btn-primary text-sm sm:text-base px-6 py-3 sm:px-8 sm:py-4 w-full sm:w-auto inline-flex items-center justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4 mt-8">
+              <button
+                onClick={() => document.getElementById('city-selection')?.scrollIntoView({ behavior: 'smooth' })}
+                className="btn-primary text-sm sm:text-base px-6 py-3 sm:px-8 sm:py-4 w-full sm:w-auto inline-flex items-center justify-center cursor-pointer"
+              >
                 Find Print Shops
                 <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
-              </a>
+              </button>
               <button onClick={scrollToHowItWorks} className="btn-secondary text-sm sm:text-base px-6 py-3 sm:px-8 sm:py-4 w-full sm:w-auto">
                 How it Works
               </button>
@@ -187,7 +192,7 @@ const HomePage = () => {
                 <p className="text-sm sm:text-base text-gray-600">Your recent visits</p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recentShops.map((shop, index) => (
                 <Link
@@ -222,74 +227,186 @@ const HomePage = () => {
         )}
 
         {/* All Shops */}
+        {/* City Selection & Shop Finder */}
+
+        {/* City Selection & Shop Finder */}
         {!loading && !error && (
-          <div className="animate-fadeInUp" id="all-shops">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="feature-icon">
-                <Store className="w-6 h-6" />
+          <div className="animate-fadeInUp py-12" id="city-selection">
+            <div className="max-w-5xl mx-auto px-4">
+              <div className="text-center mb-16 relative z-10">
+
+                <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-6 tracking-tight leading-tight">
+                  Find Print Shops <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Near You</span>
+                </h2>
+                <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed font-medium">
+                  Connect with trusted local printing partners for high-quality results.
+                </p>
               </div>
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">All Print Shops</h2>
-                <p className="text-sm sm:text-base text-gray-600">Trusted printing partners</p>
+
+              {/* Selection Card */}
+              <div className="bg-white rounded-3xl shadow-xl shadow-blue-900/5 border border-blue-100 p-6 md:p-10 mb-12 relative">
+                {/* Subtle Decorative Gradient */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-bl-full opacity-50 pointer-events-none" />
+
+                <div className="max-w-2xl mx-auto relative">
+                  <div className="space-y-6">
+                    {/* City Selection Logic */}
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Select Your City</label>
+                      <div className="relative group">
+                        <button
+                          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                          className="w-full flex items-center justify-between pl-16 pr-6 py-4 text-lg font-medium bg-white border border-gray-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all cursor-pointer text-gray-900 hover:border-blue-300"
+                        >
+                          <span className={selectedCity ? 'text-gray-900' : 'text-gray-400'}>
+                            {selectedCity || "Choose a location..."}
+                          </span>
+                          <ChevronDown className={`w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                            <MapPin className="w-5 h-5 text-blue-600" />
+                          </div>
+                        </div>
+
+                        {/* Custom Dropdown Menu */}
+                        {isDropdownOpen && (
+                          <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-fadeIn">
+                            <div className="p-1.5">
+                              {['All Cities', 'Nashik', 'Pune'].map((city) => (
+                                <button
+                                  key={city}
+                                  onClick={() => {
+                                    setSelectedCity(city === 'All Cities' ? 'All Cities' : city);
+                                    setSearchTerm('');
+                                    setIsDropdownOpen(false);
+                                  }}
+                                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left font-medium ${selectedCity === city
+                                    ? 'bg-blue-50 text-blue-600'
+                                    : 'hover:bg-gray-50 text-gray-700'
+                                    }`}
+                                >
+                                  {city === 'All Cities' ? (
+                                    <Globe className={`w-4 h-4 ${selectedCity === city ? 'text-blue-500' : 'text-gray-400'}`} />
+                                  ) : (
+                                    <MapPin className={`w-4 h-4 ${selectedCity === city ? 'text-blue-500' : 'text-gray-400'}`} />
+                                  )}
+                                  {city}
+                                  {selectedCity === city && <Check className="w-4 h-4 ml-auto text-blue-600" />}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Search Bar - Animated Appearance */}
+                    {selectedCity && (
+                      <div className="animate-fadeIn pt-6 border-t border-gray-100">
+                        <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Search in {selectedCity}</label>
+                        <div className="relative group">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                            <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                          </div>
+                          <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Search by shop name, area, or service..."
+                            className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-base placeholder-gray-400"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-            
-            {filteredShops.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredShops.map((shop, index) => (
-                  <Link
-                    key={shop.id}
-                    to={`/shop/${shop.id}`}
-                    className="print-card card-hover animate-slideInRight"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <div className="flex items-start gap-4 mb-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Printer className="w-6 h-6 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-lg text-gray-900 mb-1">{shop.name}</h3>
-                        <div className="flex items-center gap-1 text-gray-600 mb-2">
-                          <MapPin className="w-4 h-4 flex-shrink-0" />
-                          <span className="text-sm">{shop.address}</span>
+
+            {/* Filtered Shops Grid */}
+            {selectedCity ? (
+              filteredShops.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {filteredShops.map((shop, index) => (
+                    <Link
+                      key={shop.id}
+                      to={`/shop/${shop.id}`}
+                      className="group bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-xl hover:shadow-blue-900/5 hover:border-blue-200 transition-all duration-300 animate-fadeIn relative overflow-hidden"
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <div className="flex items-start gap-5 mb-5 relative z-10">
+                        <div className="w-14 h-14 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:from-blue-100 group-hover:to-indigo-100 transition-colors border border-blue-100/50">
+                          <Printer className="w-7 h-7 text-blue-600" />
                         </div>
-                        <div className="flex items-center gap-1 text-blue-600 mb-3">
-                          <Phone className="w-4 h-4" />
-                          <span className="text-sm font-medium">{shop.phone}</span>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-xl text-gray-900 mb-1.5 truncate group-hover:text-blue-600 transition-colors">{shop.name}</h3>
+                          <div className="flex items-center gap-1.5 text-gray-500 mb-2">
+                            <MapPin className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                            <span className="text-sm font-medium truncate">{shop.address}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-blue-600 bg-blue-50/50 w-fit px-2 py-0.5 rounded-md">
+                            <Phone className="w-3.5 h-3.5" />
+                            <span className="text-sm font-semibold">{shop.phone}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-500" />
-                          <span className="text-sm font-medium text-gray-700">4.8</span>
+
+                      <div className="flex items-center justify-between pt-5 border-t border-gray-50 relative z-10">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100/50">
+                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                            <span className="text-sm font-bold text-amber-700">4.8</span>
+                          </div>
+                          <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100/50">
+                            OPEN
+                          </span>
                         </div>
-                        <span className="status-badge bg-green-100 text-green-800">Open</span>
+                        <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                          <ArrowRight className="w-4 h-4" />
+                        </div>
                       </div>
-                      <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20 print-card">
-                <div className="w-16 h-16 bg-gray-100 rounded-2xl mx-auto mb-6 flex items-center justify-center">
-                  <Store className="w-8 h-8 text-gray-400" />
+
+                      {/* Hover Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-transparent to-blue-50/30 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                    </Link>
+                  ))}
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">No Shops Found</h3>
-                <p className="text-gray-600 mb-8">
-                  {searchTerm ? `No shops matching "${searchTerm}"` : 'No shops available at the moment'}
+
+              ) : (
+                <div className="max-w-md mx-auto text-center py-20 px-8 bg-white/50 rounded-3xl border border-gray-100 backdrop-blur-sm animate-fadeIn">
+                  <div className="w-20 h-20 bg-gray-50 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-inner">
+                    <Store className="w-10 h-10 text-gray-300" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                    {searchTerm ? 'No Results Found' : `No Shops in ${selectedCity}`}
+                  </h3>
+                  <p className="text-gray-500 text-lg mb-8">
+                    {searchTerm
+                      ? <span>We couldn't find any results for <span className="font-semibold text-gray-800">"{searchTerm}"</span> in {selectedCity}.</span>
+                      : `We currently don't have any print shops listed in ${selectedCity}.`
+                    }
+                  </p>
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="px-6 py-2.5 bg-white border border-gray-200 hover:border-blue-300 text-gray-700 hover:text-blue-600 font-medium rounded-xl shadow-sm hover:shadow transition-all"
+                    >
+                      Clear Search
+                    </button>
+                  )}
+                </div>
+              )
+            ) : (
+              <div className="max-w-lg mx-auto text-center py-24 px-8 bg-blue-50/40 rounded-3xl border border-blue-100 border-dashed animate-pulse-slow">
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-50 to-white rounded-full mx-auto mb-6 flex items-center justify-center shadow-lg shadow-blue-900/5">
+                  <MapPin className="w-10 h-10 text-blue-500 animate-bounce" />
+                </div>
+                <h3 className="text-2xl font-bold text-blue-900 mb-3 tracking-tight">Select a City to Begin</h3>
+                <p className="text-blue-700/60 text-lg max-w-sm mx-auto">
+                  Choose your location above to discover the best local print shops in your area.
                 </p>
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="btn-secondary"
-                  >
-                    Clear Search
-                  </button>
-                )}
               </div>
             )}
           </div>
@@ -550,7 +667,7 @@ const HomePage = () => {
           </div>
         </div>
       </footer>
-    </div>
+    </div >
   )
 }
 

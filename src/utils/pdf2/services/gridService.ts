@@ -8,6 +8,9 @@
 import { PagesPerSheet, GridSheet, PageDimensions } from '../types'
 import { PagePreviewService } from './pagePreviewService'
 import { PageState } from './pageState'
+import {
+  compositeNupSheet
+} from './nupCompositor'
 
 export interface GridLayout {
   rows: number
@@ -103,12 +106,69 @@ export class GridService {
     sheetHeight: number
   ): Promise<HTMLCanvasElement> {
     const pages = this.getSheetPages(sheetNumber)
+    const isNupMode = this.pagesPerSheet > 1  // N-up mode when more than 1 page per sheet
+
+    if (isNupMode) {
+      console.log('%c════════════════════════════════════════', 'color: red; font-weight: bold')
+      console.log('%c🔲 [GRID SERVICE] Rendering N-UP Sheet ' + sheetNumber + ' (pagesPerSheet=' + this.pagesPerSheet + ')', 'color: red; font-weight: bold; background: #ffeeee; padding: 2px 6px;')
+      console.log('%c════════════════════════════════════════', 'color: red; font-weight: bold')
+    }
+
+    // For 2-up mode, use NupCompositor for proper A4 landscape layout
+    if (this.pagesPerSheet === 2) {
+      // Calculate target page dimensions based on sheet size
+      // A 2-up sheet is 2 pages side-by-side
+      const targetPageWidth = (sheetWidth - 20) / 2  // roughly half width minus margins/gap
+      const targetPageHeight = sheetHeight - 16       // full height minus margins
+
+      // Get page canvases (render at appropriate size for the target sheet)
+      // Pass isNupMode: true to disable A4 normalization for N-up pages
+      const page1Canvas = pages[0]
+        ? await this.previewService.getPreview(pages[0], targetPageWidth, targetPageHeight, undefined, isNupMode)
+        : null
+      const page2Canvas = pages[1]
+        ? await this.previewService.getPreview(pages[1], targetPageWidth, targetPageHeight, undefined, isNupMode)
+        : null
+
+      if (!page1Canvas) {
+        // No pages to render
+        const empty = document.createElement('canvas')
+        empty.width = sheetWidth
+        empty.height = sheetHeight
+        const ctx = empty.getContext('2d')
+        if (ctx) {
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(0, 0, sheetWidth, sheetHeight)
+        }
+        return empty
+      }
+
+      // Use NupCompositor for proper landscape layout
+      const compositeCanvas = compositeNupSheet(page1Canvas, page2Canvas, {
+        sheetWidth,
+        sheetHeight,
+        gap: 10,
+        margin: 8
+      })
+
+      // Cache the sheet
+      this.sheetCache.set(sheetNumber, {
+        sheetNumber,
+        pages,
+        canvas: compositeCanvas,
+        thumbnail: null
+      })
+
+      return compositeCanvas
+    }
+
+    // Default behavior for 1-up and 4-up modes
     const layout = LAYOUTS[this.pagesPerSheet]
-    
+
     const result = document.createElement('canvas')
     result.width = sheetWidth
     result.height = sheetHeight
-    
+
     const ctx = result.getContext('2d')
     if (!ctx) throw new Error('Failed to get canvas context')
 
@@ -133,8 +193,8 @@ export class GridService {
       const x = col * (cellWidth + layout.gap)
       const y = row * (cellHeight + layout.gap)
 
-      const pageCanvas = await this.previewService.getPreview(pageNum, cellWidth, cellHeight)
-      
+      const pageCanvas = await this.previewService.getPreview(pageNum, cellWidth, cellHeight, undefined, isNupMode)
+
       // Center page in cell
       const offsetX = (cellWidth - pageCanvas.width) / 2
       const offsetY = (cellHeight - pageCanvas.height) / 2
@@ -207,7 +267,7 @@ export class GridService {
   invalidateSheetsForPage(pageNumber: number): void {
     const included = this.pageState.getIncluded()
     const pageIndex = included.findIndex(p => p.pageNumber === pageNumber)
-    
+
     if (pageIndex === -1) return
 
     const sheetNumber = Math.floor(pageIndex / this.pagesPerSheet) + 1

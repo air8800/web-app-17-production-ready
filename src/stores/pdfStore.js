@@ -9,27 +9,31 @@ export const setControllerBlocking = (value) => {
 const usePDFStore = create((set, get) => ({
   pdf: null,
   totalPages: 0,
+  fastPageCount: 0, // ⚡ Fast page count from trailer jumping (available before full parse)
   pages: new Map(),
   loadedPages: new Set(),
   dirtyPages: new Set(),
   renderQueue: [],
   controllerActive: false,
   controllerRequested: false,
+  controller: null,
   thumbnails: new Map(),
-  
+
   setControllerRequested: (requested) => set({ controllerRequested: requested }),
   setControllerActive: (active) => set({ controllerActive: active }),
-  
-  setThumbnail: (pageNumber, dataUrl) => set((state) => {
+  setController: (controller) => set({ controller }),
+  setFastPageCount: (count) => set({ fastPageCount: count }),
+
+  setThumbnail: (pageNumber, thumbnailData) => set((state) => {
     const thumbnails = new Map(state.thumbnails)
-    thumbnails.set(pageNumber, dataUrl)
+    thumbnails.set(pageNumber, thumbnailData)
     return { thumbnails }
   }),
-  
+
   getThumbnail: (pageNumber) => get().thumbnails.get(pageNumber),
-  
+
   setPDF: (pdfDoc) => set({ pdf: pdfDoc, totalPages: pdfDoc?.numPages || 0 }),
-  
+
   initializePages: (totalPages) => {
     const pages = new Map()
     for (let i = 1; i <= totalPages; i++) {
@@ -58,55 +62,55 @@ const usePDFStore = create((set, get) => ({
     }
     set({ pages, totalPages })
   },
-  
+
   setPageData: (pageNumber, data) => set((state) => {
     const pages = new Map(state.pages)
     const existing = pages.get(pageNumber) || {}
     pages.set(pageNumber, { ...existing, ...data, pageNumber, loaded: true })
-    
+
     const loadedPages = new Set(state.loadedPages)
     loadedPages.add(pageNumber)
-    
+
     return { pages, loadedPages }
   }),
-  
+
   setPageEdit: (pageNumber, editHistory) => set((state) => {
     const pages = new Map(state.pages)
     const page = pages.get(pageNumber)
     if (!page) return state
-    
+
     const hasChanges = Object.keys(editHistory).some(key => {
       if (key === 'cropArea') {
         return editHistory[key] !== null
       }
       return editHistory[key] !== 0 && editHistory[key] !== 'none' && editHistory[key] !== 100
     })
-    
+
     pages.set(pageNumber, {
       ...page,
       editHistory: { ...page.editHistory, ...editHistory },
       dirty: hasChanges
     })
-    
+
     const dirtyPages = new Set(state.dirtyPages)
     if (hasChanges) {
       dirtyPages.add(pageNumber)
     } else {
       dirtyPages.delete(pageNumber)
     }
-    
+
     return { pages, dirtyPages }
   }),
-  
+
   applyEditToAllPages: (editHistory) => set((state) => {
     const pages = new Map(state.pages)
     const dirtyPages = new Set()
-    
+
     const hasChanges = Object.keys(editHistory).some(key => {
       if (key === 'cropArea') return editHistory[key] !== null
       return editHistory[key] !== 0 && editHistory[key] !== 'none' && editHistory[key] !== 100
     })
-    
+
     for (let i = 1; i <= state.totalPages; i++) {
       const page = pages.get(i)
       if (page) {
@@ -120,15 +124,15 @@ const usePDFStore = create((set, get) => ({
         }
       }
     }
-    
+
     return { pages, dirtyPages }
   }),
-  
+
   resetPageEdit: (pageNumber) => set((state) => {
     const pages = new Map(state.pages)
     const page = pages.get(pageNumber)
     if (!page) return state
-    
+
     pages.set(pageNumber, {
       ...page,
       canvas: page.originalCanvas,
@@ -145,52 +149,54 @@ const usePDFStore = create((set, get) => ({
       },
       dirty: false
     })
-    
+
     const dirtyPages = new Set(state.dirtyPages)
     dirtyPages.delete(pageNumber)
-    
+
     return { pages, dirtyPages }
   }),
-  
+
   clearDirtyPages: () => set({ dirtyPages: new Set() }),
-  
+
   addToRenderQueue: (pageNumbers) => set((state) => ({
     renderQueue: [...new Set([...state.renderQueue, ...pageNumbers])]
   })),
-  
+
   removeFromRenderQueue: (pageNumber) => set((state) => ({
     renderQueue: state.renderQueue.filter(p => p !== pageNumber)
   })),
-  
+
   getVisibleWindow: (centerPage, windowSize = 6) => {
     const state = get()
     const halfWindow = Math.floor(windowSize / 2)
     const start = Math.max(1, centerPage - halfWindow)
     const end = Math.min(state.totalPages, start + windowSize - 1)
-    
+
     const visiblePages = []
     for (let i = start; i <= end; i++) {
       visiblePages.push(i)
     }
     return visiblePages
   },
-  
+
   getPagesToLoad: (visiblePages) => {
     const state = get()
     return visiblePages.filter(pageNum => !state.loadedPages.has(pageNum))
   },
-  
+
   reset: () => {
     CONTROLLER_BLOCKING = false
     return set({
       pdf: null,
       totalPages: 0,
+      fastPageCount: 0,
       pages: new Map(),
       loadedPages: new Set(),
       dirtyPages: new Set(),
       renderQueue: [],
       controllerActive: false,
       controllerRequested: false,
+      controller: null,
       thumbnails: new Map()
     })
   }

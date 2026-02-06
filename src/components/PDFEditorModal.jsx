@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import PDFEditorPopup from './PDFEditorPopup'
 
 const PDFEditorNew = React.lazy(() => import('./PDFEditorNew'))
+import PDFEditorSheetPopup from './PDFEditorSheetPopup'
 
 const PDFEditorModal = ({
   isOpen,
@@ -16,23 +17,32 @@ const PDFEditorModal = ({
   colorMode,
   pagesPerSheet,
   selectedPages = [],
-  onPageSelect = null
+  onPageSelect = null,
+  onEditSheet = null,  // New: for N-up sheet editing
+  onSheetsGenerating = null  // Callback for sheet generation loading
 }) => {
   const [editPopupOpen, setEditPopupOpen] = useState(false)
   const [editingPage, setEditingPage] = useState(null)
   const [editingPageIndex, setEditingPageIndex] = useState(-1)
   const [editingPageNumber, setEditingPageNumber] = useState(-1)
+  const [sheetEditPopupOpen, setSheetEditPopupOpen] = useState(false)
+  const [editingSheetData, setEditingSheetData] = useState(null)
   const [pagesData, setPagesData] = useState([])
   const [controllerRef, setControllerRef] = useState(null)
   const [applyEditRef, setApplyEditRef] = useState(null)
-  
+
   const editorRef = useRef(null)
 
   const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Escape' && !editPopupOpen) {
-      onClose()
+    if (e.key === 'Escape') {
+      if (sheetEditPopupOpen) {
+        setSheetEditPopupOpen(false)
+        setEditingSheetData(null)
+      } else if (!editPopupOpen) {
+        onClose()
+      }
     }
-  }, [onClose, editPopupOpen])
+  }, [onClose, editPopupOpen, sheetEditPopupOpen])
 
   useEffect(() => {
     if (isOpen) {
@@ -46,7 +56,7 @@ const PDFEditorModal = ({
   }, [isOpen, handleKeyDown])
 
   const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget && !editPopupOpen) {
+    if (e.target === e.currentTarget && !editPopupOpen && !sheetEditPopupOpen) {
       onClose()
     }
   }
@@ -57,7 +67,7 @@ const PDFEditorModal = ({
     }
     onClose()
   }
-  
+
   const handleEditPage = useCallback((pageIndex, pageData, controller, applyEdit) => {
     console.log('PDFEditorModal.handleEditPage called:', { pageIndex, pageData, controller: !!controller, applyEdit: !!applyEdit })
     if (pageData) {
@@ -72,39 +82,50 @@ const PDFEditorModal = ({
       console.warn('PDFEditorModal: No pageData provided')
     }
   }, [])
-  
+
   const handleCloseEditPopup = useCallback(() => {
     setEditPopupOpen(false)
     setEditingPage(null)
     setEditingPageIndex(-1)
     setEditingPageNumber(-1)
   }, [])
-  
+
+  const handleEditSheet = useCallback((sheetData) => {
+    console.log('📄 PDFEditorModal: Opening Sheet Editor', sheetData)
+    setEditingSheetData(sheetData)
+    setSheetEditPopupOpen(true)
+  }, [])
+
+  const handleCloseSheetEditPopup = useCallback(() => {
+    setSheetEditPopupOpen(false)
+    setEditingSheetData(null)
+  }, [])
+
   const handleApply = useCallback((pageIndex, edits) => {
-    setPagesData(prev => prev.map((p, idx) => 
+    setPagesData(prev => prev.map((p, idx) =>
       idx === pageIndex ? {
         ...p,
-        editHistory: { 
-          rotation: edits.rotation || 0, 
-          scale: edits.scale || 100, 
-          offsetX: 0, 
-          offsetY: 0, 
-          crop: edits.crop || null 
+        editHistory: {
+          rotation: edits.rotation || 0,
+          scale: edits.scale || 100,
+          offsetX: 0,
+          offsetY: 0,
+          crop: edits.crop || null
         },
         edited: true
       } : p
     ))
   }, [])
-  
+
   const handleApplyAll = useCallback((edits) => {
     setPagesData(prev => prev.map(p => ({
       ...p,
-      editHistory: { 
-        rotation: edits.rotation || 0, 
-        scale: edits.scale || 100, 
-        offsetX: 0, 
-        offsetY: 0, 
-        crop: edits.crop || null 
+      editHistory: {
+        rotation: edits.rotation || 0,
+        scale: edits.scale || 100,
+        offsetX: 0,
+        offsetY: 0,
+        crop: edits.crop || null
       },
       edited: true
     })))
@@ -113,11 +134,12 @@ const PDFEditorModal = ({
   if (!isOpen) return null
 
   const modalContent = (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
-      <div 
+      <div
+        id="pdf-editor-modal"
         className="relative bg-white rounded-2xl shadow-2xl w-[95vw] h-[90vh] max-w-6xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
@@ -158,12 +180,14 @@ const PDFEditorModal = ({
               selectedPages={selectedPages}
               onPageSelect={onPageSelect}
               onEditPage={handleEditPage}
+              onEditSheet={handleEditSheet}
+              onSheetsGenerating={onSheetsGenerating}
               onPagesLoaded={setPagesData}
             />
           </Suspense>
         </div>
       </div>
-      
+
       <PDFEditorPopup
         isOpen={editPopupOpen}
         onClose={handleCloseEditPopup}
@@ -175,6 +199,19 @@ const PDFEditorModal = ({
         onApply={handleApply}
         onApplyAll={handleApplyAll}
         totalPages={pagesData.length || 1}
+      />
+
+      <PDFEditorSheetPopup
+        isOpen={sheetEditPopupOpen}
+        onClose={handleCloseSheetEditPopup}
+        sheetData={editingSheetData}
+        onApply={(sheetNum, edits) => {
+          // Wrap edits in array-like structure expected by PDFEditorNew via event
+          // Actually PDFEditorSheetPopup dispatches event directly, so onApply just needs to close
+          handleCloseSheetEditPopup()
+        }}
+        onApplyAll={handleApplyAll}
+        pageSize={pageSize}
       />
     </div>
   )

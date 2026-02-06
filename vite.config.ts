@@ -15,16 +15,13 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5000,
+    port: 3030,
     strictPort: true,
     host: '0.0.0.0',
     allowedHosts: true,
-    hmr: {
-      clientPort: 443,
-    },
   },
   preview: {
-    port: 5000,
+    port: 3030,
     strictPort: true,
     host: '0.0.0.0',
   }

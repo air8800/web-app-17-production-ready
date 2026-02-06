@@ -5,7 +5,8 @@ import { PDFDocument } from 'pdf-lib'
 import { SquareCheck as CheckSquare, Square, FileText, Loader, Search, X } from 'lucide-react'
 import { getPageSize, DEFAULT_PAGE_SIZE } from '../utils/pageSizes'
 import usePDFStore, { CONTROLLER_BLOCKING } from '../stores/pdfStore'
-import { USE_NEW_PDF_CONTROLLER } from '../utils/pdf2'
+import { USE_NEW_PDF_CONTROLLER, usePdfController } from '../utils/pdf2'
+import { logDetailedMemory } from '../utils/memoryProfiler'
 
 const PDFEditor = lazy(() => import('./PDFEditorNew'))
 
@@ -40,11 +41,15 @@ const CACHE_LIMITS = {
   [QUALITY_TIERS.BEST]: 12
 }
 
-const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFAULT_PAGE_SIZE, colorMode = 'BW', pagesPerSheet = 1, onEditPage, onPagesLoaded, viewMode = 'grid' }) => {
-  const { controllerRequested, controllerActive, thumbnails, totalPages: storeTotalPages } = usePDFStore()
-  
-  const shouldSkipLoading = CONTROLLER_BLOCKING || controllerRequested || controllerActive
-  
+const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFAULT_PAGE_SIZE, colorMode = 'BW', pagesPerSheet = 1, onEditPage, onEditSheet, onPagesLoaded, viewMode = 'grid' }) => {
+  const { controllerRequested, controllerActive, thumbnails, totalPages: storeTotalPages, fastPageCount } = usePDFStore()
+  const { controller } = usePdfController()
+
+  // CRITICAL: When using new PDF controller, SKIP independent loading entirely
+  // PDFEditorNew/ModernAdapter handles PDF loading - we just sync from shared store
+  // This prevents duplicate 250MB+ memory usage!
+  const shouldSkipLoading = USE_NEW_PDF_CONTROLLER || CONTROLLER_BLOCKING || controllerRequested || controllerActive
+
   const [pages, setPages] = useState([])
   const [originalPages, setOriginalPages] = useState([]) // Store original un-combined pages
   const [totalPages, setTotalPages] = useState(0)
@@ -73,21 +78,25 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
   const nupCacheRef = React.useRef(new Map())
   const abortControllerRef = React.useRef(null) // Abort ongoing loads when file changes
   const justClearedRef = React.useRef(false) // Track if we just cleared edits
-  
+  const syncTimeoutRef = React.useRef(null) // Debounce for syncing thumbnails
+
   // Refs to track current state for cleanup (prevent memory leaks)
   const originalPagesRef = React.useRef(originalPages)
   const pagesRef = React.useRef(pages)
   const qualityCacheRef = React.useRef(qualityCache)
-  
+
   // Update refs when state changes
   useEffect(() => {
     originalPagesRef.current = originalPages
   }, [originalPages])
-  
+
   useEffect(() => {
     pagesRef.current = pages
-  }, [pages])
-  
+    if (onPagesLoaded) {
+      onPagesLoaded(pages, totalPages)
+    }
+  }, [pages, totalPages, onPagesLoaded])
+
   useEffect(() => {
     qualityCacheRef.current = qualityCache
   }, [qualityCache])
@@ -96,38 +105,44 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
   useEffect(() => {
     return () => {
       const revokedURLs = new Set() // Deduplicate to avoid revoking same URL twice
-      
+
       originalPagesRef.current.forEach(page => {
         if (page._blobURL && !revokedURLs.has(page._blobURL)) {
           URL.revokeObjectURL(page._blobURL)
           revokedURLs.add(page._blobURL)
         }
       })
-      
+
       pagesRef.current.forEach(page => {
         if (page._blobURL && !revokedURLs.has(page._blobURL)) {
           URL.revokeObjectURL(page._blobURL)
           revokedURLs.add(page._blobURL)
         }
       })
-      
+
       qualityCacheRef.current.forEach(entry => {
         if (entry.page._blobURL && !revokedURLs.has(entry.page._blobURL)) {
           URL.revokeObjectURL(entry.page._blobURL)
           revokedURLs.add(entry.page._blobURL)
         }
       })
-      
+
       nupCacheRef.current.forEach(sheet => {
         if (sheet._blobURL && !revokedURLs.has(sheet._blobURL)) {
           URL.revokeObjectURL(sheet._blobURL)
           revokedURLs.add(sheet._blobURL)
         }
       })
-      
+
       nupCacheRef.current.clear()
       console.log(`🧹 Cleanup: Revoked ${revokedURLs.size} blob URLs on unmount`)
     }
+  }, [])
+
+  // Debug mounting
+  useEffect(() => {
+    console.log('🔌 [PDFPageSelector] Mounted with file:', file?.name)
+    return () => console.log('🔌 [PDFPageSelector] Unmounted')
   }, [])
 
   // Listen for PDF cleared event to force complete reset
@@ -137,10 +152,75 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
       // Just set the flag - the file change useEffect will handle the reset
       justClearedRef.current = true
     }
-    
+
     window.addEventListener('pdfCleared', handlePdfCleared)
     return () => window.removeEventListener('pdfCleared', handlePdfCleared)
   }, [])
+
+  // ⚡ FAST PAGE COUNT FROM STORE: Set totalPages, auto-select all, show loading animation
+  useEffect(() => {
+    if (fastPageCount > 0 && totalPages === 0) {
+      console.log(`⚡ [FAST COUNT] Got ${fastPageCount} pages from store`)
+      setTotalPages(fastPageCount)
+      setLoading(true) // Show loading animation
+
+      // AUTO-SELECT ALL PAGES IMMEDIATELY (CRITICAL!)
+      if (selectedPages.length === 0) {
+        const allPageNumbers = Array.from({ length: fastPageCount }, (_, i) => i + 1)
+        onPagesSelected(allPageNumbers)
+        console.log(`✅ [AUTO-SELECT] Selected all ${fastPageCount} pages`)
+      }
+    }
+  }, [fastPageCount, totalPages, selectedPages.length, onPagesSelected])
+
+  // ⚡ FAST PAGE COUNT EVENT: Set totalPages, auto-select all, show loading animation
+  useEffect(() => {
+    if (!controller) return
+
+    const unsubscribe = controller.onProgress((event) => {
+      if (event.type === 'fastPageCount' && event.totalPages) {
+        console.log(`⚡ [FAST COUNT EVENT] Got ${event.totalPages} pages`)
+        setTotalPages(event.totalPages)
+        setLoading(true) // Show loading animation
+
+        // AUTO-SELECT ALL PAGES IMMEDIATELY (CRITICAL!)
+        if (selectedPages.length === 0) {
+          const allPageNumbers = Array.from({ length: event.totalPages }, (_, i) => i + 1)
+          onPagesSelected(allPageNumbers)
+          console.log(`✅ [AUTO-SELECT] Selected all ${event.totalPages} pages`)
+        }
+      }
+
+      // Handle page count correction if fast estimate was wrong
+      if (event.type === 'pageCountCorrected' && event.data) {
+        const { oldCount, newCount } = event.data
+        console.log(`⚡ [FAST GRID] Correcting page count: ${oldCount} → ${newCount}`)
+        setTotalPages(newCount)
+
+        // Update selected pages if we Auto-selected all
+        // (If previous selection count matched old count, assume user wants all)
+        if (selectedPages.length === oldCount) {
+          const allPageNumbers = Array.from({ length: newCount }, (_, i) => i + 1)
+          onPagesSelected(allPageNumbers)
+        }
+      }
+    })
+
+    return () => unsubscribe()
+  }, [controller, pageSize, selectedPages.length, onPagesSelected])
+
+  // Sync props to state
+  useEffect(() => {
+    setCurrentPagesPerSheet(pagesPerSheet)
+  }, [pagesPerSheet])
+
+  useEffect(() => {
+    setCurrentPageSize(pageSize)
+  }, [pageSize])
+
+  useEffect(() => {
+    setCurrentColorMode(colorMode)
+  }, [colorMode])
 
   useEffect(() => {
     // Abort any ongoing loads when file changes
@@ -148,8 +228,9 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
       console.log('🛑 Aborting previous PDF load')
       abortControllerRef.current.abort()
     }
-    
+
     if (file && file.type === 'application/pdf') {
+      console.log('📂 [PDFPageSelector] File prop changed:', file.name)
       // If we just cleared, reset all state first
       if (justClearedRef.current) {
         console.log('🧹 Cleared flag detected - resetting all state before reload')
@@ -164,15 +245,20 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
         nupCacheRef.current.clear()
         justClearedRef.current = false
       }
-      
+
       // Check if this is a new file
       const isNewFile = totalPages === 0 || !pdf
-      
+
       console.log('📂 File changed:', file.name, '| isNewFile:', isNewFile, '| totalPages:', totalPages, '| pdf:', !!pdf)
-      
+
       if (isNewFile) {
         // New file - load from scratch
         console.log('🆕 Loading new file from scratch...')
+
+        // CRITICAL: Always show loading state immediately!
+        // Even if we skip loadInitialPDFPages (legacy), we want the UI to show "Loading..."
+        setLoading(true)
+
         loadInitialPDFPages()
       } else {
         // Edited file - reload the loaded pages without resetting placeholders
@@ -184,35 +270,42 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
 
   useEffect(() => {
     if (controllerActive && thumbnails.size > 0) {
-      console.log(`🔄 [PDFPageSelector] Syncing ${thumbnails.size} thumbnails from shared store`)
-      
-      const syncedPages = []
-      thumbnails.forEach((dataUrl, pageNumber) => {
-        syncedPages.push({
-          pageNumber,
-          thumbnail: dataUrl,
-          originalThumbnail: dataUrl,
-          width: 595,
-          height: 842,
-          isFittedToPage: true,
-          pageSize: pageSize,
-          quality: 'APPROPRIATE'
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current)
+
+      syncTimeoutRef.current = setTimeout(() => {
+        console.log(`🔄 [PDFPageSelector] Syncing ${thumbnails.size} thumbnails from shared store`)
+
+        const syncedPages = []
+        thumbnails.forEach((dataUrl, pageNumber) => {
+          syncedPages.push({
+            pageNumber,
+            thumbnail: dataUrl,
+            originalThumbnail: dataUrl,
+            width: 595,
+            height: 842,
+            isFittedToPage: true,
+            pageSize: pageSize,
+            quality: 'APPROPRIATE'
+          })
         })
-      })
-      
-      syncedPages.sort((a, b) => a.pageNumber - b.pageNumber)
-      
-      setPages(syncedPages)
-      setOriginalPages(syncedPages)
-      setTotalPages(syncedPages.length)
-      setLoadedPages(syncedPages.length)
-      setLoading(false)
-      setInitialBatchLoaded(true)
-      
-      if (syncedPages.length > 0 && selectedPages.length === 0) {
-        const allPageNumbers = syncedPages.map(p => p.pageNumber)
-        onPagesSelected(allPageNumbers)
-      }
+
+        syncedPages.sort((a, b) => a.pageNumber - b.pageNumber)
+
+        setPages(syncedPages)
+        setOriginalPages(syncedPages)
+        setLoadedPages(syncedPages.length)
+        setLoading(false)
+        setInitialBatchLoaded(true)
+
+        if (syncedPages.length > 0 && selectedPages.length === 0) {
+          const allPageNumbers = syncedPages.map(p => p.pageNumber)
+          onPagesSelected(allPageNumbers)
+        }
+      }, 100)
+    }
+
+    return () => {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current)
     }
   }, [controllerActive, thumbnails.size])
 
@@ -247,60 +340,78 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
       console.log('🔒 [PDFPageSelector] Controller requested/active, skipping reloadExistingPages')
       return
     }
-    
+
     try {
       setLoading(true)
       console.log('🔄 Reloading existing pages after edit...')
-      
-      const arrayBuffer = await file.arrayBuffer()
-      const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+
+      // MEMORY OPTIMIZATION: Use chunk loading instead of full arrayBuffer
+      const fileSize = file.size
+      const CHUNK_SIZE = 65536
+
+      const initialChunk = file.slice(0, Math.min(CHUNK_SIZE, fileSize))
+      const initialData = new Uint8Array(await initialChunk.arrayBuffer())
+
+      const transport = new pdfjsLib.PDFDataRangeTransport(fileSize, initialData)
+      transport.requestDataRange = async (begin, end) => {
+        const chunk = file.slice(begin, end)
+        const data = new Uint8Array(await chunk.arrayBuffer())
+        transport.onDataRange(begin, data)
+      }
+
+      const pdfDoc = await pdfjsLib.getDocument({
+        range: transport,
+        length: fileSize,
+        disableAutoFetch: true,
+        disableStream: true
+      }).promise
       const newTotalPages = pdfDoc.numPages
-      
+
       console.log(`📊 Page count: old=${totalPages}, new=${newTotalPages}`)
-      
+
       setPdf(pdfDoc)
       setTotalPages(newTotalPages)
-      
+
       // Get the page numbers that were previously loaded, but only keep valid ones
       const loadedPageNumbers = originalPages
         .map(p => p.pageNumber)
         .filter(pageNum => pageNum <= newTotalPages)
-      
+
       console.log(`🔄 Reloading ${loadedPageNumbers.length} previously loaded pages (valid in new PDF):`, loadedPageNumbers)
-      
+
       // Re-render only the pages that were already loaded AND still exist
-      const pagePromises = loadedPageNumbers.map(pageNum => 
+      const pagePromises = loadedPageNumbers.map(pageNum =>
         renderPageThumbnail(pdfDoc, pageNum, fitToPageEnabled)
       )
-      
+
       const renderedPages = await Promise.all(pagePromises)
       const validPages = renderedPages.filter(p => p !== null)
-      
+
       // Replace the originalPages with the newly rendered versions
       const sortedPages = validPages.sort((a, b) => a.pageNumber - b.pageNumber)
       setOriginalPages(sortedPages)
       setPages(sortedPages) // CRITICAL: Also update pages for UI
-      
+
       // Update loadedPages to reflect the highest loaded page
-      const maxLoadedPage = validPages.length > 0 
+      const maxLoadedPage = validPages.length > 0
         ? Math.max(...validPages.map(p => p.pageNumber))
         : 0
       setLoadedPages(maxLoadedPage)
-      
+
       // Update selected pages - remove any that are beyond the new page count
       const validSelectedPages = selectedPages.filter(pageNum => pageNum <= newTotalPages)
       if (validSelectedPages.length !== selectedPages.length) {
         console.log(`🔧 Adjusted selection: ${selectedPages.length} → ${validSelectedPages.length} pages`)
         onPagesSelected(validSelectedPages)
       }
-      
+
       console.log(`✅ Reloaded ${validPages.length} pages after edit (new total: ${newTotalPages})`)
-      
+
       // Increment reload version to trigger useEffect rebuild
       // This ensures UI reflects edits even when other dependencies unchanged
       setReloadVersion(prev => prev + 1)
       console.log('🔄 Triggered page rebuild via reloadVersion increment')
-      
+
     } catch (error) {
       console.error('❌ Error reloading pages:', error)
     } finally {
@@ -308,42 +419,152 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
     }
   }
 
+  // Sync PDF document and total pages from controller if available
+  useEffect(() => {
+    if (USE_NEW_PDF_CONTROLLER && controller?.isLoaded()) {
+      const internalPdf = controller.getInternalPdfDoc()
+      const effectiveTotalPages = internalPdf?.numPages || storeTotalPages || 0
+
+      if (effectiveTotalPages > 0 && totalPages !== effectiveTotalPages) {
+        console.log(`🔗 [PDFPageSelector] Syncing totalPages from controller: ${effectiveTotalPages}`)
+        setTotalPages(effectiveTotalPages)
+        setLoading(false)
+
+        // Auto-select ALL pages by default if none selected yet
+        if (selectedPages.length === 0) {
+          console.log(`🔗 [PDFPageSelector] Auto-selecting all ${effectiveTotalPages} pages by default`)
+          const allPageNumbers = Array.from({ length: effectiveTotalPages }, (_, i) => i + 1)
+          onPagesSelected(allPageNumbers)
+        }
+      }
+
+      if (internalPdf && !pdf) {
+        setPdf(internalPdf)
+      }
+    }
+  }, [controller, storeTotalPages, controllerActive, pdf, totalPages, selectedPages.length, onPagesSelected])
+
+  useEffect(() => {
+    if (controllerActive && thumbnails.size > 0) {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current)
+
+      syncTimeoutRef.current = setTimeout(() => {
+        const total = totalPages || storeTotalPages || thumbnails.size
+        console.log(`🔄 [PDFPageSelector] Syncing ${thumbnails.size}/${total} thumbnails from shared store`)
+
+        const syncedPages = []
+        thumbnails.forEach((thumbnailData, pageNumber) => {
+          // Extract dataUrl and dimensions from the new metadata object or fallback to string
+          const dataUrl = typeof thumbnailData === 'string' ? thumbnailData : thumbnailData.dataUrl
+          const width = thumbnailData.width || 595
+          const height = thumbnailData.height || 842
+
+          // Create a structured page object
+          const page = {
+            pageNumber,
+            thumbnail: dataUrl,
+            width,
+            height,
+            isLoaded: true,
+            isFittedToPage: false,
+            quality: QUALITY_TIERS.BEST // Controller thumbnails are usually high quality
+          }
+          syncedPages.push(page)
+        })
+
+        syncedPages.sort((a, b) => a.pageNumber - b.pageNumber)
+
+        setPages(syncedPages)
+        setOriginalPages(syncedPages)
+        setLoadedPages(syncedPages.length)
+        setLoading(false)
+        setInitialBatchLoaded(true)
+      }, 100)
+    }
+
+    return () => {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current)
+    }
+  }, [controllerActive, thumbnails.size, totalPages, storeTotalPages])
+
+  /* 
+   * Initial PDF loading using chunked transport (Memory Efficient)
+   * Only used when new controller is NOT active
+   */
   const loadInitialPDFPages = async () => {
+    // CRITICAL: If using new controller, DO NOT run this legacy loader
+    // It causes double-loading, memory spikes, and race conditions
     if (shouldSkipLoading) {
-      console.log('🔒 [PDFPageSelector] Controller requested/active, skipping independent PDF loading (waiting for shared store)')
+      console.log('🛑 [PDFPageSelector] Skipping legacy loadInitialPDFPages because controller is active')
       return
     }
-    
+
     try {
       // Create new abort controller for this load
       abortControllerRef.current = new AbortController()
-      
+
       setLoading(true)
       setError(null)
       setInitialBatchLoaded(false) // Reset flag for new file
-      
+
       const uploadStartTime = performance.now()
       console.log('⏱️ [UPLOAD START] PDF upload started')
-      
-      console.log('📄 Starting fast PDF loading...')
-      
-      // Convert to array buffer
+
+      console.log('📄 Starting fast PDF loading with CHUNK mode...')
+      // MEMORY OPTIMIZATION: Load PDF in 64KB chunks instead of entire file
       console.log('📄 Loading file:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2), 'MB', 'Type:', file.type)
-      const arrayBuffer = await file.arrayBuffer()
-      console.log('📄 File converted to array buffer, size:', (arrayBuffer.byteLength / 1024 / 1024).toFixed(2), 'MB')
-      
-      // Load PDF document
-      const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+
+      const fileSize = file.size
+      const CHUNK_SIZE = 65536 // 64KB chunks
+
+      // Read only first chunk for PDF header (saves ~95% initial memory)
+      const initialChunk = file.slice(0, Math.min(CHUNK_SIZE, fileSize))
+      const initialData = new Uint8Array(await initialChunk.arrayBuffer())
+      console.log('📄 Initial chunk loaded:', (initialData.byteLength / 1024).toFixed(1), 'KB (instead of full', (fileSize / 1024 / 1024).toFixed(2), 'MB)')
+
+      // Create range transport for on-demand chunk loading
+      const transport = new pdfjsLib.PDFDataRangeTransport(fileSize, initialData)
+
+      transport.requestDataRange = async (begin, end) => {
+        const chunk = file.slice(begin, end)
+        const data = new Uint8Array(await chunk.arrayBuffer())
+        transport.onDataRange(begin, data)
+      }
+
+      // ⏱️ PERFORMANCE: Start timing PDF.js parsing
+      const pdfParseStart = performance.now()
+      console.log('⏱️ [PDF PARSE START] Starting PDF.js document parsing...')
+
+      // Load PDF document using chunked loading (only loads what's needed)
+      const pdfDoc = await pdfjsLib.getDocument({
+        range: transport,
+        length: fileSize,
+        disableAutoFetch: true,  // Don't pre-fetch entire PDF
+        disableStream: true      // Don't stream (use range requests)
+      }).promise
+
+      // ⏱️ PERFORMANCE: Measure PDF.js parsing time
+      const pdfParseEnd = performance.now()
+      const pdfParseTime = ((pdfParseEnd - pdfParseStart) / 1000).toFixed(2)
+      console.log(`⏱️ [PDF PARSE COMPLETE] PDF.js parsing took ${pdfParseTime}s`)
+
+      console.log('📄 PDF parsed via chunk loading (memory-efficient)')
       const total = pdfDoc.numPages
-      
+
       console.log(`📄 PDF ready: ${total} pages detected`)
-      
+
+      // Memory checkpoint: After pdf.js parsing in PDFPageSelector
+      logDetailedMemory('PDFPageSelector: After pdf.js parse (chunked)', {
+        fileSize: fileSize,
+        pageProxies: total
+      })
+
       // Verify first page dimensions to confirm normalization
       const firstPage = await pdfDoc.getPage(1)
       const firstPageViewport = firstPage.getViewport({ scale: 1.0 })
       console.log(`📏 First page dimensions: ${firstPageViewport.width.toFixed(1)} x ${firstPageViewport.height.toFixed(1)} (rotation: ${firstPageViewport.rotation}°)`)
       console.log(`📄 Expected A4: 595.3 x 841.9 (portrait) or 841.9 x 595.3 (landscape)`)
-      
+
       // Check if normalization worked
       const isA4Portrait = Math.abs(firstPageViewport.width - 595.3) < 5 && Math.abs(firstPageViewport.height - 841.9) < 5
       const isA4Landscape = Math.abs(firstPageViewport.width - 841.9) < 5 && Math.abs(firstPageViewport.height - 595.3) < 5
@@ -354,19 +575,24 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
         console.warn(`   Current: ${firstPageViewport.width.toFixed(1)} x ${firstPageViewport.height.toFixed(1)}`)
         console.warn(`   Expected: 595.3 x 841.9 (portrait) OR 841.9 x 595.3 (landscape)`)
       }
-      
+
       // Set PDF info immediately to show UI faster
       setPdf(pdfDoc)
       setTotalPages(total)
-      
+
       // Select all pages by default (even if not loaded yet)
       const allPageNumbers = Array.from({ length: total }, (_, i) => i + 1)
       onPagesSelected(allPageNumbers)
-      
+
+      // ⏱️ PERFORMANCE: Grid should appear immediately after this
+      const gridShowTime = performance.now()
+      const gridDelay = ((gridShowTime - uploadStartTime) / 1000).toFixed(2)
+      console.log(`⏱️ [GRID READY] Grid should appear now (${gridDelay}s after upload start)`)
+
       // Show grid immediately - fast!
       setLoading(false)
       setInitialBatchLoaded(true)
-      
+
       // Load first batch of pages in background
       console.log(`📄 Loading first ${PAGES_PER_BATCH} pages in background...`)
       loadPageBatch(pdfDoc, 1, Math.min(PAGES_PER_BATCH, total))
@@ -378,7 +604,7 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
         .catch(err => {
           console.error('❌ Error loading initial pages:', err)
         })
-      
+
     } catch (error) {
       console.error('❌ Error loading PDF:', error)
       setError('Failed to load PDF: ' + error.message)
@@ -393,22 +619,27 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
         console.log('🛑 Load aborted, skipping batch')
         return
       }
-      
+
       console.log(`📄 Loading pages ${startPage} to ${endPage}`)
-      
+
       const pagePromises = []
       for (let i = startPage; i <= endPage; i++) {
         pagePromises.push(renderPageThumbnail(pdfDoc, i, fitToPageEnabled))
+
+        // Yield to main thread every few pages to prevent UI lag
+        if (i % 2 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 0))
+        }
       }
-      
+
       const renderedPages = await Promise.all(pagePromises)
-      
+
       // Check again after async operation
       if (abortControllerRef.current?.signal.aborted) {
         console.log('🛑 Load aborted after render, discarding pages')
         return
       }
-      
+
       let validPages = renderedPages.filter(p => p !== null)
 
       setOriginalPages(prev => {
@@ -416,7 +647,7 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
         const newPages = validPages.filter(p => !existingPageNumbers.has(p.pageNumber))
         return [...prev, ...newPages]
       })
-      
+
       // CRITICAL: Also update pages state so UI shows the loaded thumbnails
       setPages(prev => {
         const existingPageNumbers = new Set(prev.map(p => p.pageNumber))
@@ -425,9 +656,9 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
       })
 
       setLoadedPages(endPage)
-      
+
       console.log(`📄 Loaded ${validPages.length} pages successfully`)
-      
+
     } catch (error) {
       console.error('❌ Error loading page batch:', error)
       throw error
@@ -440,15 +671,15 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
       return
     }
     if (!pdf || loadedPages >= totalPages || loadingMore) return
-    
+
     try {
       setLoadingMore(true)
-      
+
       const nextStart = loadedPages + 1
       const nextEnd = Math.min(loadedPages + PAGES_PER_BATCH, totalPages)
-      
+
       await loadPageBatch(pdf, nextStart, nextEnd)
-      
+
     } catch (error) {
       console.error('❌ Error loading more pages:', error)
     } finally {
@@ -466,7 +697,7 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
       return
     }
     if (!pdf || pageNumber < 1 || pageNumber > totalPages) return
-    
+
     // Check if page is already loaded
     const pageExists = pages.find(p => p.pageNumber === pageNumber)
     if (pageExists) {
@@ -477,14 +708,14 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
       }
       return
     }
-    
+
     // Load pages up to the requested page
     try {
       setLoadingMore(true)
-      
+
       const batchStart = Math.max(1, pageNumber - 5) // Load a few pages before
       const batchEnd = Math.min(totalPages, pageNumber + 5) // And a few after
-      
+
       // Only load pages we haven't loaded yet
       const pagesToLoad = []
       for (let i = batchStart; i <= batchEnd; i++) {
@@ -492,18 +723,18 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
           pagesToLoad.push(i)
         }
       }
-      
+
       if (pagesToLoad.length > 0) {
         const pagePromises = pagesToLoad.map(pageNum => renderPageThumbnail(pdf, pageNum))
         const renderedPages = await Promise.all(pagePromises)
         const validPages = renderedPages.filter(p => p !== null)
-        
+
         setOriginalPages(prev => {
           const existingPageNumbers = new Set(prev.map(p => p.pageNumber))
           const newPages = validPages.filter(p => !existingPageNumbers.has(p.pageNumber))
-          
+
           if (newPages.length === 0) return prev
-          
+
           const result = [...prev]
           newPages.forEach(page => {
             const insertIndex = result.findIndex(p => p.pageNumber > page.pageNumber)
@@ -515,14 +746,14 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
           })
           return result
         })
-        
+
         // CRITICAL: Also update pages state for UI rendering
         setPages(prev => {
           const existingPageNumbers = new Set(prev.map(p => p.pageNumber))
           const newPages = validPages.filter(p => !existingPageNumbers.has(p.pageNumber))
-          
+
           if (newPages.length === 0) return prev
-          
+
           const result = [...prev]
           newPages.forEach(page => {
             const insertIndex = result.findIndex(p => p.pageNumber > page.pageNumber)
@@ -534,10 +765,10 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
           })
           return result
         })
-        
+
         setLoadedPages(Math.max(loadedPages, batchEnd))
       }
-      
+
       // Scroll to page after loading
       setTimeout(() => {
         const pageElement = document.getElementById(`page-${pageNumber}`)
@@ -545,7 +776,7 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
           pageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
         }
       }, 100)
-      
+
     } catch (error) {
       console.error('❌ Error jumping to page:', error)
     } finally {
@@ -619,25 +850,25 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
   const evictCacheIfNeeded = (newQuality) => {
     setQualityCache(prevCache => {
       const newCache = new Map(prevCache)
-      
+
       // Count pages by quality
       const counts = {
         [QUALITY_TIERS.ULTRA_LOW]: 0,
         [QUALITY_TIERS.APPROPRIATE]: 0,
         [QUALITY_TIERS.BEST]: 0
       }
-      
+
       const pagesByQuality = {
         [QUALITY_TIERS.ULTRA_LOW]: [],
         [QUALITY_TIERS.APPROPRIATE]: [],
         [QUALITY_TIERS.BEST]: []
       }
-      
+
       newCache.forEach((entry, pageNum) => {
         counts[entry.quality]++
         pagesByQuality[entry.quality].push({ pageNum, entry })
       })
-      
+
       // Evict oldest pages if over limit for each tier
       Object.keys(counts).forEach(qualityTier => {
         const limit = CACHE_LIMITS[qualityTier]
@@ -651,18 +882,18 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
           console.log(`🗑️ Evicted ${qualityTier} quality page ${toEvict.pageNum} from cache`)
         }
       })
-      
+
       return newCache
     })
   }
 
   const upgradePageQuality = async (pageNumber, targetQuality) => {
     if (!pdf) return
-    
+
     // Check if we already have this quality or better
     const cached = qualityCache.get(pageNumber)
     const qualityOrder = [QUALITY_TIERS.ULTRA_LOW, QUALITY_TIERS.APPROPRIATE, QUALITY_TIERS.BEST]
-    
+
     if (cached) {
       const cachedIndex = qualityOrder.indexOf(cached.quality)
       const targetIndex = qualityOrder.indexOf(targetQuality)
@@ -671,68 +902,68 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
         return cached.page
       }
     }
-    
+
     // Check if already upgrading
     if (upgradingPages.has(pageNumber)) {
       console.log(`⏳ Page ${pageNumber} already upgrading`)
       return null
     }
-    
+
     try {
       setUpgradingPages(prev => new Set(prev).add(pageNumber))
       console.log(`⬆️ Upgrading page ${pageNumber} to ${targetQuality} quality`)
-      
+
       // Render at target quality
       const upgradedPage = await renderPageThumbnail(pdf, pageNumber, fitToPageEnabled, targetQuality)
-      
+
       if (upgradedPage) {
         // Evict if needed before adding
         evictCacheIfNeeded(targetQuality)
-        
+
         // Store in cache
         setQualityCache(prev => {
           const newCache = new Map(prev)
-          
+
           // Revoke old blob URL if exists
           const oldEntry = newCache.get(pageNumber)
           if (oldEntry && oldEntry.page._blobURL) {
             URL.revokeObjectURL(oldEntry.page._blobURL)
           }
-          
+
           newCache.set(pageNumber, { quality: targetQuality, page: upgradedPage })
           return newCache
         })
-        
+
         // Update the page in originalPages
         setOriginalPages(prev => {
-          const newPages = prev.map(p => 
+          const newPages = prev.map(p =>
             p.pageNumber === pageNumber ? upgradedPage : p
           )
-          
+
           // If page doesn't exist, add it
           if (!prev.find(p => p.pageNumber === pageNumber)) {
             newPages.push(upgradedPage)
             newPages.sort((a, b) => a.pageNumber - b.pageNumber)
           }
-          
+
           return newPages
         })
-        
+
         // Update pages state for UI
         setPages(prev => {
-          const newPages = prev.map(p => 
+          const newPages = prev.map(p =>
             p.pageNumber === pageNumber ? upgradedPage : p
           )
-          
+
           // If page doesn't exist, add it
           if (!prev.find(p => p.pageNumber === pageNumber)) {
             newPages.push(upgradedPage)
             newPages.sort((a, b) => a.pageNumber - b.pageNumber)
           }
-          
+
           return newPages
         })
-        
+
         console.log(`✅ Upgraded page ${pageNumber} to ${targetQuality} quality`)
         return upgradedPage
       }
@@ -745,7 +976,7 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
         return newSet
       })
     }
-    
+
     return null
   }
 
@@ -835,25 +1066,38 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
   const applyPrintSettingsToPages = async () => {
     if (totalPages === 0) return
 
+    const applyStart = performance.now()
+    console.log('🔄 [N-UP] applyPrintSettingsToPages called:', {
+      currentPagesPerSheet,
+      totalPages,
+      originalPagesCount: originalPages.length,
+      hasPdf: !!pdf
+    })
+
+    // ⏱️ PERFORMANCE: Track placeholder creation time
+    console.log('⏱️ [PLACEHOLDER START] Creating placeholders...')
+
     if (currentPagesPerSheet === 2) {
-      // FIX: Loop through ALL pages (1 to totalPages), not just loaded originalPages
-      // This ensures we maintain all 200 sheets for a 200-page PDF
-      const sheets = []
+      // 2-UP MODE with LAZY LOADING
 
-      for (let i = 1; i <= totalPages; i += 2) {
-        const pageNumber1 = i
-        const pageNumber2 = i + 1 <= totalPages ? i + 1 : null
+      const INITIAL_BATCH = 50 // Show first 50 sheets immediately
+      const BATCH_SIZE = 50 // Load remaining in batches of 50
+      const totalSheets = Math.ceil(totalPages / 2)
 
+      console.log(`📊 [N-UP] Total sheets needed: ${totalSheets}, will show first ${Math.min(INITIAL_BATCH, totalSheets)} immediately`)
+
+      // Helper function to create a single sheet placeholder
+      const createSheetPlaceholder = async (pageNumber1, pageNumber2, loadThumbnails = false) => {
         // Check if these pages are loaded
         const page1 = originalPages.find(p => p.pageNumber === pageNumber1)
         const page2 = pageNumber2 ? originalPages.find(p => p.pageNumber === pageNumber2) : null
 
         if (pageNumber2) {
-          // Two-page sheet (pages i and i+1)
-          if (page1 && page2) {
+          // Two-page sheet
+          if (loadThumbnails && page1 && page2) {
             const cacheKey = `${pageNumber1}|${pageNumber2}|${currentPageSize}|${currentColorMode}`
             let cachedSheet = nupCacheRef.current.get(cacheKey)
-            
+
             if (!cachedSheet) {
               const canvas1 = await renderPageAtScale(pageNumber1, 2.0)
               const canvas2 = await renderPageAtScale(pageNumber2, 2.0)
@@ -874,20 +1118,15 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
                   isSheet: true,
                   containsPages: [pageNumber1, pageNumber2],
                   isLoaded: true,
+                  isPlaceholderCreated: true,
                   _blobURL: blobURL
                 }
-                
+
                 nupCacheRef.current.set(cacheKey, cachedSheet)
               }
             }
-            
-            if (cachedSheet) {
-              sheets.push(cachedSheet)
-            }
-          } else {
-            // At least one page not loaded - create placeholder sheet
-            // This preserves both page numbers even if only one is loaded
-            sheets.push({
+
+            return cachedSheet || {
               pageNumber: `${pageNumber1}-${pageNumber2}`,
               thumbnail: null,
               originalThumbnail: null,
@@ -895,15 +1134,29 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
               height: 842,
               isSheet: true,
               containsPages: [pageNumber1, pageNumber2],
-              isLoaded: false
-            })
+              isLoaded: false,
+              isPlaceholderCreated: true
+            }
+          } else {
+            // Placeholder sheet (not loaded yet)
+            return {
+              pageNumber: `${pageNumber1}-${pageNumber2}`,
+              thumbnail: null,
+              originalThumbnail: null,
+              width: 595,
+              height: 842,
+              isSheet: true,
+              containsPages: [pageNumber1, pageNumber2],
+              isLoaded: false,
+              isPlaceholderCreated: true
+            }
           }
         } else {
           // Last page (odd page count) - single page sheet
-          if (page1) {
+          if (loadThumbnails && page1) {
             const cacheKey = `${pageNumber1}|${currentPageSize}|${currentColorMode}`
             let cachedSheet = nupCacheRef.current.get(cacheKey)
-            
+
             if (!cachedSheet) {
               const canvas1 = await renderPageAtScale(pageNumber1, 2.0)
               if (canvas1) {
@@ -911,7 +1164,7 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
                   canvas1.toBlob(resolve, 'image/jpeg', 0.95)
                 })
                 const blobURL = URL.createObjectURL(blob)
-                
+
                 cachedSheet = {
                   pageNumber: pageNumber1,
                   thumbnail: blobURL,
@@ -921,19 +1174,15 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
                   isSheet: true,
                   containsPages: [pageNumber1],
                   isLoaded: true,
+                  isPlaceholderCreated: true,
                   _blobURL: blobURL
                 }
-                
+
                 nupCacheRef.current.set(cacheKey, cachedSheet)
               }
             }
-            
-            if (cachedSheet) {
-              sheets.push(cachedSheet)
-            }
-          } else {
-            // Page not loaded - create placeholder
-            sheets.push({
+
+            return cachedSheet || {
               pageNumber: pageNumber1,
               thumbnail: null,
               originalThumbnail: null,
@@ -941,40 +1190,114 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
               height: 842,
               isSheet: true,
               containsPages: [pageNumber1],
-              isLoaded: false
-            })
+              isLoaded: false,
+              isPlaceholderCreated: true
+            }
+          } else {
+            // Placeholder
+            return {
+              pageNumber: pageNumber1,
+              thumbnail: null,
+              originalThumbnail: null,
+              width: 595,
+              height: 842,
+              isSheet: true,
+              containsPages: [pageNumber1],
+              isLoaded: false,
+              isPlaceholderCreated: true
+            }
           }
         }
       }
 
-      // CRITICAL: Only update state once with ALL sheets ready
-      // This prevents flickering from showing intermediate single-page states
-      setPages(sheets)
+      // PHASE 1: Create INITIAL batch synchronously for immediate display
+      const initialSheets = []
+      const initialSheetCount = Math.min(INITIAL_BATCH, totalSheets)
+
+      for (let sheetIdx = 0; sheetIdx < initialSheetCount; sheetIdx++) {
+        const pageNumber1 = sheetIdx * 2 + 1
+        const pageNumber2 = sheetIdx * 2 + 2 <= totalPages ? sheetIdx * 2 + 2 : null
+        const sheet = await createSheetPlaceholder(pageNumber1, pageNumber2, false) // Don't load thumbnails yet
+        initialSheets.push(sheet)
+      }
+
+      // ⏱️ PERFORMANCE: Show initial batch immediately
+      const initialBatchTime = performance.now()
+      const initialBatchDuration = ((initialBatchTime - applyStart) / 1000).toFixed(3)
+      console.log(`⏱️ [PLACEHOLDER BATCH 1] Created ${initialSheets.length} initial placeholders in ${initialBatchDuration}s`)
+
+      // Update UI with initial batch - GRID APPEARS NOW
+      setPages(initialSheets)
+
+      // PHASE 2: Load remaining sheets in background using requestIdleCallback
+      if (totalSheets > INITIAL_BATCH) {
+        const remainingSheets = totalSheets - INITIAL_BATCH
+        console.log(`📊 [N-UP] Loading remaining ${remainingSheets} sheets in background...`)
+
+        const loadRemainingBatch = async (startIdx, endIdx) => {
+          const batch = []
+          for (let sheetIdx = startIdx; sheetIdx < endIdx; sheetIdx++) {
+            const pageNumber1 = sheetIdx * 2 + 1
+            const pageNumber2 = sheetIdx * 2 + 2 <= totalPages ? sheetIdx * 2 + 2 : null
+            const sheet = await createSheetPlaceholder(pageNumber1, pageNumber2, false)
+            batch.push(sheet)
+          }
+          return batch
+        }
+
+        // Use requestIdleCallback for non-blocking background loading
+        const scheduleNextBatch = (currentIdx) => {
+          if (currentIdx >= totalSheets) {
+            const finalTime = performance.now()
+            const totalDuration = ((finalTime - applyStart) / 1000).toFixed(2)
+            console.log(`⏱️ [PLACEHOLDER COMPLETE] All ${totalSheets} placeholders created in ${totalDuration}s`)
+            return
+          }
+
+          const nextBatchEnd = Math.min(currentIdx + BATCH_SIZE, totalSheets)
+
+          const callback = async (deadline) => {
+            const batchStart = performance.now()
+            const batch = await loadRemainingBatch(currentIdx, nextBatchEnd)
+            const batchEnd = performance.now()
+            const batchDuration = ((batchEnd - batchStart) / 1000).toFixed(3)
+
+            console.log(`⏱️ [PLACEHOLDER BATCH] Created sheets ${currentIdx + 1}-${nextBatchEnd} in ${batchDuration}s`)
+
+            // Append to existing pages
+            setPages(prev => [...prev, ...batch])
+
+            // Schedule next batch
+            scheduleNextBatch(nextBatchEnd)
+          }
+
+          // Use requestIdleCallback if available, otherwise setTimeout
+          if (typeof requestIdleCallback !== 'undefined') {
+            requestIdleCallback(callback, { timeout: 100 })
+          } else {
+            setTimeout(callback, 0)
+          }
+        }
+
+        // Start background loading
+        scheduleNextBatch(INITIAL_BATCH)
+      }
+
     } else {
-      // Normal 1-page mode - FIX: Create placeholders for ALL pages
-      const allPagesList = []
-      
-      for (let i = 1; i <= totalPages; i++) {
-        const loadedPage = originalPages.find(p => p.pageNumber === i)
-        
-        if (loadedPage) {
-          // Page is loaded - process it
-          const processed = await applyPrintSettingsToPage(loadedPage)
-          allPagesList.push({ ...processed, isLoaded: true })
-        } else {
-          // Page not loaded - create placeholder
-          allPagesList.push({
-            pageNumber: i,
-            thumbnail: null,
-            originalThumbnail: null,
-            width: 595,
-            height: 842,
-            isLoaded: false
-          })
+      // NORMAL 1-PAGE MODE (Filtered - No Placeholders)
+      console.log(`📊 [1-UP] Updating grid with ${originalPages.length} loaded pages (skipping placeholders)`)
+
+      const updatedPages = []
+
+      for (const page of originalPages) {
+        if (page.isLoaded || page.thumbnail) {
+          const processed = await applyPrintSettingsToPage(page)
+          updatedPages.push({ ...processed, isLoaded: true })
         }
       }
-      
-      setPages(allPagesList)
+
+      setPages(updatedPages)
+      console.log(`✅ [GRID UPDATE] Set ${updatedPages.length} pages to grid`)
     }
   }
 
@@ -1250,18 +1573,20 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div id="page-selector-header" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h3 className="text-sm sm:text-base font-medium text-gray-900">
           Selected Pages ({selectedPages.length}/{totalPages})
         </h3>
         <div className="flex flex-wrap gap-2">
           <button
+            id="page-selector-select-all"
             onClick={selectAllPages}
             className="text-xs sm:text-sm bg-blue-100 text-blue-700 px-2 sm:px-3 py-1 rounded hover:bg-blue-200 transition-colors"
           >
             Select All
           </button>
           <button
+            id="page-selector-clear"
             onClick={deselectAllPages}
             className="text-xs sm:text-sm bg-gray-100 text-gray-700 px-2 sm:px-3 py-1 rounded hover:bg-gray-200 transition-colors"
           >
@@ -1271,7 +1596,7 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
       </div>
 
       {/* Search and Navigation */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+      <div id="page-selector-search" className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
         <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
@@ -1298,23 +1623,25 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
         (() => {
           // Use originalPages (actual thumbnails) instead of pages (which may have placeholders)
           const sourcePages = currentPagesPerSheet === 1 ? originalPages : pages
-          
+
           // Apply filtering
           const singleViewFilteredPages = sourcePages.filter(page => {
             if (!searchTerm) return true
             return page.pageNumber.toString().includes(searchTerm)
           })
-          
+
           const currentPage = singleViewFilteredPages[currentPageIndex]
           // Show editor immediately when PDF metadata is loaded (don't wait for pages)
-          const hasPages = totalPages > 0
-          
+          // CRITICAL: When using new controller, we MUST render the editor even with 0 pages
+          // because the editor ITSELF is what loads the PDF!
+          const hasPages = totalPages > 0 || (USE_NEW_PDF_CONTROLLER && file)
+
           // Handle page navigation with lazy loading
           const handlePageNav = (newIndex) => {
             const clampedIndex = Math.max(0, Math.min(newIndex, singleViewFilteredPages.length - 1))
             setCurrentPageIndex(clampedIndex)
             setCropActive(false)
-            
+
             // If navigating to unloaded page, trigger load
             if (singleViewFilteredPages[clampedIndex] && !singleViewFilteredPages[clampedIndex].thumbnail && pdf) {
               const targetPageNumber = singleViewFilteredPages[clampedIndex].pageNumber
@@ -1323,7 +1650,7 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
               }
             }
           }
-          
+
           return (
             <div className="space-y-3">
               {/* PDF Editor - Direct rendering without extra boxes */}
@@ -1353,6 +1680,7 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
                       selectedPages={selectedPages}
                       onPageSelect={togglePageSelection}
                       onEditPage={onEditPage}
+                      onEditSheet={onEditSheet}
                       onPagesLoaded={onPagesLoaded}
                     />
                   </Suspense>
@@ -1367,119 +1695,155 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
         })()
       ) : (
         /* === GRID VIEW (Original) === */
-        <div className="border rounded-lg p-2 sm:p-4 bg-gray-50 h-80 overflow-y-auto">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
-            {filteredPages.map((page) => (
-            <div
-              key={page.pageNumber}
-              id={`page-${page.pageNumber}`}
-              data-page-number={page.pageNumber}
-              className={`relative border-2 rounded-lg p-1 sm:p-2 transition-all cursor-pointer ${
-                isPageSelected(page)
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
-            >
-              {/* Selection Checkbox */}
-              <div className="absolute top-1 left-1 z-10">
-                <button
-                  onClick={() => togglePageSelection(page.pageNumber)}
-                  className="bg-white rounded shadow-sm p-1"
-                >
-                  {isPageSelected(page) ? (
-                    <CheckSquare className="w-4 h-4 text-blue-600" />
-                  ) : (
-                    <Square className="w-4 h-4 text-gray-400" />
-                  )}
-                </button>
+        <div id="page-selector-grid" className="border rounded-lg p-2 sm:p-4 bg-gray-50 h-80 overflow-y-auto">
+          {(() => {
+            console.log(`🔍 [GRID RENDER] loading=${loading}, pages.length=${pages.length}, totalPages=${totalPages}`)
+            return null
+          })()}
+          {loading && pages.length === 0 ? (
+            /* ⚡ ENGAGING LOADING ANIMATION */
+            <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 rounded-lg">
+              <div className="relative mb-6">
+                {/* Outer spinning ring */}
+                <div className="w-24 h-24 border-4 border-blue-200 rounded-full animate-spin border-t-blue-600" />
+                {/* Inner pulsing circle */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-blue-500 rounded-full animate-pulse opacity-20" />
+                {/* Center icon */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                  <FileText className="w-10 h-10 text-blue-600 animate-pulse" />
+                </div>
               </div>
 
-              {/* Page Thumbnail */}
-              <div
-                className="w-full aspect-[3/4] bg-gray-100 rounded flex items-center justify-center overflow-hidden relative"
-                onClick={() => togglePageSelection(page.pageNumber)}
-              >
-                {page.thumbnail ? (
-                  <>
-                    <img
-                      src={page.thumbnail}
-                      alt={`Page ${page.pageNumber}`}
-                      className={`max-w-full max-h-full object-contain transition-opacity duration-300 ${
-                        page.quality === QUALITY_TIERS.BEST ? 'opacity-100' : 'opacity-95'
-                      }`}
-                      style={{ imageRendering: page.quality === QUALITY_TIERS.BEST ? 'crisp-edges' : 'auto' }}
-                    />
-                    {/* Loading shimmer overlay for quality upgrade */}
-                    {upgradingPages.has(page.pageNumber) && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-                    )}
-                    {/* Quality indicator badge */}
-                    {page.quality === QUALITY_TIERS.BEST && (
-                      <div className="absolute bottom-1 right-1 bg-green-500 text-white text-[8px] px-1 py-0.5 rounded font-bold">
-                        BEST
-                      </div>
-                    )}
-                    {page.quality === QUALITY_TIERS.APPROPRIATE && (
-                      <div className="absolute bottom-1 right-1 bg-blue-500 text-white text-[8px] px-1 py-0.5 rounded font-bold">
-                        OK
-                      </div>
-                    )}
-                  </>
-                ) : page.isLoaded === false ? (
-                  <div className="text-center">
-                    <Loader className="w-6 h-6 text-gray-400 mx-auto mb-1 animate-spin" />
-                    <p className="text-xs text-gray-500">Not loaded</p>
+              {/* Animated text messages */}
+              <div className="text-center space-y-2 px-4">
+                <h3 className="text-xl font-semibold text-gray-800 animate-pulse">
+                  Preparing Your Document
+                </h3>
+                <div className="h-6 overflow-hidden">
+                  <div className="animate-[slide_8s_ease-in-out_infinite]">
+                    <p className="text-sm text-gray-600 mb-6">Getting your document ready to edit...</p>
+                    <p className="text-sm text-gray-600 mb-6">Loading {totalPages > 0 ? totalPages : ''} pages...</p>
+                    <p className="text-sm text-gray-600 mb-6">Preparing pages for preview...</p>
+                    {totalPages > 100 && <p className="text-sm text-gray-600 mb-6">Large PDF detected - please wait a moment...</p>}
                   </div>
-                ) : (
-                  <div className="text-center">
-                    <FileText className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                    <p className="text-xs text-red-500">Failed to load</p>
-                  </div>
+                </div>
+                {totalPages > 0 && (
+                  <p className="text-xs text-gray-500 mt-4">
+                    {totalPages} pages detected • Processing...
+                  </p>
                 )}
               </div>
 
-              {/* Page Number */}
-              <div className="text-center mt-1 sm:mt-2">
-                <span className="text-xs font-medium text-gray-700">
-                  Page {page.pageNumber}
-                </span>
-                {page.isFittedToPage && (
-                  <span className="text-xs text-green-600 ml-1">✓</span>
-                )}
+              {/* Progress bar (indeterminate) */}
+              <div className="w-64 h-1 bg-gray-200 rounded-full overflow-hidden mt-6">
+                <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-[shimmer_2s_ease-in-out_infinite]" style={{ width: '40%' }} />
               </div>
-
-              {/* Edit Button - Bottom of card */}
-              {onEditPage && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onEditPage(page.pageNumber - 1)
-                  }}
-                  className="w-full mt-2 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors"
-                >
-                  Edit
-                </button>
-              )}
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
+              {filteredPages.map((page) => (
+                <div
+                  key={page.pageNumber}
+                  id={`page-${page.pageNumber}`}
+                  data-page-number={page.pageNumber}
+                  className={`relative border-2 rounded-lg p-1 sm:p-2 transition-all cursor-pointer ${isPageSelected(page)
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                >
+                  {/* Selection Checkbox */}
+                  <div className="absolute top-1 left-1 z-10">
+                    <button
+                      onClick={() => togglePageSelection(page.pageNumber)}
+                      className="bg-white rounded shadow-sm p-1"
+                    >
+                      {isPageSelected(page) ? (
+                        <CheckSquare className="w-4 h-4 text-blue-600" />
+                      ) : (
+                        <Square className="w-4 h-4 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
 
-        {/* Auto-load trigger (invisible) + Optional Load More Button */}
-        {loadedPages < totalPages && (
-          <div className="text-center mt-6">
-            {/* Invisible trigger for scroll-based auto-loading */}
-            <div ref={loadMoreTriggerRef} className="h-px w-full" />
-            
-            {/* Loading indicator */}
-            {loadingMore && (
-              <div className="flex items-center justify-center gap-2 text-gray-600 py-4">
-                <Loader className="w-5 h-5 animate-spin" />
-                <span>Loading more pages...</span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+                  {/* Page Thumbnail */}
+                  <div
+                    className="w-full bg-gray-100 rounded flex items-center justify-center overflow-hidden relative"
+                    style={{ aspectRatio: `${page.width || 3} / ${page.height || 4}` }}
+                    onClick={() => togglePageSelection(page.pageNumber)}
+                  >
+                    {page.thumbnail ? (
+                      <>
+                        <img
+                          src={page.thumbnail}
+                          alt={`Page ${page.pageNumber}`}
+                          className={`max-w-full max-h-full object-contain transition-opacity duration-300 ${page.quality === QUALITY_TIERS.BEST ? 'opacity-100' : 'opacity-95'
+                            }`}
+                          style={{ imageRendering: page.quality === QUALITY_TIERS.BEST ? 'crisp-edges' : 'auto' }}
+                        />
+                        {/* Loading shimmer overlay for quality upgrade */}
+                        {upgradingPages.has(page.pageNumber) && (
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                        )}
+                        {/* Quality indicator badge */}
+                        {page.quality === QUALITY_TIERS.BEST && (
+                          <div className="absolute bottom-1 right-1 bg-green-500 text-white text-[8px] px-1 py-0.5 rounded font-bold">
+                            BEST
+                          </div>
+                        )}
+                        {page.quality === QUALITY_TIERS.APPROPRIATE && (
+                          <div className="absolute bottom-1 right-1 bg-blue-500 text-white text-[8px] px-1 py-0.5 rounded font-bold">
+                            OK
+                          </div>
+                        )}
+                      </>
+                    ) : page.isPlaceholder ? (
+                      /* ⚡ FAST PLACEHOLDER: Show immediately before thumbnail loads */
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                        <div className="text-3xl font-bold text-gray-400 mb-2">{page.pageNumber}</div>
+                        <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+                        <p className="text-[10px] text-gray-400 mt-1">Loading...</p>
+                      </div>
+                    ) : page.isLoaded === false ? (
+                      <div className="text-center">
+                        {/* Smooth CSS-only pulse loader - doesn't stress low RAM */}
+                        <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-gray-200 animate-pulse" />
+                        <p className="text-xs text-gray-500">Loading...</p>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <FileText className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+                        <p className="text-xs text-red-500">Failed to load</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Page Number */}
+                  <div className="text-center mt-1 sm:mt-2">
+                    <span className="text-xs font-medium text-gray-700">
+                      Page {page.pageNumber}
+                    </span>
+                    {page.isFittedToPage && (
+                      <span className="text-xs text-green-600 ml-1">✓</span>
+                    )}
+                  </div>
+
+                  {/* Edit Button - Bottom of card */}
+                  {onEditPage && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onEditPage(page.pageNumber - 1)
+                      }}
+                      className="w-full mt-2 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Selection Summary */}
@@ -1501,7 +1865,7 @@ const PDFPageSelector = ({ file, selectedPages, onPagesSelected, pageSize = DEFA
               {showAllSelected ? 'Less' : 'More'}
             </button>
           </div>
-          {selectedPages.length !== totalPages && (
+          {selectedPages.length !== totalPages && totalPages > 0 && (
             <p className="text-blue-600 text-xs mt-2">
               Only selected pages will print
             </p>

@@ -5,7 +5,7 @@
  * Used by controller to report loading progress, export progress, etc.
  */
 
-export type ProgressEventType = 
+export type ProgressEventType =
   | 'loadStart'
   | 'loadProgress'
   | 'loadComplete'
@@ -19,6 +19,8 @@ export type ProgressEventType =
   | 'renderComplete'
   | 'operationStart'
   | 'operationComplete'
+  | 'fastPageCount'      // Fast page count extracted from PDF trailer
+  | 'pageCountCorrected' // Actual page count differs from fast estimate
 
 export interface ProgressEvent {
   type: ProgressEventType

@@ -46,6 +46,10 @@ export class EditOrchestrator {
         this.rotationService.rotate(pageNumber, delta)
         break
 
+      case 'setRotation':
+        this.rotationService.setRotation(pageNumber, command.value as any)
+        break
+
       case 'scale':
         this.scaleService.setScale(pageNumber, command.value as number)
         break

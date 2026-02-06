@@ -1,4 +1,5 @@
 import { PDFDocument, PageSizes } from 'pdf-lib';
+import { isOPFSSupported, saveToOPFS } from '../opfs';
 
 export interface NormalizeOptions {
   onProgress?: (progress: number, message: string) => void;
@@ -16,7 +17,7 @@ export interface NormalizeResult {
 const A4_PORTRAIT = PageSizes.A4;
 const A4_LANDSCAPE = [PageSizes.A4[1], PageSizes.A4[0]] as [number, number];
 
-const A4_TOLERANCE = 5;
+const A4_TOLERANCE = 20;
 
 function isA4Size(width: number, height: number, tolerance: number = A4_TOLERANCE): boolean {
   const isPortrait =
@@ -44,6 +45,61 @@ function getA4Dimensions(orientation: 'portrait' | 'landscape'): [number, number
   return orientation === 'portrait' ? A4_PORTRAIT : A4_LANDSCAPE;
 }
 
+/**
+ * Lightweight check using pdf.js chunked loading to detect if PDF is already A4
+ * This avoids loading the entire file into memory before checking
+ */
+async function checkIfA4WithPdfJs(file: File, tolerance: number): Promise<{ allA4: boolean; pageCount: number }> {
+  // Dynamic import to avoid circular dependencies
+  const pdfjsLib = await import('pdfjs-dist');
+
+  const fileSize = file.size;
+  const CHUNK_SIZE = 65536; // 64KB chunks
+
+  // Read only first chunk for header
+  const initialChunk = file.slice(0, Math.min(CHUNK_SIZE, fileSize));
+  const initialData = new Uint8Array(await initialChunk.arrayBuffer());
+
+  // Create range transport for chunked loading
+  const transport = new pdfjsLib.PDFDataRangeTransport(fileSize, initialData);
+
+  transport.requestDataRange = async (begin: number, end: number) => {
+    const chunk = file.slice(begin, end);
+    const data = new Uint8Array(await chunk.arrayBuffer());
+    transport.onDataRange(begin, data);
+  };
+
+  try {
+    const pdf = await pdfjsLib.getDocument({
+      range: transport,
+      length: fileSize,
+      disableAutoFetch: true,
+      disableStream: true
+    }).promise;
+
+    const pageCount = pdf.numPages;
+
+    // Check first few pages (most PDFs have consistent dimensions)
+    const pagesToCheck = Math.min(3, pageCount);
+
+    for (let i = 1; i <= pagesToCheck; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 1 });
+
+      if (!isA4Size(viewport.width, viewport.height, tolerance)) {
+        await pdf.destroy();
+        return { allA4: false, pageCount };
+      }
+    }
+
+    await pdf.destroy();
+    return { allA4: true, pageCount };
+  } catch (error) {
+    console.warn('⚠️ pdf.js pre-check failed, falling back to full load:', error);
+    return { allA4: false, pageCount: 0 };
+  }
+}
+
 export async function normalizePdfToA4(
   file: File,
   options: NormalizeOptions = {}
@@ -51,36 +107,38 @@ export async function normalizePdfToA4(
   const { onProgress, skipIfA4 = true, tolerance = A4_TOLERANCE } = options;
 
   try {
-    onProgress?.(0, 'Loading PDF...');
+    onProgress?.(0, 'Checking PDF dimensions...');
 
-    const arrayBuffer = await file.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(arrayBuffer);
-
-    const pageCount = pdfDoc.getPageCount();
-    const orientations: ('portrait' | 'landscape')[] = [];
-
+    // OPTIMIZATION: Use pdf.js (chunked) to check if PDF is already A4 BEFORE loading into pdf-lib
+    // This avoids the 250MB memory spike for files that don't need normalization
     if (skipIfA4) {
-      let allPagesA4 = true;
-      for (let i = 0; i < pageCount; i++) {
-        const page = pdfDoc.getPage(i);
-        const { width, height } = page.getSize();
-        if (!isA4Size(width, height, tolerance)) {
-          allPagesA4 = false;
-          break;
-        }
-      }
-
-      if (allPagesA4) {
-        console.log('ℹ️ PDF already A4-sized, skipping normalization');
+      const isAlreadyA4 = await checkIfA4WithPdfJs(file, tolerance);
+      if (isAlreadyA4.allA4) {
+        console.log('ℹ️ PDF already A4-sized (detected via lightweight check), skipping normalization');
         onProgress?.(100, 'PDF already A4-sized');
         return {
           normalizedFile: file,
           wasNormalized: false,
-          pageCount,
-          orientations: Array(pageCount).fill('portrait'),
+          pageCount: isAlreadyA4.pageCount,
+          orientations: Array(isAlreadyA4.pageCount).fill('portrait'),
         };
       }
+      console.log(`📐 PDF needs normalization (${isAlreadyA4.pageCount} pages)`);
     }
+
+    onProgress?.(5, 'Loading PDF for normalization...');
+
+    let arrayBuffer: ArrayBuffer | null = await file.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+
+    // CRITICAL (Memory): Release input buffer immediately after parsing
+    arrayBuffer = null;
+
+    const pageCount = pdfDoc.getPageCount();
+    const orientations: ('portrait' | 'landscape')[] = [];
+
+    // NOTE: A4 check already done with pdf.js (lightweight chunked loading)
+    // If we reach here, the PDF needs normalization
 
     onProgress?.(10, `Normalizing ${pageCount} pages to A4...`);
 
@@ -91,10 +149,10 @@ export async function normalizePdfToA4(
 
       const rotation = page.getRotation().angle;
       const isRotated90or270 = rotation === 90 || rotation === 270;
-      
+
       const cropBox = page.getCropBox();
       const mediaBox = page.getMediaBox();
-      
+
       const box = cropBox || mediaBox;
       const boxX = box.x;
       const boxY = box.y;
@@ -110,7 +168,7 @@ export async function normalizePdfToA4(
       const orientation = detectOptimalOrientation(visualWidth, visualHeight);
       orientations.push(orientation);
 
-      console.log(`📄 Page ${i + 1}: Original size ${boxWidth.toFixed(1)} x ${boxHeight.toFixed(1)} (visual: ${visualWidth.toFixed(1)} x ${visualHeight.toFixed(1)}) → ${orientation}`);
+      // Removed verbose per-page logging for cleaner console
 
       const [a4VisualWidth, a4VisualHeight] = getA4Dimensions(orientation);
 
@@ -120,7 +178,7 @@ export async function normalizePdfToA4(
       const scaleX = a4UnrotatedWidth / unrotatedWidth;
       const scaleY = a4UnrotatedHeight / unrotatedHeight;
       const baseScale = Math.min(scaleX, scaleY);
-      
+
       const scale = baseScale * 0.95;
 
       const scaledUnrotatedWidth = unrotatedWidth * scale;
@@ -129,8 +187,7 @@ export async function normalizePdfToA4(
       const centeringOffsetX = (a4UnrotatedWidth - scaledUnrotatedWidth) / 2;
       const centeringOffsetY = (a4UnrotatedHeight - scaledUnrotatedHeight) / 2;
 
-      console.log(`  📐 Scale: ${scale.toFixed(3)} (base: ${baseScale.toFixed(3)} × 0.95 = 5% margin), Target: ${a4UnrotatedWidth.toFixed(1)} x ${a4UnrotatedHeight.toFixed(1)}`);
-      console.log(`  📦 Content size after scale: ${scaledUnrotatedWidth.toFixed(1)} x ${scaledUnrotatedHeight.toFixed(1)}, Margins: ${centeringOffsetX.toFixed(1)}, ${centeringOffsetY.toFixed(1)}`);
+      // Scaling applied silently for performance
 
       page.translateContent(-boxX, -boxY);
 
@@ -140,10 +197,10 @@ export async function normalizePdfToA4(
 
       page.setMediaBox(0, 0, a4UnrotatedWidth, a4UnrotatedHeight);
       page.setCropBox(0, 0, a4UnrotatedWidth, a4UnrotatedHeight);
-      
-      console.log(`  ✅ Page ${i + 1} normalized to A4 ${orientation} (${a4UnrotatedWidth.toFixed(1)} x ${a4UnrotatedHeight.toFixed(1)})`);
 
-      
+      // Page normalized (silent)
+
+
       try {
         page.setTrimBox(0, 0, a4UnrotatedWidth, a4UnrotatedHeight);
         page.setBleedBox(0, 0, a4UnrotatedWidth, a4UnrotatedHeight);
@@ -164,18 +221,32 @@ export async function normalizePdfToA4(
 
     onProgress?.(90, 'Finalizing PDF...');
 
-    const normalizedBytes = await pdfDoc.save({
+    let normalizedBytes: Uint8Array | null = await pdfDoc.save({
       useObjectStreams: true,
     });
 
-    const normalizedBlob = new Blob([new Uint8Array(normalizedBytes)], { type: 'application/pdf' });
     const timestamp = Date.now();
     const originalName = file.name.replace(/\.pdf$/i, '');
     const normalizedFileName = `${originalName}_normalized_${timestamp}.pdf`;
-    const normalizedFile = new File([normalizedBlob], normalizedFileName, {
-      type: 'application/pdf',
-      lastModified: timestamp,
-    });
+
+    let normalizedFile: File;
+
+    // OPTIMIZATION: Use OPFS (disk storage) instead of RAM for large files
+    // This prevents the 900MB RAM spike on mobile devices
+    if (await isOPFSSupported()) {
+      console.log('💾 [OPFS] Saving normalized PDF to disk (saves ~250MB RAM)...');
+      // saveToOPFS returns a File object that is DISK-BACKED (not in RAM)
+      // DO NOT wrap it in new File() - that would copy it back to RAM!
+      normalizedFile = await saveToOPFS(normalizedFileName, normalizedBytes);
+      console.log('✅ [OPFS] Using disk-backed file directly (0 MB RAM)');
+    } else {
+      console.log('⚠️ OPFS not supported, using RAM-based Blob (higher memory usage)');
+      const normalizedBlob = new Blob([new Uint8Array(normalizedBytes)], { type: 'application/pdf' });
+      normalizedFile = new File([normalizedBlob], normalizedFileName, {
+        type: 'application/pdf',
+        lastModified: timestamp,
+      });
+    }
 
     const originalSize = (file.size / 1024 / 1024).toFixed(2);
     const newSize = (normalizedFile.size / 1024 / 1024).toFixed(2);
@@ -184,6 +255,13 @@ export async function normalizePdfToA4(
     console.log(`📦 File size: ${originalSize} MB → ${newSize} MB`);
 
     onProgress?.(100, 'Normalization complete!');
+
+    // CRITICAL: Help garbage collection by nullifying large objects
+    // This can free 250MB+ of memory for large PDFs
+    console.log('🧹 Cleaning up normalization memory...');
+    // @ts-ignore - intentionally clearing for GC
+    pdfDoc.context = null;
+    normalizedBytes = null;
 
     return {
       normalizedFile,

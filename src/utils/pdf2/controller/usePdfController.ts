@@ -9,7 +9,7 @@
  * - true: Uses ModernAdapter with new pdf2 services
  */
 
-import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
+import { useEffect, useCallback, useState, useMemo } from 'react'
 import {
   PdfController,
   EditCommand,
@@ -17,6 +17,7 @@ import {
 } from '../types'
 import { LegacyAdapter, LegacyPdfEditorRef } from './legacyAdapter'
 import { ModernAdapter, ModernAdapterOptions } from './modernAdapter'
+import usePDFStore from '../../../stores/pdfStore'
 
 /**
  * Feature flag - set to true to use new implementation
@@ -32,10 +33,10 @@ export interface UsePdfControllerResult {
   isReady: boolean
   isLoading: boolean
   error: string | null
-  
+
   // For legacy mode: function to set the PDFEditor ref
   setLegacyRef: (ref: LegacyPdfEditorRef | null) => void
-  
+
   // Convenience methods
   loadDocument: (file: File) => Promise<void>
   applyEdit: (pageNum: number, edit: EditCommand) => void
@@ -48,49 +49,54 @@ export function usePdfController(
   options: UsePdfControllerOptions = {}
 ): UsePdfControllerResult {
   const useNew = options.useNewImplementation ?? USE_NEW_PDF_CONTROLLER
-  
-  // Initialize adapter synchronously using useMemo to ensure it's available immediately
-  const modernAdapterRef = useRef<ModernAdapter | null>(null)
-  const legacyAdapterRef = useRef<LegacyAdapter | null>(null)
-  
-  // Create adapter immediately (not in useEffect) so it's available on first render
-  useMemo(() => {
-    if (useNew && !modernAdapterRef.current) {
-      modernAdapterRef.current = new ModernAdapter(options)
-      console.log('[usePdfController] ModernAdapter created synchronously')
-    } else if (!useNew && !legacyAdapterRef.current) {
-      legacyAdapterRef.current = new LegacyAdapter()
-    }
-  }, [useNew])
-  
-  const [isReady, setIsReady] = useState(false)
+
+  const { controller: sharedController, setController, setControllerActive } = usePDFStore()
+
+  // Use shared controller if available, otherwise use local ref (for legacy or internal management)
+  const [isReady, setIsReady] = useState(sharedController?.isLoaded() || false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      modernAdapterRef.current?.destroy()
-      legacyAdapterRef.current?.destroy()
+  // Initialize adapter synchronously using useMemo to ensure it's available immediately
+  // FIXED: Only create if no shared controller exists
+  useMemo(() => {
+    if (useNew && !sharedController) {
+      const adapter = new ModernAdapter(options)
+      setController(adapter)
+      console.log('[usePdfController] ModernAdapter created and shared via store')
+    } else if (!useNew && !sharedController) {
+      const adapter = new LegacyAdapter()
+      setController(adapter)
     }
-  }, [])
+  }, [useNew, sharedController])
+
+  const controller = sharedController as PdfController | null
+
+  // No auto-destroy on unmount for shared controller
+  // The store survives component unmounts
+  useEffect(() => {
+    if (controller && isReady) {
+      setControllerActive(true)
+    }
+  }, [controller, isReady, setControllerActive])
 
   // Get current controller
   const getController = useCallback((): PdfController | null => {
-    return useNew ? modernAdapterRef.current : legacyAdapterRef.current
-  }, [useNew])
+    return controller
+  }, [controller])
 
   // Set legacy ref (for connecting to PDFEditor component)
   const setLegacyRef = useCallback((ref: LegacyPdfEditorRef | null) => {
-    if (legacyAdapterRef.current) {
+    const currentController = getController()
+    if (currentController && isLegacyController(currentController)) {
       if (ref) {
-        legacyAdapterRef.current.setRef(ref)
+        currentController.setRef(ref)
         setIsReady(true)
       } else {
         setIsReady(false)
       }
     }
-  }, [])
+  }, [getController])
 
   // Load document
   const loadDocument = useCallback(async (file: File): Promise<void> => {
@@ -126,7 +132,7 @@ export function usePdfController(
   const exportRecipe = useCallback((): Recipe | null => {
     const controller = getController()
     if (!controller) return null
-    
+
     try {
       return controller.exportRecipe()
     } catch (e) {

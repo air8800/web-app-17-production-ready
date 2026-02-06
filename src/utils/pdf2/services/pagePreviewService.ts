@@ -15,6 +15,7 @@ export class PagePreviewService {
   private metadataStore: MetadataStore
   private progressBus: ProgressBus
   private previewCache: Map<string, HTMLCanvasElement> = new Map()
+  private rawPreviewCache: Map<string, HTMLCanvasElement> = new Map()
   private maxCacheSize: number = 20
 
   constructor(
@@ -33,38 +34,38 @@ export class PagePreviewService {
   async getPreview(
     pageNumber: number,
     containerWidth: number,
-    containerHeight: number
+    containerHeight: number,
+    signal?: AbortSignal,
+    isNupMode: boolean = false  // When true, disable A4 normalization
   ): Promise<HTMLCanvasElement> {
-    console.log(`🔍 [PagePreviewService] getPreview(${pageNumber}, ${containerWidth}x${containerHeight}) START`)
     const transforms = this.metadataStore.getTransforms(pageNumber)
-    const cacheKey = this.getCacheKey(pageNumber, transforms, containerWidth, containerHeight)
+    const cacheKey = this.getCacheKey(pageNumber, transforms, containerWidth, containerHeight) + (isNupMode ? '_nup' : '')
 
     // Check cache
     if (this.previewCache.has(cacheKey)) {
-      const cached = this.previewCache.get(cacheKey)!
-      console.log(`🔍 [PagePreviewService] getPreview(${pageNumber}) - CACHE HIT, size: ${cached.width}x${cached.height}`)
-      return cached
+      return this.previewCache.get(cacheKey)!
     }
 
     this.progressBus.emitRenderStart(pageNumber)
 
     // Render base page
-    console.log(`🔍 [PagePreviewService] getPreview(${pageNumber}) - Rendering base page...`)
     const baseCanvas = document.createElement('canvas')
     const scale = this.calculateScale(pageNumber, containerWidth, containerHeight)
-    console.log(`🔍 [PagePreviewService] getPreview(${pageNumber}) - Scale: ${scale}`)
-    await this.documentLoader.renderPageToCanvas(pageNumber, baseCanvas, scale)
-    console.log(`🔍 [PagePreviewService] getPreview(${pageNumber}) - Base canvas: ${baseCanvas.width}x${baseCanvas.height}`)
+
+    // N-up mode: disable A4 normalization
+    const applyA4Normalization = !isNupMode
+    if (isNupMode) {
+      console.log('%c🔲 [N-UP PREVIEW] Page ' + pageNumber + ' - A4 Normalization: DISABLED', 'color: red; font-weight: bold; background: #ffeeee; padding: 2px 6px;')
+    }
+    await this.documentLoader.renderPageToCanvas(pageNumber, baseCanvas, scale, signal, applyA4Normalization)
 
     // Apply transforms
     const transformedCanvas = this.applyTransforms(baseCanvas, transforms)
-    console.log(`🔍 [PagePreviewService] getPreview(${pageNumber}) - Transformed canvas: ${transformedCanvas.width}x${transformedCanvas.height}`)
 
     // Cache result
     this.addToCache(cacheKey, transformedCanvas)
 
     this.progressBus.emitRenderComplete(pageNumber)
-    console.log(`🔍 [PagePreviewService] getPreview(${pageNumber}) COMPLETE`)
     return transformedCanvas
   }
 
@@ -214,6 +215,15 @@ export class PagePreviewService {
       }
     })
     keysToDelete.forEach(key => this.previewCache.delete(key))
+
+    // Also clear raw preview cache for this page
+    const rawKeysToDelete: string[] = []
+    this.rawPreviewCache.forEach((_, key) => {
+      if (key.startsWith(`raw_${pageNumber}_`)) {
+        rawKeysToDelete.push(key)
+      }
+    })
+    rawKeysToDelete.forEach(key => this.rawPreviewCache.delete(key))
   }
 
   /**
@@ -221,17 +231,54 @@ export class PagePreviewService {
    */
   clearCache(): void {
     this.previewCache.clear()
+    this.rawPreviewCache.clear()
   }
 
   /**
-   * Get raw page canvas without transforms
+   * Get raw page canvas without transforms (CACHED)
+   * First call renders, subsequent calls return instantly.
    */
   async getRawPreview(
     pageNumber: number,
-    scale: number = 1
+    scale: number = 1,
+    signal?: AbortSignal,
+    isNupMode: boolean = false  // When true, disable A4 normalization
   ): Promise<HTMLCanvasElement> {
+    // Cache key includes page number and scale
+    const cacheKey = `raw_${pageNumber}_${scale.toFixed(2)}` + (isNupMode ? '_nup' : '')
+
+    // Check raw preview cache first
+    if (this.rawPreviewCache.has(cacheKey)) {
+      console.log(`⚡ [getRawPreview] Cache HIT: page ${pageNumber} @ ${scale}`)
+      return this.rawPreviewCache.get(cacheKey)!
+    }
+
+    console.log(`🖼️ [getRawPreview] Cache MISS: Rendering page ${pageNumber} @ ${scale}`)
     const canvas = document.createElement('canvas')
-    await this.documentLoader.renderPageToCanvas(pageNumber, canvas, scale)
+
+    // N-up mode: disable A4 normalization
+    const applyA4Normalization = !isNupMode
+    if (isNupMode) {
+      console.log('%c🔲 [N-UP RAW PREVIEW] Page ' + pageNumber + ' - A4 Normalization: DISABLED', 'color: red; font-weight: bold; background: #ffeeee; padding: 2px 6px;')
+    }
+    await this.documentLoader.renderPageToCanvas(pageNumber, canvas, scale, signal, applyA4Normalization)
+
+    // If cancelled, don't cache empty/partial canvas
+    if (signal?.aborted) {
+      throw new Error('Aborted')
+    }
+
+    // Store in raw preview cache
+    this.rawPreviewCache.set(cacheKey, canvas)
+
+    // Evict old entries if cache grows too large
+    if (this.rawPreviewCache.size > this.maxCacheSize * 2) {
+      const keys = Array.from(this.rawPreviewCache.keys())
+      for (let i = 0; i < keys.length - this.maxCacheSize; i++) {
+        this.rawPreviewCache.delete(keys[i])
+      }
+    }
+
     return canvas
   }
 
@@ -250,91 +297,84 @@ export class PagePreviewService {
     containerHeight: number,
     transforms?: PageTransforms
   ): Promise<HTMLCanvasElement> {
-    console.log(`📄 [PagePreviewService] getPreviewWithFixedPage(${pageNumber}) START`)
-    
+
     // Get transforms (either passed or from store)
     const pageTransforms = transforms || this.metadataStore.getTransforms(pageNumber)
-    
+
     // Get original page dimensions
     const pageDimensions = this.documentLoader.getPageDimensions(pageNumber)
     if (!pageDimensions) {
       throw new Error(`Cannot get dimensions for page ${pageNumber}`)
     }
-    
+
+    // Normalize rotation to 0-359 range
+    const rotation = ((pageTransforms.rotation % 360) + 360) % 360
+    const isRotated90or270 = rotation === 90 || rotation === 270
+
+    // Calculate the VISUAL page dimensions (swapped if rotated)
+    const visualPageWidth = isRotated90or270 ? pageDimensions.height : pageDimensions.width
+    const visualPageHeight = isRotated90or270 ? pageDimensions.width : pageDimensions.height
+
     // Calculate render scale to fit container
     const renderScale = Math.min(
-      containerWidth / pageDimensions.width,
-      containerHeight / pageDimensions.height,
+      containerWidth / visualPageWidth,
+      containerHeight / visualPageHeight,
       2 // Cap at 2x for performance
     )
-    
-    // Create the FIXED page canvas (this is the "paper")
+
+    // Create the page canvas matching visual orientation
     const pageCanvas = document.createElement('canvas')
-    pageCanvas.width = Math.round(pageDimensions.width * renderScale)
-    pageCanvas.height = Math.round(pageDimensions.height * renderScale)
-    
+    pageCanvas.width = Math.round(visualPageWidth * renderScale)
+    pageCanvas.height = Math.round(visualPageHeight * renderScale)
+
     const ctx = pageCanvas.getContext('2d')
     if (!ctx) {
       throw new Error('Cannot get 2D context')
     }
-    
+
     // Fill with white background (the paper)
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
-    
+
     // Render the base page content
     const contentCanvas = document.createElement('canvas')
     await this.documentLoader.renderPageToCanvas(pageNumber, contentCanvas, renderScale)
-    
+
     // Now draw the content with transforms applied
     // Order: CROP → ROTATE → SCALE → OFFSET
-    
+
     ctx.save()
-    
+
     // Move to center of page (for rotation/scale around center)
     ctx.translate(pageCanvas.width / 2, pageCanvas.height / 2)
-    
+
     // Apply rotation (around center)
-    if (pageTransforms.rotation !== 0) {
-      ctx.rotate((pageTransforms.rotation * Math.PI) / 180)
+    const radians = (rotation * Math.PI) / 180
+    if (rotation !== 0) {
+      ctx.rotate(radians)
     }
-    
-    // Calculate auto-fit scale for rotated content
-    // When rotation is 90° or 270°, dimensions are swapped, so we need to scale down to fit
-    // This applies regardless of user scale - auto-fit ensures content fits in the paper
+
+    // Since we rotated the canvas to match orientation, we don't need auto-fit scale
+    // of the content relative to the paper (it fits by default)
     let autoFitScale = 1.0
-    
-    // Normalize rotation to 0-359 range (handle negative rotations)
-    const rotation = ((pageTransforms.rotation % 360) + 360) % 360
-    if (rotation === 90 || rotation === 270) {
-      // Dimensions are swapped after rotation
-      const contentWidth = contentCanvas.width
-      const contentHeight = contentCanvas.height
-      const pageWidth = pageCanvas.width
-      const pageHeight = pageCanvas.height
-      
-      // After rotation, content's width becomes page's height dimension and vice versa
-      // So we need to fit: contentWidth into pageHeight, contentHeight into pageWidth
-      autoFitScale = Math.min(
-        pageWidth / contentHeight,
-        pageHeight / contentWidth,
-        1.0 // Never scale up, only down to fit
-      )
-      console.log(`📐 [PagePreviewService] Auto-fit scale for ${rotation}° rotation: ${autoFitScale.toFixed(3)}`)
-    }
-    
-    // Apply content scale (user scale * auto-fit scale)
-    const userScale = pageTransforms.scale / 100
-    const finalScale = userScale * autoFitScale
-    ctx.scale(finalScale, finalScale)
-    
-    if (autoFitScale !== 1.0) {
-      console.log(`📐 [PagePreviewService] Final scale: ${finalScale.toFixed(3)} (user: ${userScale}, auto-fit: ${autoFitScale.toFixed(3)})`)
-    }
-    
+
     // Apply offset
-    ctx.translate(pageTransforms.offsetX || 0, pageTransforms.offsetY || 0)
-    
+    // Include normalization if present
+    const metadata = this.metadataStore.get(pageNumber)
+    const norm = metadata?.normalization || { scale: 1, offsetX: 0, offsetY: 0 }
+
+    // Total scale includes user scale, auto-fit, and A4 normalization
+    const userScale = pageTransforms.scale / 100
+    const finalScale = (userScale * autoFitScale) * norm.scale
+    ctx.scale(finalScale, finalScale)
+
+    // Total offset includes user offset and normalization offset
+    // Normalization offset is in points, need to scale to canvas
+    const totalOffX = (pageTransforms.offsetX || 0) + (norm.offsetX || 0)
+    const totalOffY = (pageTransforms.offsetY || 0) + (norm.offsetY || 0)
+
+    ctx.translate(totalOffX, totalOffY)
+
     // Determine source region (apply crop if present)
     let sx = 0, sy = 0, sw = contentCanvas.width, sh = contentCanvas.height
     if (pageTransforms.crop) {
@@ -342,26 +382,25 @@ export class PagePreviewService {
       sy = pageTransforms.crop.y * contentCanvas.height
       sw = pageTransforms.crop.width * contentCanvas.width
       sh = pageTransforms.crop.height * contentCanvas.height
-      
-      // Debug logging
-      console.log(`🖼️ [PagePreviewService] Rendering with crop at rotation=${pageTransforms.rotation}°:`)
-      console.log(`  Crop: {x:${pageTransforms.crop.x.toFixed(3)}, y:${pageTransforms.crop.y.toFixed(3)}, w:${pageTransforms.crop.width.toFixed(3)}, h:${pageTransforms.crop.height.toFixed(3)}} (${pageTransforms.crop.width > pageTransforms.crop.height ? 'HORIZONTAL' : 'VERTICAL'})`)
-      console.log(`  Source region: sx=${sx.toFixed(0)}, sy=${sy.toFixed(0)}, sw=${sw.toFixed(0)}, sh=${sh.toFixed(0)} (${sw > sh ? 'WIDE' : 'TALL'})`)
     }
-    
+
     // Draw content centered (accounting for crop)
     const drawWidth = pageTransforms.crop ? sw : contentCanvas.width
     const drawHeight = pageTransforms.crop ? sh : contentCanvas.height
-    
+
     ctx.drawImage(
       contentCanvas,
       sx, sy, sw, sh,  // Source region
       -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight  // Destination (centered)
     )
-    
+
     ctx.restore()
-    
-    console.log(`📄 [PagePreviewService] getPreviewWithFixedPage(${pageNumber}) COMPLETE - ${pageCanvas.width}x${pageCanvas.height}`)
     return pageCanvas
+  }
+  /**
+   * Get page dimensions
+   */
+  getPageDimensions(pageNumber: number) {
+    return this.documentLoader.getPageDimensions(pageNumber)
   }
 }

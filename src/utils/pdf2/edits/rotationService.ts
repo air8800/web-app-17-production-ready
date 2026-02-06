@@ -34,11 +34,11 @@ export class RotationService {
    */
   setRotation(pageNumber: number, rotation: RotationDegrees): void {
     const currentRotation = this.store.getRotation(pageNumber)
-    
+
     if (currentRotation === rotation) return
 
-    // Remap crop if exists
-    this.remapCropForRotationChange(pageNumber, currentRotation, rotation)
+    // Crop is invariant (relative to 0° source), so NO remapping needed.
+    // this.remapCropForRotationChange(pageNumber, currentRotation, rotation)
 
     this.store.setRotation(pageNumber, rotation)
   }
@@ -51,8 +51,8 @@ export class RotationService {
     const currentRotation = this.store.getRotation(pageNumber)
     const newRotation = this.calculateNewRotation(currentRotation, delta)
 
-    // Remap crop if exists
-    this.remapCropForRotationChange(pageNumber, currentRotation, newRotation)
+    // Crop is invariant (relative to 0° source), so NO remapping needed.
+    // this.remapCropForRotationChange(pageNumber, currentRotation, newRotation)
 
     this.store.setRotation(pageNumber, newRotation)
     return newRotation
@@ -84,11 +84,11 @@ export class RotationService {
    */
   resetRotation(pageNumber: number): void {
     const currentRotation = this.store.getRotation(pageNumber)
-    
+
     if (currentRotation === 0) return
 
-    // Remap crop back to original orientation
-    this.remapCropForRotationChange(pageNumber, currentRotation, 0)
+    // Crop is invariant, no remapping needed.
+    // this.remapCropForRotationChange(pageNumber, currentRotation, 0)
 
     this.store.setRotation(pageNumber, 0)
   }
@@ -106,7 +106,7 @@ export class RotationService {
    */
   normalizeRotation(degrees: number): RotationDegrees {
     const normalized = ((degrees % 360) + 360) % 360
-    
+
     // Snap to nearest 90°
     if (normalized < 45) return 0
     if (normalized < 135) return 90
@@ -140,6 +140,10 @@ export class RotationService {
    * Remap existing crop when rotation changes
    * Uses cropService.setCrop to ensure normalization and validation
    */
+  /*
+   * Remap existing crop when rotation changes
+   * DEPRECATED: Crop is now invariant (relative to 0° source)
+   *
   private remapCropForRotationChange(
     pageNumber: number,
     fromRotation: RotationDegrees,
@@ -157,6 +161,7 @@ export class RotationService {
     // Use cropService.setCrop to ensure normalization and validation
     this.cropService.setCrop(pageNumber, remappedCrop)
   }
+  */
 
   /**
    * Get CSS transform string for rotation

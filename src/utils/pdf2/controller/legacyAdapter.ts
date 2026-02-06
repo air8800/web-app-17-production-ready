@@ -3,10 +3,6 @@
  * 
  * Wraps the old PDFEditor.jsx functionality to conform to the new PdfController interface.
  * This allows gradual migration - the feature flag can switch between legacy and modern.
- * 
- * The legacy code lives in:
- * - src/components/PDFEditor.jsx (4,871 lines)
- * - src/utils/pdf/* (various utilities)
  */
 
 import {
@@ -15,18 +11,13 @@ import {
   Recipe,
   PageMetadata,
   ProgressCallback,
-  DEFAULT_TRANSFORMS
+  DEFAULT_TRANSFORMS,
+  RecipeOptions
 } from '../types'
 
-/**
- * Reference to legacy PDFEditor component instance
- * This is populated by the React component that wraps it
- */
 export interface LegacyPdfEditorRef {
   exportPDF: () => Promise<void>
   clearAllEdits: () => void
-  
-  // Additional methods we need to expose from the legacy component
   pages?: Array<{
     pageNumber: number
     width: number
@@ -48,70 +39,41 @@ export class LegacyAdapter implements PdfController {
   private progressCallbacks: Set<ProgressCallback> = new Set()
   private currentFile: File | null = null
 
-  /**
-   * Set the legacy component ref
-   */
   setRef(ref: LegacyPdfEditorRef): void {
     this.ref = ref
   }
 
-  /**
-   * Load PDF document
-   * In legacy mode, this is handled by the PDFEditor component internally
-   */
   async loadDocument(file: File): Promise<void> {
     this.currentFile = file
     this.notifyProgress(0, 'parsing')
-    
-    // The legacy component handles loading internally
-    // This adapter just stores the file reference
-    // The actual loading is triggered by passing the file as a prop
-    
     this.notifyProgress(100, 'loading')
   }
 
-  /**
-   * Get page preview canvas
-   */
   getPagePreview(pageNum: number): HTMLCanvasElement | null {
     if (!this.ref?.pages) return null
-    
     const page = this.ref.pages.find(p => p.pageNumber === pageNum)
     return page?.canvas || null
   }
 
-  /**
-   * Apply edit to page
-   * In legacy mode, edits are handled by the PDFEditor component
-   */
   applyEdit(pageNum: number, edit: EditCommand): void {
-    // Legacy mode: edits are applied through React state in PDFEditor
-    // This is a no-op in the adapter; actual edits happen in the component
     console.log('[LegacyAdapter] applyEdit called', pageNum, edit.type)
   }
 
-  /**
-   * Get thumbnail
-   */
   getThumbnail(pageNum: number): string | null {
     if (!this.ref?.pages) return null
-    
     const page = this.ref.pages.find(p => p.pageNumber === pageNum)
     return page?.thumbnail || null
   }
 
-  /**
-   * Export recipe for desktop cpdf
-   */
   exportRecipe(): Recipe {
     if (!this.currentFile) {
       throw new Error('No file loaded')
     }
 
     const pages = this.ref?.pages || []
-    
+
     return {
-      version: '1.0', // Legacy version
+      version: '1.0',
       type: 'print_job',
       generatedAt: new Date().toISOString(),
       source: {
@@ -148,27 +110,25 @@ export class LegacyAdapter implements PdfController {
     }
   }
 
-  /**
-   * Subscribe to progress events
-   */
+  setSelectedPages(_pageNumbers: number[]): void {
+    // Legacy doesn't support selection syncing via adapter
+  }
+
+  setOptions(_options: Partial<RecipeOptions>): void {
+    // Legacy doesn't support structured print options via adapter
+  }
+
   onProgress(callback: ProgressCallback): () => void {
     this.progressCallbacks.add(callback)
     return () => this.progressCallbacks.delete(callback)
   }
 
-  /**
-   * Get page count
-   */
   getPageCount(): number {
     return this.ref?.pages?.length || 0
   }
 
-  /**
-   * Get page metadata
-   */
   getPageMetadata(pageNum: number): PageMetadata | null {
     if (!this.ref?.pages) return null
-    
     const page = this.ref.pages.find(p => p.pageNumber === pageNum)
     if (!page) return null
 
@@ -188,35 +148,22 @@ export class LegacyAdapter implements PdfController {
     }
   }
 
-  /**
-   * Reset page
-   */
   resetPage(pageNum: number): void {
-    // Legacy: would need to call into PDFEditor's reset logic
     console.log('[LegacyAdapter] resetPage called', pageNum)
   }
 
-  /**
-   * Reset all pages
-   */
   resetAll(): void {
     if (this.ref?.clearAllEdits) {
       this.ref.clearAllEdits()
     }
   }
 
-  /**
-   * Clean up
-   */
   destroy(): void {
     this.ref = null
     this.progressCallbacks.clear()
     this.currentFile = null
   }
 
-  /**
-   * Notify progress callbacks
-   */
   private notifyProgress(progress: number, stage?: string): void {
     this.progressCallbacks.forEach(callback => {
       try {
@@ -227,10 +174,11 @@ export class LegacyAdapter implements PdfController {
     })
   }
 
-  /**
-   * Get the current file
-   */
-  getCurrentFile(): File | null {
-    return this.currentFile
+  isLoaded(): boolean {
+    return !!this.ref
+  }
+
+  getInternalPdfDoc(): any {
+    return null
   }
 }

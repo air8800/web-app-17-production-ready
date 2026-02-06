@@ -6,7 +6,7 @@ import OrderPage from './pages/OrderPage'
 import PaymentPage from './pages/PaymentPage'
 import StatusPage from './pages/StatusPage'
 import DesignMockup from './pages/DesignMockup'
-import MobileDebugConsole from './components/MobileDebugConsole'
+
 import { logDetailedMemory } from './utils/memoryProfiler'
 
 // Log baseline memory immediately on module load
@@ -37,8 +37,6 @@ function App() {
         </Routes>
       </Router>
 
-      {/* Mobile Debug Console - shows timing logs on screen */}
-      <MobileDebugConsole />
     </>
   )
 }

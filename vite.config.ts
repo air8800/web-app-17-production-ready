@@ -4,7 +4,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  base: process.env.IS_DEV ? '/' : './',
+  base: '/',
   build: {
     outDir: 'dist',
     assetsDir: '.',

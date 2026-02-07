@@ -12,25 +12,60 @@ const MobileDebugConsole = () => {
     useEffect(() => {
         // Intercept console.log
         const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        const addLog = (type, message) => {
+            const timestamp = new Date().toLocaleTimeString();
+            setLogs(prev => [...prev.slice(-30), { // Keep last 30 logs
+                time: timestamp,
+                message: message,
+                type: type
+            }]);
+        };
 
         console.log = (...args) => {
-            // Call original console.log
             originalLog(...args);
-
-            // Check if this is a timing/performance log (contains relevant emojis)
             const message = args.join(' ');
-            if (message.includes('⏱️') || message.includes('📥') || message.includes('📊') || message.includes('⚡')) {
-                const timestamp = new Date().toLocaleTimeString();
-                setLogs(prev => [...prev.slice(-20), { // Keep last 20 logs only
-                    time: timestamp,
-                    message: message
-                }]);
+            // Capture timing logs and errors
+            if (message.includes('⏱️') || message.includes('📥') || message.includes('📊') ||
+                message.includes('⚡') || message.includes('❌') || message.includes('✅') ||
+                message.includes('🧹') || message.includes('🔌')) {
+                addLog('log', message);
             }
         };
+
+        console.error = (...args) => {
+            originalError(...args);
+            const message = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+            addLog('error', '❌ ' + message);
+        };
+
+        console.warn = (...args) => {
+            originalWarn(...args);
+            const message = args.join(' ');
+            addLog('warn', '⚠️ ' + message);
+        };
+
+        // Capture unhandled errors
+        const handleError = (event) => {
+            addLog('error', `❌ Unhandled: ${event.message} at ${event.filename}:${event.lineno}`);
+        };
+        window.addEventListener('error', handleError);
+
+        // Capture unhandled promise rejections
+        const handleRejection = (event) => {
+            addLog('error', `❌ Promise rejected: ${event.reason}`);
+        };
+        window.addEventListener('unhandledrejection', handleRejection);
 
         // Cleanup
         return () => {
             console.log = originalLog;
+            console.error = originalError;
+            console.warn = originalWarn;
+            window.removeEventListener('error', handleError);
+            window.removeEventListener('unhandledrejection', handleRejection);
         };
     }, []);
 

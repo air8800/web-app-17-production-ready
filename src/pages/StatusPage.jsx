@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getJobStatus, getShopInfo, subscribeToJobUpdates, startJobStatusPolling, formatCurrency } from '../utils/supabase'
 
+import { usePageTitle } from '../hooks/usePageTitle'
+
 const StatusPage = () => {
   const { jobId } = useParams()
   const [job, setJob] = useState(null)
@@ -11,9 +13,11 @@ const StatusPage = () => {
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [connectionStatus, setConnectionStatus] = useState('connecting')
 
+  usePageTitle('Order Status')
+
   useEffect(() => {
     loadJobStatus()
-    
+
     // Set up real-time subscription
     console.log('🔄 Setting up real-time updates for job:', jobId)
     const subscription = subscribeToJobUpdates(jobId, (updatedJob) => {
@@ -49,26 +53,26 @@ const StatusPage = () => {
     try {
       setLoading(true)
       setError(null)
-      
+
       const { data: jobData, error: jobError } = await getJobStatus(jobId)
-      
+
       if (jobError) {
         throw new Error('Failed to load order status: ' + jobError.message)
       }
-      
+
       if (!jobData) {
         throw new Error('Order not found')
       }
-      
+
       setJob(jobData)
       setLastUpdated(new Date())
-      
+
       // Load shop info
       const { data: shopData } = await getShopInfo(jobData.shop_id)
       if (shopData) {
         setShop(shopData)
       }
-      
+
     } catch (error) {
       console.error('❌ Error loading job status:', error)
       setError(error.message)
@@ -163,15 +167,14 @@ const StatusPage = () => {
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Connection status indicator */}
               <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-                <div className={`w-2 h-2 rounded-full ${
-                  connectionStatus === 'connected' ? 'bg-green-500' :
-                  connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
-                  'bg-red-500'
-                }`}></div>
+                <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500' :
+                    connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
+                      'bg-red-500'
+                  }`}></div>
                 <span className="text-gray-600">
                   {connectionStatus === 'connected' ? 'Live' :
-                   connectionStatus === 'connecting' ? 'Connecting' :
-                   'Offline'}
+                    connectionStatus === 'connecting' ? 'Connecting' :
+                      'Offline'}
                 </span>
               </div>
               <button
@@ -187,7 +190,7 @@ const StatusPage = () => {
           <div className="text-xs text-gray-500 mb-6">
             Last updated: {lastUpdated.toLocaleTimeString()}
           </div>
-          
+
           {/* Shop Info */}
           {shop && (
             <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b">
@@ -197,7 +200,7 @@ const StatusPage = () => {
               <p className="text-sm text-gray-600">{shop.phone}</p>
             </div>
           )}
-          
+
           {/* Status Timeline */}
           <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
             <div className="flex items-center">
@@ -210,11 +213,10 @@ const StatusPage = () => {
                 <p className="text-xs text-gray-400">{new Date(job.created_at).toLocaleString()}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 ${
-                job.payment_status === 'paid' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 ${job.payment_status === 'paid' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                }`}>
                 {job.payment_status === 'paid' ? '✓' : '💳'}
               </div>
               <div>
@@ -227,19 +229,18 @@ const StatusPage = () => {
                 )}
               </div>
             </div>
-            
+
             <div className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 ${
-                job.job_status === 'printing' || job.job_status === 'completed' 
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 ${job.job_status === 'printing' || job.job_status === 'completed'
                   ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
-              }`}>
+                }`}>
                 {job.job_status === 'printing' || job.job_status === 'completed' ? '🖨️' : '⏳'}
               </div>
               <div>
                 <p className="font-medium">Printing</p>
                 <p className="text-sm text-gray-500">
-                  {job.job_status === 'printing' ? 'Currently printing...' : 
-                   job.job_status === 'completed' ? 'Printing completed' : 'Waiting to print'}
+                  {job.job_status === 'printing' ? 'Currently printing...' :
+                    job.job_status === 'completed' ? 'Printing completed' : 'Waiting to print'}
                 </p>
                 {job.job_status === 'printing' && job.estimated_completion && (
                   <p className="text-xs text-gray-400">
@@ -248,11 +249,10 @@ const StatusPage = () => {
                 )}
               </div>
             </div>
-            
+
             <div className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 ${
-                job.job_status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 ${job.job_status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                }`}>
                 {job.job_status === 'completed' ? '✅' : '📦'}
               </div>
               <div>
@@ -275,7 +275,7 @@ const StatusPage = () => {
                 {getStatusIcon(job.job_status)} {getStatusText(job.job_status)}
               </span>
             </div>
-            
+
             {job.job_status === 'completed' && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 text-center animate-pulse-glow">
                 <p className="text-green-800 font-medium text-base sm:text-lg">🎉 Ready for pickup!</p>
@@ -289,7 +289,7 @@ const StatusPage = () => {
                 )}
               </div>
             )}
-            
+
             {job.job_status === 'printing' && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                 <p className="text-blue-800 font-medium">🖨️ Your order is being printed!</p>
@@ -301,14 +301,14 @@ const StatusPage = () => {
                 )}
               </div>
             )}
-            
+
             {job.job_status === 'pending' && job.payment_status === 'paid' && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
                 <p className="text-yellow-800 font-medium">⏳ Your order is in queue</p>
                 <p className="text-yellow-600 text-sm mt-1">We'll start printing it soon</p>
               </div>
             )}
-            
+
             {job.job_status === 'cancelled' && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
                 <p className="text-red-800 font-medium">❌ Your order has been cancelled</p>
@@ -353,10 +353,10 @@ const StatusPage = () => {
               </div>
             </div>
           </div>
-          
+
           {/* Back to Shop */}
           <div className="border-t pt-4 sm:pt-6 mt-4 sm:mt-6 text-center">
-            <Link 
+            <Link
               to={`/shop/${job.shop_id}`}
               className="text-blue-600 hover:underline"
             >

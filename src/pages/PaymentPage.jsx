@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getJobStatus, updatePaymentStatus, getShopInfo, formatCurrency } from '../utils/supabase'
 
+import { usePageTitle } from '../hooks/usePageTitle'
+
 const PaymentPage = () => {
   const { jobId } = useParams()
   const navigate = useNavigate()
@@ -11,6 +13,8 @@ const PaymentPage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  usePageTitle('Payment')
+
   useEffect(() => {
     loadJobDetails()
   }, [jobId])
@@ -19,25 +23,25 @@ const PaymentPage = () => {
     try {
       setLoading(true)
       setError(null)
-      
+
       const { data: jobData, error: jobError } = await getJobStatus(jobId)
-      
+
       if (jobError) {
         throw new Error('Failed to load order: ' + jobError.message)
       }
-      
+
       if (!jobData) {
         throw new Error('Order not found')
       }
-      
+
       setJob(jobData)
-      
+
       // Load shop info
       const { data: shopData } = await getShopInfo(jobData.shop_id)
       if (shopData) {
         setShop(shopData)
       }
-      
+
     } catch (error) {
       console.error('❌ Error loading job details:', error)
       setError(error.message)
@@ -49,17 +53,17 @@ const PaymentPage = () => {
   const handlePaymentConfirmation = async () => {
     try {
       const { error } = await updatePaymentStatus(jobId, 'paid')
-      
+
       if (error) {
         throw new Error('Failed to update payment status: ' + error.message)
       }
-      
+
       setPaymentConfirmed(true)
-      
+
       setTimeout(() => {
         navigate(`/status/${jobId}`)
       }, 2000)
-      
+
     } catch (error) {
       console.error('❌ Payment confirmation error:', error)
       alert('Failed to confirm payment: ' + error.message)
@@ -130,7 +134,7 @@ const PaymentPage = () => {
       <div className="max-w-2xl mx-auto px-4 py-4 sm:py-8">
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Payment</h1>
-          
+
           {/* Order Summary */}
           <div className="border-b pb-3 sm:pb-4 mb-3 sm:mb-4">
             <h2 className="text-sm sm:text-base font-semibold mb-2">Order Summary</h2>

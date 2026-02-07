@@ -2,12 +2,16 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getShopInfo, testConnection } from '../utils/supabase'
 
+import { usePageTitle } from '../hooks/usePageTitle'
+
 const ShopPage = () => {
   const { shopId } = useParams()
   const navigate = useNavigate()
   const [shop, setShop] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  usePageTitle(shop?.name ? `Shop - ${shop.name}` : 'Shop')
 
   useEffect(() => {
     loadShopInfo()
@@ -17,35 +21,35 @@ const ShopPage = () => {
     try {
       setLoading(true)
       setError(null)
-      
+
       // First test connection
       console.log('🔍 Testing connection...')
       const connectionTest = await testConnection()
-      
+
       if (!connectionTest.success) {
         throw new Error('Database connection failed: ' + connectionTest.error)
       }
-      
+
       console.log('✅ Connection successful, loading shop...')
-      
+
       // Then load shop info
       const { data, error } = await getShopInfo(shopId)
-      
+
       if (error) {
         throw new Error('Failed to load shop: ' + error.message)
       }
-      
+
       if (!data) {
         throw new Error('Shop not found or inactive')
       }
-      
+
       setShop(data)
-      
+
       // Save to recent shops
       const recent = JSON.parse(localStorage.getItem('recentShops') || '[]')
       const updated = [data, ...recent.filter(s => s.id !== data.id)].slice(0, 5)
       localStorage.setItem('recentShops', JSON.stringify(updated))
-      
+
     } catch (error) {
       console.error('❌ Error loading shop:', error)
       setError(error.message)

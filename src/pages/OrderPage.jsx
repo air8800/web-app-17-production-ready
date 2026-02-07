@@ -16,11 +16,14 @@ import PDFEditorModal from '../components/PDFEditorModal'
 import PDFEditorPopup from '../components/PDFEditorPopup'
 import PDFEditorSheetPopup from '../components/PDFEditorSheetPopup'
 import { useTour } from '../hooks/useTour'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const OrderPage = () => {
   const { shopId } = useParams()
   const navigate = useNavigate()
   const [shop, setShop] = useState(null)
+
+  usePageTitle(shop?.name ? `Order - ${shop.name}` : 'Order')
   const [pricing, setPricing] = useState([])
   const [availablePaperSizes, setAvailablePaperSizes] = useState(['A4'])
   const [previewPageSize, setPreviewPageSize] = useState(DEFAULT_PAGE_SIZE)

@@ -3,7 +3,10 @@ import { Link } from 'react-router-dom'
 import { getAllActiveShops } from '../utils/supabase'
 import { Printer, Search, Store, Clock, Star, MapPin, Phone, ArrowRight, Zap, Shield, Award, Globe, Upload, Settings, FileCheck, Package, Mail, Facebook, Twitter, Instagram, Linkedin, Sparkles, ChevronDown, Check } from 'lucide-react'
 
+import { usePageTitle } from '../hooks/usePageTitle'
+
 const HomePage = () => {
+  usePageTitle() // Sets title to "PrintGet"
   const [shops, setShops] = useState([])
   const [recentShops, setRecentShops] = useState([])
   const [loading, setLoading] = useState(true)

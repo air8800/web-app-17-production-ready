@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4f46e5;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect x="32" y="32" width="448" height="448" rx="128" fill="url(#grad1)" />
+  
+  <!-- Paper Sheet -->
+  <path d="M352 96H160c-17.7 0-32 14.3-32 32v96h256v-96c0-17.7-14.3-32-32-32z" fill="#ffffff" fill-opacity="0.9"/>
+  
+  <!-- Printer Body -->
+  <path d="M384 192H128c-35.3 0-64 28.7-64 64v128c0 35.3 28.7 64 64 64h32v-64h192v64h32c35.3 0 64-28.7 64-64V256c0-35.3-28.7-64-64-64zm-64 80c-13.3 0-24-10.7-24-24s10.7-24 24-24 24 10.7 24 24-10.7 24-24 24z" fill="#ffffff"/>
+  
+  <!-- Printed Page with Lines (P shape hint) -->
+  <path d="M160 352h192v96H160z" fill="#e0e7ff"/>
+  <rect x="180" y="370" width="152" height="12" rx="4" fill="#2563eb" fill-opacity="0.3"/>
+  <rect x="180" y="394" width="152" height="12" rx="4" fill="#2563eb" fill-opacity="0.3"/>
+  <rect x="180" y="418" width="100" height="12" rx="4" fill="#2563eb" fill-opacity="0.3"/>
+</svg>

@@ -6,6 +6,7 @@ import OrderPage from './pages/OrderPage'
 import PaymentPage from './pages/PaymentPage'
 import StatusPage from './pages/StatusPage'
 import DesignMockup from './pages/DesignMockup'
+import MobileDebugConsole from './components/MobileDebugConsole'
 
 import { logDetailedMemory } from './utils/memoryProfiler'
 
@@ -36,9 +37,10 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
-
+      <MobileDebugConsole />
     </>
   )
 }
 
 export default App
+

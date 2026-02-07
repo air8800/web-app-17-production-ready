@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { getShopInfo, getShopPricing, calculateOrderCost, uploadFile, uploadFileChunked, submitPrintJob, formatCurrency, updatePaymentStatus, updatePrintJob } from '../utils/supabase'
 import { usePdfController, USE_NEW_PDF_CONTROLLER } from '../utils/pdf2/controller/usePdfController'
+import usePDFStore from '../stores/pdfStore'
 import PDFPageSelector from '../components/PDFPageSelector'
 import Dropdown from '../components/Dropdown'
 import { PDFDocument } from 'pdf-lib'
@@ -120,12 +121,12 @@ const OrderPage = () => {
   // N-up conversion loading state
   const [isConvertingNup, setIsConvertingNup] = useState(false)
 
-  // Background Submission Settings
   const [backgroundSubmission, setBackgroundSubmission] = useState(() => {
     const saved = localStorage.getItem('printflow_background_submission')
     return saved !== null ? saved === 'true' : true
   })
   const [showBackgroundInfo, setShowBackgroundInfo] = useState(false)
+  const [showFullFilename, setShowFullFilename] = useState(false) // Toggle for long filename display
 
   // Persist background submission setting
   useEffect(() => {
@@ -836,6 +837,53 @@ const OrderPage = () => {
     setEditorType(null)
     setEditorError(null)
     setIsDirectPageEdit(false) // Reset direct page edit flag
+  }
+
+  // 🧹 Proper cleanup when removing file - destroys controller, cancels uploads, resets store
+  const handleRemoveFile = () => {
+    console.log('🧹 [handleRemoveFile] Starting full cleanup...')
+
+    // 1. Destroy the PDF controller to release memory (250-600MB for large PDFs)
+    if (controller) {
+      try {
+        controller.destroy()
+        console.log('✅ Controller destroyed')
+      } catch (e) {
+        console.warn('⚠️ Error destroying controller:', e)
+      }
+    }
+
+    // 2. Reset the shared PDF store
+    usePDFStore.getState().reset()
+    console.log('✅ PDF store reset')
+
+    // 3. Clear all order state
+    setOrderData(prev => ({
+      ...prev,
+      file: null,
+      files: [],
+      filename: '',
+      selectedPages: [],
+      selectedImages: []
+    }))
+
+    // 4. Clear all PDF-related state
+    setReadyPDFBlob(null)
+    setPreUploadedFileUrl(null)
+    preUploadedFileUrlRef.current = null
+    setEditedPages({})
+    setUploadProgress(0)
+    setBackgroundUploadProgress(0)
+    setIsGeneratingPDF(false)
+    setIsUploading(false)
+    setPdfPageCount(0)
+    setPdfPagesData([])
+    setShowFullFilename(false) // Reset filename display state
+
+    // 5. Dispatch event to notify other components (PDFPageSelector listens for this)
+    window.dispatchEvent(new CustomEvent('pdfCleared'))
+
+    console.log('✅ [handleRemoveFile] Full cleanup complete')
   }
 
   const processSelectedPages = async (originalFile, selectedPages) => {
@@ -1781,15 +1829,27 @@ const OrderPage = () => {
               ) : orderData.file || orderData.files.length > 0 ? (
                 <div>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       {orderData.file?.type === 'application/pdf' ? (
                         <FileText className="w-6 h-6 text-green-600" />
                       ) : (
                         <ImageIcon className="w-6 h-6 text-green-600" />
                       )}
                     </div>
-                    <div className="flex-1">
-                      <p className="text-green-600 font-medium">{orderData.filename}</p>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-green-600 font-medium cursor-pointer hover:text-green-700 transition-colors ${showFullFilename ? 'break-all' : 'truncate'
+                          }`}
+                        onClick={() => setShowFullFilename(!showFullFilename)}
+                        title={showFullFilename ? 'Click to collapse' : orderData.filename}
+                      >
+                        {orderData.filename}
+                      </p>
+                      {orderData.filename.length > 30 && (
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          {showFullFilename ? 'Click to collapse' : 'Click to see full name'}
+                        </p>
+                      )}
                       <p className="text-sm text-gray-500">
                         {orderData.file?.type === 'application/pdf' ? 'PDF Document' :
                           orderData.files.length > 1 ? `${orderData.files.length} Images` : 'Image File'} •
@@ -1801,7 +1861,7 @@ const OrderPage = () => {
 
                   <div className="flex items-center justify-between mt-4">
                     <button
-                      onClick={() => setOrderData(prev => ({ ...prev, file: null, files: [], filename: '', selectedPages: [], selectedImages: [] }))}
+                      onClick={handleRemoveFile}
                       className="text-red-600 text-xs sm:text-sm hover:underline py-1"
                     >
                       Remove

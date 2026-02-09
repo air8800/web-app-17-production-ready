@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import HomePage from './pages/HomePage'
 import ShopPage from './pages/ShopPage'
 import OrderPage from './pages/OrderPage'
@@ -37,6 +38,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
+      <Analytics />
     </>
   )
 }

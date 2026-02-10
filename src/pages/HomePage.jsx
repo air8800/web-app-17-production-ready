@@ -621,19 +621,8 @@ const HomePage = () => {
               </ul>
             </div>
 
-            {/* Contact */}
-            <div>
-              <h4 className="text-white font-semibold mb-4">Contact Us</h4>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-start gap-2">
-                  <Mail className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <a href="mailto:support@printflowpro.com" className="hover:text-blue-400 transition-colors">
-                    support@printflowpro.com
-                  </a>
-                </li>
 
-              </ul>
-            </div>
+
           </div>
 
 

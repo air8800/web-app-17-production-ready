@@ -631,29 +631,12 @@ const HomePage = () => {
                     support@printflowpro.com
                   </a>
                 </li>
-                <li className="flex items-start gap-2">
-                  <Phone className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <a href="tel:+1234567890" className="hover:text-blue-400 transition-colors">
-                    +1 (234) 567-890
-                  </a>
-                </li>
-                <li className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>123 Print Street, City, Country</span>
-                </li>
+
               </ul>
             </div>
           </div>
 
-          {/* Design Preview Button */}
-          <div className="mb-8">
-            <Link
-              to="/design-mockup"
-              className="block w-full sm:w-auto mx-auto text-center bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-4 rounded-xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-            >
-              🎨 View New Design Mockups
-            </Link>
-          </div>
+
 
           {/* Bottom Bar */}
           <div className="border-t border-gray-800 pt-8">

@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
 /**
  * Generates the HTML for "Order Confirmed" 
  */
-function buildConfirmedHTML(customerName, filename, shopName, orderId) {
+function buildConfirmedHTML(customerName, filename, shopName, orderId, amount, paymentMethod) {
   return `
 <!DOCTYPE html>
 <html>
@@ -41,7 +41,7 @@ function buildConfirmedHTML(customerName, filename, shopName, orderId) {
                 Hi <strong>${customerName || 'there'}</strong>,<br><br>
                 Your payment was successful and your print job is now in the queue. We will notify you again as soon as it is ready for pickup!
               </p>
-              ${buildDetailsTable(filename, shopName, orderId, '⏳ In Queue', '#eab308')}
+              ${buildDetailsTable(filename, shopName, orderId, '⏳ In Queue', '#eab308', amount, paymentMethod)}
             </td>
           </tr>
           ${buildFooter()}
@@ -56,7 +56,7 @@ function buildConfirmedHTML(customerName, filename, shopName, orderId) {
 /**
  * Generates the HTML for "Print Ready" 
  */
-function buildReadyHTML(customerName, filename, shopName, orderId) {
+function buildReadyHTML(customerName, filename, shopName, orderId, amount, paymentMethod) {
   return `
 <!DOCTYPE html>
 <html>
@@ -82,7 +82,7 @@ function buildReadyHTML(customerName, filename, shopName, orderId) {
                 Hi <strong>${customerName || 'there'}</strong>,<br><br>
                 Great news! Your print job has been completed and is waiting for you to collect it.
               </p>
-              ${buildDetailsTable(filename, shopName, orderId, '✅ Ready for Pickup', '#16a34a')}
+              ${buildDetailsTable(filename, shopName, orderId, '✅ Ready for Pickup', '#16a34a', amount, paymentMethod)}
             </td>
           </tr>
           ${buildFooter()}
@@ -97,7 +97,7 @@ function buildReadyHTML(customerName, filename, shopName, orderId) {
 /**
  * Generates the HTML for "Cancelled" 
  */
-function buildCancelledHTML(customerName, filename, shopName, orderId) {
+function buildCancelledHTML(customerName, filename, shopName, orderId, amount, paymentMethod) {
   return `
 <!DOCTYPE html>
 <html>
@@ -122,7 +122,7 @@ function buildCancelledHTML(customerName, filename, shopName, orderId) {
                 Hi <strong>${customerName || 'there'}</strong>,<br><br>
                 Unfortunately, your print job has been cancelled by the shop. Please contact them for more details.
               </p>
-              ${buildDetailsTable(filename, shopName, orderId, '❌ Cancelled', '#ef4444')}
+              ${buildDetailsTable(filename, shopName, orderId, '❌ Cancelled', '#ef4444', amount, paymentMethod)}
             </td>
           </tr>
           ${buildFooter()}
@@ -135,7 +135,7 @@ function buildCancelledHTML(customerName, filename, shopName, orderId) {
 }
 
 // Helper: Common Order Details Table
-function buildDetailsTable(filename, shopName, orderId, statusText, statusColor) {
+function buildDetailsTable(filename, shopName, orderId, statusText, statusColor, amount, paymentMethod) {
   return `
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 24px;">
     <tr>
@@ -155,6 +155,16 @@ function buildDetailsTable(filename, shopName, orderId, statusText, statusColor)
           <tr>
             <td style="padding: 6px 0;">
               <table width="100%"><tr><td style="color: #64748b; font-size: 13px;">Order ID</td><td align="right" style="color: #1e293b; font-size: 13px; font-weight: 600; font-family: monospace;">${orderId ? orderId.slice(0, 8) : '—'}</td></tr></table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0;">
+              <table width="100%"><tr><td style="color: #64748b; font-size: 13px;">Amount Paid</td><td align="right" style="color: #1e293b; font-size: 13px; font-weight: 600;">₹${amount || '0'}</td></tr></table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0;">
+              <table width="100%"><tr><td style="color: #64748b; font-size: 13px;">Payment Method</td><td align="right" style="color: #1e293b; font-size: 13px; font-weight: 600;">${paymentMethod || 'Cash on Delivery'}</td></tr></table>
             </td>
           </tr>
           <tr>
@@ -227,17 +237,17 @@ export default async function handler(req, res) {
     // Scenario 1: Order just became 'pending' + 'paid' (Order Submitted)
     if (record.job_status === 'pending' && record.payment_status === 'paid' && old_record?.payment_status !== 'paid') {
       subject = 'Order Confirmed - Print Job Received';
-      emailHTML = buildConfirmedHTML(record.customer_name, record.filename, null, record.id);
+      emailHTML = buildConfirmedHTML(record.customer_name, record.filename, null, record.id, record.total_cost, 'Cash on Delivery');
     } 
     // Scenario 2: Order became 'completed' (Print Ready)
     else if (record.job_status === 'completed' && old_record?.job_status !== 'completed') {
       subject = 'Your Print is Ready for Pickup';
-      emailHTML = buildReadyHTML(record.customer_name, record.filename, null, record.id);
+      emailHTML = buildReadyHTML(record.customer_name, record.filename, null, record.id, record.total_cost, 'Cash on Delivery');
     }
     // Scenario 3: Order became 'cancelled'
     else if (record.job_status === 'cancelled' && old_record?.job_status !== 'cancelled') {
       subject = 'Order Cancelled - PrintGet';
-      emailHTML = buildCancelledHTML(record.customer_name, record.filename, null, record.id);
+      emailHTML = buildCancelledHTML(record.customer_name, record.filename, null, record.id, record.total_cost, 'Cash on Delivery');
     } 
     // Ignore all other updates
     else {

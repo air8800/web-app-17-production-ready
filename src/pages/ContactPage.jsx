@@ -115,7 +115,7 @@ const ContactPage = () => {
                             <h3 className="text-sm font-semibold text-amber-800 mb-1">Grievance / Complaints</h3>
                             <p className="text-sm text-amber-700">
                                 For formal grievances or complaints, email us at{' '}
-                                <a href="mailto:contact@printget.in" className="font-medium underline">contact@printget.in</a>{' '}
+                                <a href="mailto:support@printget.in" className="font-medium underline">support@printget.in</a>{' '}
                                 with <strong>"Grievance"</strong> in the subject line. We will acknowledge your complaint within 48 hours
                                 and aim to resolve it as quickly as possible.
                             </p>

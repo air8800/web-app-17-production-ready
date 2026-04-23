@@ -287,7 +287,7 @@ const PrivacyPage = () => {
                         </ul>
                         <p className="text-gray-600 text-sm mt-3">
                             To exercise any of these rights, email us at{' '}
-                            <a href="mailto:hello@printget.in" className="text-blue-600 hover:underline">hello@printget.in</a>.
+                            <a href="mailto:support@printget.in" className="text-blue-600 hover:underline">support@printget.in</a>.
                         </p>
                     </div>
 

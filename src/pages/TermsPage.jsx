@@ -150,7 +150,7 @@ const TermsPage = () => {
                             Once a payment is made, it cannot be reversed or refunded. Please review your order details carefully —
                             including file, print settings, and pricing — before submitting your order. If you experience any issues
                             with your order, please contact the print shop directly or reach out to us at{' '}
-                            <a href="mailto:hello@printget.in" className="text-blue-600 hover:underline">hello@printget.in</a>{' '}
+                            <a href="mailto:support@printget.in" className="text-blue-600 hover:underline">support@printget.in</a>{' '}
                             and we will try our best to help resolve the matter.
                         </p>
                     </div>
@@ -217,7 +217,7 @@ const TermsPage = () => {
                             These Terms are governed by and construed in accordance with the laws of India. Any disputes arising
                             from or in connection with these Terms shall be subject to the exclusive jurisdiction of the courts in India.
                             We encourage you to contact us first at{' '}
-                            <a href="mailto:hello@printget.in" className="text-blue-600 hover:underline">hello@printget.in</a>{' '}
+                            <a href="mailto:support@printget.in" className="text-blue-600 hover:underline">support@printget.in</a>{' '}
                             to attempt to resolve any issues before initiating legal proceedings.
                         </p>
                     </div>
@@ -237,11 +237,11 @@ const TermsPage = () => {
                                 If you have any questions or concerns about these Terms, please contact us:
                             </p>
                             <a
-                                href="mailto:hello@printget.in"
+                                href="mailto:support@printget.in"
                                 className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors"
                             >
                                 <Mail className="w-4 h-4" />
-                                hello@printget.in
+                                support@printget.in
                             </a>
                         </div>
                     </div>

@@ -8,7 +8,7 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER, // orders@printget.in
-    pass: process.env.EMAIL_PASS, // App Password (NOT regular password)
+    pass: process.env.EMAIL_PASS,
   },
 });
 
@@ -260,7 +260,7 @@ export default async function handler(req, res) {
     const emailText = emailHTML.replace(/<[^>]*>?/gm, '\n').replace(/\n\s*\n/g, '\n').trim();
 
     await transporter.sendMail({
-      from: `"PrintGet Orders" <orders@printget.in>`,
+      from: `"Order PrintGet" <orders@printget.in>`,
       replyTo: 'support@printget.in',
       to: customerEmail,
       subject: subject,

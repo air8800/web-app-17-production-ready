@@ -159,11 +159,11 @@ const CookiePolicyPage = () => {
                             For any questions about our cookie practices, contact us at:
                         </p>
                         <a
-                            href="mailto:hello@printget.in"
+                            href="mailto:support@printget.in"
                             className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors"
                         >
                             <Mail className="w-4 h-4" />
-                            hello@printget.in
+                            support@printget.in
                         </a>
                     </div>
 

@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { getAllActiveShops } from '../utils/supabase'
-import { Printer, Search, Store, Clock, Star, MapPin, Phone, ArrowRight, Zap, Shield, Award, Globe, Upload, Settings, FileCheck, Package, Mail, Sparkles, ChevronDown, Check, CreditCard } from 'lucide-react'
+import { Printer, Search, Store, Clock, Star, MapPin, Phone, ArrowRight, Zap, Shield, Award, Globe, Upload, Settings, FileCheck, Package, Mail, Sparkles, ChevronDown, ChevronRight, Check, CreditCard } from 'lucide-react'
 
 // Helper: Check if a shop is currently open based on operating_hours
 const isShopOpen = (shop) => {
   if (!shop?.operating_hours) return null // unknown
   const now = new Date()
-  const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
   const today = days[now.getDay()]
   const todayHours = shop.operating_hours[today]
   if (!todayHours) return null
@@ -30,6 +30,87 @@ const isShopOpen = (shop) => {
 
 import { usePageTitle } from '../hooks/usePageTitle'
 
+// Individual shop card with scroll-triggered animation
+const ShopCard = ({ shop, index, glow }) => {
+  const cardRef = useRef(null)
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.1 }
+    )
+    if (cardRef.current) observer.observe(cardRef.current)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <Link
+      ref={cardRef}
+      to={`/shop/${shop.id}`}
+      className={`block bg-white rounded-2xl border p-6 transition-all duration-300 active:scale-[0.98] relative overflow-hidden ${
+        glow ? 'animate-boundary-glow' : 'border-gray-100'
+      }`}
+      style={{
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? 'translateY(0)' : 'translateY(40px)',
+        transition: `opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1) ${index * 0.08}s, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1) ${index * 0.08}s`,
+      }}
+    >
+      <div className="flex items-start gap-5 mb-5 relative z-10">
+        <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/20">
+          <Printer className="w-7 h-7 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-xl text-gray-900 mb-1.5 truncate">{shop.name}</h3>
+          <div className="flex items-center gap-1.5 text-gray-500 mb-2">
+            <MapPin className="w-4 h-4 flex-shrink-0 text-gray-400" />
+            <span className="text-sm font-medium truncate">{shop.address}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md">
+            <Phone className="w-3.5 h-3.5" />
+            <span className="text-sm font-semibold">{shop.phone}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-4 border-t border-gray-100 relative z-10">
+        <div className="flex items-center gap-3">
+          {(() => {
+            const open = isShopOpen(shop)
+            if (open === true) return (
+              <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                OPEN
+              </span>
+            )
+            if (open === false) return (
+              <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-red-50 text-red-600 border border-red-100">
+                CLOSED
+              </span>
+            )
+            return (
+              <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-gray-50 text-gray-500 border border-gray-100">
+                HOURS N/A
+              </span>
+            )
+          })()}
+        </div>
+        <div className="flex items-center gap-1.5 text-blue-600">
+          <span className="text-xs font-semibold text-gray-400">Order</span>
+          <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center">
+            <ArrowRight className="w-3.5 h-3.5 text-white" />
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 const HomePage = () => {
   usePageTitle() // Sets title to "PrintGet"
   const [shops, setShops] = useState([])
@@ -42,11 +123,29 @@ const HomePage = () => {
   })
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const howItWorksRef = useRef(null)
+  const cityRef = useRef(null)
+  const [cityVisible, setCityVisible] = useState(false)
+  const [shouldGlow, setShouldGlow] = useState(false)
 
   useEffect(() => {
     loadShops()
     loadRecentShops()
   }, [])
+
+  // Observe when city dropdown scrolls into view
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setCityVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.3 }
+    )
+    if (cityRef.current) observer.observe(cityRef.current)
+    return () => observer.disconnect()
+  }, [loading])
 
   useEffect(() => {
     if (selectedCity) {
@@ -90,6 +189,12 @@ const HomePage = () => {
     howItWorksRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  const scrollToCitySelection = () => {
+    document.getElementById('city-selection')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setShouldGlow(true)
+    setTimeout(() => setShouldGlow(false), 1500)
+  }
+
   const filteredShops = shops.filter(shop => {
     // 1. City Filter (Primary)
     if (selectedCity && selectedCity !== 'All Cities' && !shop.address.toLowerCase().includes(selectedCity.toLowerCase())) {
@@ -116,11 +221,7 @@ const HomePage = () => {
       title: "Secure & Private",
       description: "Your files are encrypted and auto-deleted after printing"
     },
-    {
-      icon: Globe,
-      title: "Wide Network",
-      description: "Access hundreds of print shops across the city"
-    },
+
     {
       icon: Award,
       title: "Quality Guaranteed",
@@ -140,7 +241,7 @@ const HomePage = () => {
           }} />
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 py-20 sm:py-32">
+        <div className="relative max-w-7xl mx-auto px-4 py-12 sm:py-32">
           <div className="text-center animate-fadeInUp">
             {/* Badge */}
 
@@ -178,7 +279,7 @@ const HomePage = () => {
       </div>
 
 
-      <div className="max-w-7xl mx-auto px-4 py-16">
+      <div className="max-w-7xl mx-auto px-4 py-4 sm:py-16">
 
         {/* Loading State */}
         {loading && (
@@ -210,7 +311,7 @@ const HomePage = () => {
 
         {/* Recent Shops */}
         {!loading && !error && recentShops.length > 0 && (
-          <div className="mb-16 animate-fadeInUp">
+          <div className="mb-10 sm:mb-16 animate-fadeInUp">
             <div className="flex items-center gap-3 mb-8">
               <div className="feature-icon">
                 <Clock className="w-6 h-6" />
@@ -260,7 +361,7 @@ const HomePage = () => {
 
         {/* City Selection & Shop Finder */}
         {!loading && !error && (
-          <div className="animate-fadeInUp py-12" id="city-selection">
+          <div className="animate-fadeInUp py-8 sm:py-12" id="city-selection">
             <div className="max-w-5xl mx-auto px-4">
               <div className="text-center mb-16 relative z-10">
 
@@ -273,7 +374,7 @@ const HomePage = () => {
               </div>
 
               {/* Selection Card */}
-              <div className="bg-white rounded-3xl shadow-xl shadow-blue-900/5 border border-blue-100 p-6 md:p-10 mb-12 relative">
+              <div ref={cityRef} className={`bg-white rounded-3xl shadow-xl shadow-blue-900/5 border p-6 md:p-10 mb-10 sm:mb-12 relative transition-all duration-300 ${shouldGlow ? 'animate-boundary-glow' : 'border-blue-100'}`}>
                 {/* Subtle Decorative Gradient */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-bl-full opacity-50 pointer-events-none" />
 
@@ -285,12 +386,16 @@ const HomePage = () => {
                       <div className="relative group">
                         <button
                           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                          className="w-full flex items-center justify-between pl-16 pr-6 py-4 text-lg font-medium bg-white border border-gray-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all cursor-pointer text-gray-900 hover:border-blue-300"
+                          className={`w-full flex items-center justify-between pl-16 pr-6 py-4 text-lg font-medium bg-white rounded-2xl cursor-pointer transition-colors ${
+                            !selectedCity && cityVisible
+                              ? 'border-2 border-blue-400 attention-shimmer'
+                              : 'border border-gray-200 shadow-sm'
+                          }`}
                         >
-                          <span className={selectedCity ? 'text-gray-900' : 'text-gray-400'}>
-                            {selectedCity || "Choose a location..."}
+                          <span className={selectedCity ? 'text-gray-900 font-semibold' : 'text-gray-400'}>
+                            {selectedCity || 'Choose a location...'}
                           </span>
-                          <ChevronDown className={`w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                          <ChevronDown className={`w-5 h-5 text-blue-500 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                         </button>
 
                         <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -357,62 +462,23 @@ const HomePage = () => {
             {/* Filtered Shops Grid */}
             {selectedCity ? (
               filteredShops.length > 0 ? (
+                <>
+                  {/* Section label */}
+                  <div className="mb-6 px-1">
+                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-1">
+                      Available Print Shops{' '}
+                      <span className="text-blue-600">Near You</span>
+                      <ChevronRight className="w-5 h-5 text-blue-500 animate-arrow-point" />
+                    </h3>
+                    <p className="text-sm text-gray-400 mt-1">Tap a shop to place your order</p>
+                  </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filteredShops.map((shop, index) => (
-                    <Link
-                      key={shop.id}
-                      to={`/shop/${shop.id}`}
-                      className="group bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-xl hover:shadow-blue-900/5 hover:border-blue-200 transition-all duration-300 animate-fadeIn relative overflow-hidden"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <div className="flex items-start gap-5 mb-5 relative z-10">
-                        <div className="w-14 h-14 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:from-blue-100 group-hover:to-indigo-100 transition-colors border border-blue-100/50">
-                          <Printer className="w-7 h-7 text-blue-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-xl text-gray-900 mb-1.5 truncate group-hover:text-blue-600 transition-colors">{shop.name}</h3>
-                          <div className="flex items-center gap-1.5 text-gray-500 mb-2">
-                            <MapPin className="w-4 h-4 flex-shrink-0 text-gray-400" />
-                            <span className="text-sm font-medium truncate">{shop.address}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-blue-600 bg-blue-50/50 w-fit px-2 py-0.5 rounded-md">
-                            <Phone className="w-3.5 h-3.5" />
-                            <span className="text-sm font-semibold">{shop.phone}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-5 border-t border-gray-50 relative z-10">
-                        <div className="flex items-center gap-3">
-                          {(() => {
-                            const open = isShopOpen(shop)
-                            if (open === true) return (
-                              <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100/50">
-                                OPEN
-                              </span>
-                            )
-                            if (open === false) return (
-                              <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-red-50 text-red-600 border border-red-100/50">
-                                CLOSED
-                              </span>
-                            )
-                            return (
-                              <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-gray-50 text-gray-500 border border-gray-100/50">
-                                HOURS N/A
-                              </span>
-                            )
-                          })()}
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                          <ArrowRight className="w-4 h-4" />
-                        </div>
-                      </div>
-
-                      {/* Hover Gradient Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-transparent to-blue-50/30 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                    </Link>
+                    <ShopCard key={shop.id} shop={shop} index={index} glow={shouldGlow} />
                   ))}
                 </div>
+                </>
 
               ) : (
                 <div className="max-w-md mx-auto text-center py-20 px-8 bg-white/50 rounded-3xl border border-gray-100 backdrop-blur-sm animate-fadeIn">
@@ -453,7 +519,7 @@ const HomePage = () => {
         )}
 
         {/* How to Use Section */}
-        <div ref={howItWorksRef} className="py-20 animate-fadeInUp" id="how-it-works">
+        <div ref={howItWorksRef} className="py-12 sm:py-20 animate-fadeInUp" id="how-it-works">
           <div className="text-center mb-12 sm:mb-16 px-4">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">How It Works</h2>
             <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-3xl mx-auto">
@@ -461,54 +527,79 @@ const HomePage = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 sm:gap-8 mb-16">
-            <div className="text-center print-card card-hover">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg">
-                <Store className="w-8 h-8 text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-8 mb-12 sm:mb-16">
+            <button
+              onClick={scrollToCitySelection}
+              className="text-center print-card card-hover block w-full group"
+            >
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl mb-4 flex items-center justify-center shadow-lg group-active:scale-95 transition-transform relative">
+                  <Store className="w-7 h-7 text-white" />
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-700 text-white rounded-full flex items-center justify-center font-bold text-xs border-2 border-white shadow-sm">1</div>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Choose Shop</h3>
+                <p className="text-gray-600 text-sm leading-relaxed max-w-[240px] mx-auto">Browse and select from our network of trusted print shops near you</p>
               </div>
-              <div className="w-8 h-8 bg-blue-600 text-white rounded-full mx-auto mb-4 flex items-center justify-center font-bold text-sm">1</div>
-              <h3 className="text-lg font-bold text-gray-900 mb-3">Choose Shop</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">Browse and select from our network of trusted print shops near you</p>
-            </div>
+            </button>
 
-            <div className="text-center print-card card-hover">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg">
-                <Upload className="w-8 h-8 text-white" />
+            <button
+              onClick={scrollToCitySelection}
+              className="text-center print-card card-hover block w-full group"
+            >
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl mb-4 flex items-center justify-center shadow-lg group-active:scale-95 transition-transform relative">
+                  <Upload className="w-7 h-7 text-white" />
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-700 text-white rounded-full flex items-center justify-center font-bold text-xs border-2 border-white shadow-sm">2</div>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Upload Files</h3>
+                <p className="text-gray-600 text-sm leading-relaxed max-w-[240px] mx-auto">Upload your PDF or image files. Multiple files and formats supported</p>
               </div>
-              <div className="w-8 h-8 bg-green-600 text-white rounded-full mx-auto mb-4 flex items-center justify-center font-bold text-sm">2</div>
-              <h3 className="text-lg font-bold text-gray-900 mb-3">Upload Files</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">Upload your PDF or image files. Multiple files and formats supported</p>
-            </div>
+            </button>
 
-            <div className="text-center print-card card-hover">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg">
-                <Settings className="w-8 h-8 text-white" />
+            <button
+              onClick={scrollToCitySelection}
+              className="text-center print-card card-hover block w-full group"
+            >
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl mb-4 flex items-center justify-center shadow-lg group-active:scale-95 transition-transform relative">
+                  <Settings className="w-7 h-7 text-white" />
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-purple-700 text-white rounded-full flex items-center justify-center font-bold text-xs border-2 border-white shadow-sm">3</div>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Configure</h3>
+                <p className="text-gray-600 text-sm leading-relaxed max-w-[240px] mx-auto">Choose page size, color mode, copies, and other print options</p>
               </div>
-              <div className="w-8 h-8 bg-purple-600 text-white rounded-full mx-auto mb-4 flex items-center justify-center font-bold text-sm">3</div>
-              <h3 className="text-lg font-bold text-gray-900 mb-3">Configure</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">Choose page size, color mode, copies, and other print options</p>
-            </div>
+            </button>
 
-            <div className="text-center print-card card-hover">
-              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg">
-                <FileCheck className="w-8 h-8 text-white" />
+            <button
+              onClick={scrollToCitySelection}
+              className="text-center print-card card-hover block w-full group"
+            >
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl mb-4 flex items-center justify-center shadow-lg group-active:scale-95 transition-transform relative">
+                  <FileCheck className="w-7 h-7 text-white" />
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-orange-700 text-white rounded-full flex items-center justify-center font-bold text-xs border-2 border-white shadow-sm">4</div>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Submit Order</h3>
+                <p className="text-gray-600 text-sm leading-relaxed max-w-[240px] mx-auto">Review your order details and submit with your contact information</p>
               </div>
-              <div className="w-8 h-8 bg-orange-600 text-white rounded-full mx-auto mb-4 flex items-center justify-center font-bold text-sm">4</div>
-              <h3 className="text-lg font-bold text-gray-900 mb-3">Submit Order</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">Review your order details and submit with your contact information</p>
-            </div>
+            </button>
 
-            <div className="text-center print-card card-hover">
-              <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg">
-                <Package className="w-8 h-8 text-white" />
+            <button
+              onClick={scrollToCitySelection}
+              className="text-center print-card card-hover block w-full group"
+            >
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl mb-4 flex items-center justify-center shadow-lg group-active:scale-95 transition-transform relative">
+                  <Package className="w-7 h-7 text-white" />
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-700 text-white rounded-full flex items-center justify-center font-bold text-xs border-2 border-white shadow-sm">5</div>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Collect Prints</h3>
+                <p className="text-gray-600 text-sm leading-relaxed max-w-[240px] mx-auto">Visit the shop and collect your professionally printed documents</p>
               </div>
-              <div className="w-8 h-8 bg-red-600 text-white rounded-full mx-auto mb-4 flex items-center justify-center font-bold text-sm">5</div>
-              <h3 className="text-lg font-bold text-gray-900 mb-3">Collect Prints</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">Visit the shop and collect your professionally printed documents</p>
-            </div>
+            </button>
           </div>
 
-          <div className="glass-card bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-8 sm:p-12 rounded-2xl">
+          <div id="powerful-features" className="glass-card bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-8 sm:p-12 rounded-2xl">
             <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">Powerful Features</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex gap-4">
@@ -562,39 +653,16 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* Features Section */}
-        <div className="py-20 animate-fadeInUp">
-          <div className="text-center mb-12 sm:mb-16 px-4">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">Why Choose Us?</h2>
-            <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-3xl mx-auto">
-              Innovative platform designed for modern needs
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
-              <div
-                key={index}
-                className="text-center print-card card-hover animate-slideInRight"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className="feature-icon mx-auto mb-6">
-                  <feature.icon className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+
       </div>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300 mt-20">
-        <div className="max-w-7xl mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+      <footer className="bg-gray-900 text-gray-300 mt-4 sm:mt-20">
+        <div className="max-w-7xl mx-auto px-4 py-6 sm:py-12">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
             {/* Company Info */}
-            <div>
+            <div className="col-span-2 lg:col-span-1">
               <div className="flex items-center gap-2.5 mb-4">
                 <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
                   <Printer className="w-5 h-5 text-white" />
@@ -613,33 +681,42 @@ const HomePage = () => {
               <h4 className="text-white font-semibold mb-4">Quick Links</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <a href="/payment/demo" className="text-blue-400 font-bold hover:text-blue-300 transition-colors flex items-center gap-1">
-                    <CreditCard className="w-3.5 h-3.5" />
-                    Payment Demo
-                  </a>
+                  <button onClick={scrollToCitySelection} className="hover:text-blue-400 transition-colors text-left">Find Shops</button>
                 </li>
                 <li>
-                  <a href="#all-shops" className="hover:text-blue-400 transition-colors">Find Shops</a>
+                  <button onClick={scrollToHowItWorks} className="hover:text-blue-400 transition-colors text-left">How It Works</button>
                 </li>
                 <li>
-                  <button onClick={scrollToHowItWorks} className="hover:text-blue-400 transition-colors">How It Works</button>
+                  <button 
+                    onClick={() => document.getElementById('powerful-features')?.scrollIntoView({ behavior: 'smooth' })} 
+                    className="hover:text-blue-400 transition-colors text-left"
+                  >
+                    Features
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Support */}
+            <div>
+              <h4 className="text-white font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <Link to="/about" className="hover:text-blue-400 transition-colors">About Us</Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-blue-400 transition-colors">Features</a>
+                  <Link to="/faq" className="hover:text-blue-400 transition-colors">FAQ / Help</Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-blue-400 transition-colors">Pricing</a>
+                  <Link to="/contact" className="hover:text-blue-400 transition-colors">Contact Us</Link>
                 </li>
               </ul>
             </div>
 
             {/* Legal */}
-            <div>
+            <div className="col-span-2 lg:col-span-1">
               <h4 className="text-white font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-sm">
-                <li>
-                  <Link to="/about" className="hover:text-blue-400 transition-colors">About Us</Link>
-                </li>
                 <li>
                   <Link to="/terms" className="hover:text-blue-400 transition-colors">Terms of Service</Link>
                 </li>
@@ -647,16 +724,10 @@ const HomePage = () => {
                   <Link to="/privacy" className="hover:text-blue-400 transition-colors">Privacy Policy</Link>
                 </li>
                 <li>
-                  <Link to="/faq" className="hover:text-blue-400 transition-colors">FAQ / Help</Link>
-                </li>
-                <li>
-                  <Link to="/refund-policy" className="hover:text-blue-400 transition-colors">Refund & Cancellation Policy</Link>
+                  <Link to="/refund-policy" className="hover:text-blue-400 transition-colors">Refund & Cancellation</Link>
                 </li>
                 <li>
                   <Link to="/cookie-policy" className="hover:text-blue-400 transition-colors">Cookie Policy</Link>
-                </li>
-                <li>
-                  <Link to="/contact" className="hover:text-blue-400 transition-colors">Contact Us</Link>
                 </li>
               </ul>
             </div>

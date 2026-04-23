@@ -101,7 +101,7 @@ const RefundPolicyPage = () => {
                   Because PrintGet currently facilitates direct payments to shops via UPI, automated refund APIs are not available. 
                 </p>
                 <ol className="list-decimal list-inside space-y-2 text-slate-700 ml-2">
-                  <li>To request a refund, contact us at <strong>billing@printget.in</strong> within 1 hour of the transaction.</li>
+                  <li>To request a refund, contact us at <strong>support@printget.in</strong> within 1 hour of the transaction.</li>
                   <li>Include your Order ID, Phone Number, and photographic proof of any defects.</li>
                   <li>Validated refunds will be processed manually via UPI transfer to the source bank account.</li>
                   <li>Please allow 5-7 business days for the amount to reflect in your account.</li>

@@ -249,9 +249,9 @@ const StatusPage = () => {
                 {job.payment_status === 'paid' ? '✓' : '💳'}
               </div>
               <div>
-                <p className="font-medium">Payment</p>
+                <p className="font-medium">Payment Method</p>
                 <p className="text-sm text-gray-500">
-                  {job.payment_status === 'paid' ? 'Payment confirmed' : 'Waiting for payment'}
+                  {job.payment_status === 'paid' ? 'Cash on Delivery (Pay at Shop)' : 'Pending Confirmation'}
                 </p>
                 {job.payment_status === 'paid' && (
                   <p className="text-xs text-gray-400">{new Date(job.updated_at).toLocaleString()}</p>
@@ -422,9 +422,9 @@ const StatusPage = () => {
                 <span>{formatCurrency(job.total_cost)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Payment Status:</span>
+                <span>Payment Method:</span>
                 <span className={job.payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600'}>
-                  {job.payment_status === 'paid' ? 'Paid' : 'Pending'}
+                  {job.payment_status === 'paid' ? 'Cash on Delivery' : 'Pending'}
                 </span>
               </div>
             </div>

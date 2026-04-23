@@ -21,6 +21,22 @@ export const getTodayDayName = (): DayName => {
 }
 
 /**
+ * Normalize a single day's hours entry to a simple string.
+ * Handles both formats:
+ *   - Simple string: "9:00-18:00" or "Closed"
+ *   - Desktop App object: { open: "09:00", close: "18:00", closed: false }
+ */
+const normalizeDayHours = (hours: any): string | null => {
+  if (!hours) return null
+  if (typeof hours === 'string') return hours
+  if (typeof hours === 'object') {
+    if (hours.closed === true) return 'Closed'
+    if (hours.open && hours.close) return `${hours.open}-${hours.close}`
+  }
+  return null
+}
+
+/**
  * Get today's operating hours for a shop
  * @param operatingHours - Shop's operating hours object
  * @returns Formatted string with today's hours (e.g., "Today: 9:00-18:00")
@@ -28,7 +44,8 @@ export const getTodayDayName = (): DayName => {
 export const getTodayHours = (operatingHours?: OperatingHours | null): string => {
   if (!operatingHours) return 'Hours not available'
   const today = getTodayDayName()
-  const hours = operatingHours[today]
+  const raw = (operatingHours as any)[today]
+  const hours = normalizeDayHours(raw)
   return `Today: ${hours || 'Closed'}`
 }
 
@@ -41,11 +58,12 @@ export const isShopOpen = (operatingHours?: OperatingHours | null): boolean => {
   if (!operatingHours) return false
 
   const today = getTodayDayName()
-  const hours = operatingHours[today]
+  const raw = (operatingHours as any)[today]
+  const hours = normalizeDayHours(raw)
 
   if (!hours || hours.toLowerCase() === 'closed') return false
 
-  // Parse hours (format: "9:00-18:00" or "9:00 AM-6:00 PM")
+  // Parse hours (format: "9:00-18:00" or "09:00-18:00")
   const match = hours.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/)
   if (!match) return false
 

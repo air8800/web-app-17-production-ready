@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { getShopInfo, getShopPricing, calculateOrderCost, uploadFile, uploadFileChunked, submitPrintJob, formatCurrency, updatePaymentStatus, updatePrintJob } from '../utils/supabase'
 import { usePdfController, USE_NEW_PDF_CONTROLLER } from '../utils/pdf2/controller/usePdfController'
 import usePDFStore from '../stores/pdfStore'
@@ -130,6 +130,9 @@ const OrderPage = () => {
   })
   const [showBackgroundInfo, setShowBackgroundInfo] = useState(false)
   const [showFullFilename, setShowFullFilename] = useState(false) // Toggle for long filename display
+  const [agreedToTerms, setAgreedToTerms] = useState(() => {
+    return localStorage.getItem('printget_agreed_terms') === 'true'
+  })
 
   // Persist background submission setting
   useEffect(() => {
@@ -1745,12 +1748,20 @@ const OrderPage = () => {
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">Hours</h3>
                     <div className="space-y-1">
-                      {Object.entries(shop.operating_hours).map(([day, hours]) => (
-                        <div key={day} className="flex justify-between text-sm">
-                          <span className="capitalize font-medium text-gray-700">{day}</span>
-                          <span className="text-gray-600">{hours}</span>
-                        </div>
-                      ))}
+                      {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map((day) => {
+                        const hours = shop.operating_hours[day]
+                        let display = hours
+                        if (!hours) display = 'Not set'
+                        else if (typeof hours === 'object' && hours !== null) {
+                          display = hours.closed ? 'Closed' : `${hours.open || '?'}-${hours.close || '?'}`
+                        }
+                        return (
+                          <div key={day} className="flex justify-between text-sm">
+                            <span className="capitalize font-medium text-gray-700">{day}</span>
+                            <span className="text-gray-600">{display}</span>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -2342,26 +2353,14 @@ const OrderPage = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div>
-                <label className="block text-xs sm:text-sm font-medium mb-2">Email</label>
-                <input
-                  type="email"
-                  value={orderData.customerEmail}
-                  onChange={(e) => setOrderData(prev => ({ ...prev, customerEmail: e.target.value }))}
-                  className="w-full p-3 border rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs sm:text-sm font-medium mb-2">Phone</label>
-                <input
-                  type="tel"
-                  value={orderData.customerPhone}
-                  onChange={(e) => setOrderData(prev => ({ ...prev, customerPhone: e.target.value }))}
-                  className="w-full p-3 border rounded-lg"
-                />
-              </div>
+            <div>
+              <label className="block text-xs sm:text-sm font-medium mb-2">Phone <span className="text-gray-400 font-normal">(Optional)</span></label>
+              <input
+                type="tel"
+                value={orderData.customerPhone}
+                onChange={(e) => setOrderData(prev => ({ ...prev, customerPhone: e.target.value }))}
+                className="w-full p-3 border rounded-lg"
+              />
             </div>
           </div>
 
@@ -2428,11 +2427,39 @@ const OrderPage = () => {
             </div>
           )}
 
+          {/* Terms and Conditions Checkbox */}
+          <div className="flex items-start gap-3 bg-gray-50/50 p-3 rounded-xl border border-gray-100 mt-2">
+            <div className="flex items-center h-5 mt-0.5">
+              <input
+                id="terms"
+                name="terms"
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => {
+                  setAgreedToTerms(e.target.checked)
+                  localStorage.setItem('printget_agreed_terms', e.target.checked ? 'true' : 'false')
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+              />
+            </div>
+            <div className="text-sm">
+              <label htmlFor="terms" className="font-medium text-gray-700 cursor-pointer">
+                I agree to the Terms
+              </label>
+              <p className="text-gray-500 text-xs mt-0.5">
+                By submitting, I agree to PrintGet's{' '}
+                <Link to="/terms" target="_blank" className="text-blue-600 hover:underline">Terms & Conditions</Link> and{' '}
+                <Link to="/privacy" target="_blank" className="text-blue-600 hover:underline">Privacy Policy</Link>.
+              </p>
+            </div>
+          </div>
+
           {/* Submit Button */}
           <button
             onClick={handleSubmitOrder}
             disabled={
               isSubmitting ||
+              !agreedToTerms ||
               (!orderData.file && (!orderData.files || orderData.files.length === 0)) ||
               !orderData.customerName ||
               costInfo.cost <= 0 ||

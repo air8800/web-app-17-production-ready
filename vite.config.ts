@@ -19,6 +19,13 @@ export default defineConfig({
     strictPort: true,
     host: '0.0.0.0',
     allowedHosts: true,
+    proxy: {
+      '/api/upi': {
+        target: 'https://merchant.upigateway.com/api',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/upi/, ""),
+      },
+    },
   },
   preview: {
     port: 3030,

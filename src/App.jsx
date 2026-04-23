@@ -1,11 +1,28 @@
 import React, { useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+
+// Scrolls to top on every route change
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [pathname])
+  return null
+}
 import HomePage from './pages/HomePage'
 import ShopPage from './pages/ShopPage'
 import OrderPage from './pages/OrderPage'
 import PaymentPage from './pages/PaymentPage'
 import StatusPage from './pages/StatusPage'
 import DesignMockup from './pages/DesignMockup'
+import TermsPage from './pages/TermsPage'
+import PrivacyPage from './pages/PrivacyPage'
+import AboutPage from './pages/AboutPage'
+import ContactPage from './pages/ContactPage'
+import CookiePolicyPage from './pages/CookiePolicyPage'
+import FAQPage from './pages/FAQPage'
+import NotFoundPage from './pages/NotFoundPage'
+import RefundPolicyPage from './pages/RefundPolicyPage'
 
 
 import { logDetailedMemory } from './utils/memoryProfiler'
@@ -27,6 +44,7 @@ function App() {
   return (
     <>
       <Router>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/design-mockup" element={<DesignMockup />} />
@@ -34,7 +52,14 @@ function App() {
           <Route path="/shop/:shopId/order" element={<OrderPage />} />
           <Route path="/payment/:jobId" element={<PaymentPage />} />
           <Route path="/status/:jobId" element={<StatusPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/cookie-policy" element={<CookiePolicyPage />} />
+          <Route path="/faq" element={<FAQPage />} />
+          <Route path="/refund-policy" element={<RefundPolicyPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
     </>

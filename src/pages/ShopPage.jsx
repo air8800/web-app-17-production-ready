@@ -150,12 +150,20 @@ const ShopPage = () => {
             <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Hours</h2>
             {shop.operating_hours ? (
               <div className="space-y-2">
-                {Object.entries(shop.operating_hours).map(([day, hours]) => (
-                  <div key={day} className="flex justify-between">
-                    <span className="capitalize font-medium">{day}</span>
-                    <span className="text-gray-600">{hours}</span>
-                  </div>
-                ))}
+                {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map((day) => {
+                  const hours = shop.operating_hours[day]
+                  let display = hours
+                  if (!hours) display = 'Not set'
+                  else if (typeof hours === 'object' && hours !== null) {
+                    display = hours.closed ? 'Closed' : `${hours.open || '?'}-${hours.close || '?'}`
+                  }
+                  return (
+                    <div key={day} className="flex justify-between">
+                      <span className="capitalize font-medium">{day}</span>
+                      <span className="text-gray-600">{display}</span>
+                    </div>
+                  )
+                })}
               </div>
             ) : (
               <p className="text-gray-600">Contact shop for operating hours</p>

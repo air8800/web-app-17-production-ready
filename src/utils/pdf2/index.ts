@@ -1,7 +1,7 @@
 /**
  * PDF2 Module
  * 
- * Modern, modular PDF editing architecture for PrintFlow Pro.
+ * Modern, modular PDF editing architecture for PrintGet.
  * 
  * This module provides:
  * - Clean separation of UI from logic

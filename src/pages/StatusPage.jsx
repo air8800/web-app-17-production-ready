@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getJobStatus, getShopInfo, subscribeToJobUpdates, startJobStatusPolling, formatCurrency } from '../utils/supabase'
+import { getJobStatus, getShopInfo, subscribeToJobUpdates, startJobStatusPolling, formatCurrency, updatePrintJob } from '../utils/supabase'
+import { Mail } from 'lucide-react'
 
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -12,6 +13,12 @@ const StatusPage = () => {
   const [error, setError] = useState(null)
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [connectionStatus, setConnectionStatus] = useState('connecting')
+
+  // Email notification state
+  const [notifEmail, setNotifEmail] = useState('')
+  const [emailSaved, setEmailSaved] = useState(false)
+  const [emailSaving, setEmailSaving] = useState(false)
+  const [emailError, setEmailError] = useState('')
 
   usePageTitle('Order Status')
 
@@ -85,6 +92,28 @@ const StatusPage = () => {
   const handleRefresh = () => {
     console.log('🔄 Manual refresh requested')
     loadJobStatus()
+  }
+
+  const handleSaveEmail = async () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!notifEmail.trim()) {
+      setEmailError('Please enter your email address.')
+      return
+    }
+    if (!emailRegex.test(notifEmail.trim())) {
+      setEmailError('Please enter a valid email address.')
+      return
+    }
+    setEmailError('')
+    setEmailSaving(true)
+    try {
+      await updatePrintJob(job.id, { customer_email: notifEmail.trim() })
+      setEmailSaved(true)
+    } catch (err) {
+      setEmailError('Something went wrong. Please try again.')
+    } finally {
+      setEmailSaving(false)
+    }
   }
 
   const getStatusColor = (status) => {
@@ -316,6 +345,53 @@ const StatusPage = () => {
               </div>
             )}
           </div>
+
+          {/* Email Notification Card - only show if no email saved yet and job is not completed */}
+          {job && !job.customer_email && job.job_status !== 'completed' && job.job_status !== 'cancelled' && (
+            <div className="border-t pt-4 sm:pt-6 mt-4 sm:mt-6">
+              {emailSaved ? (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Mail className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-green-800 text-sm">You're all set! 🎉</p>
+                    <p className="text-green-600 text-xs mt-0.5">We'll email you at <span className="font-medium">{notifEmail}</span> the moment your print is ready for pickup.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Mail className="w-4 h-4 text-blue-600" />
+                    <p className="font-semibold text-blue-900 text-sm">Get notified when ready</p>
+                  </div>
+                  <p className="text-blue-700 text-xs mb-3">
+                    Enter your email and we'll send you a notification the moment the shop marks your print job as completed — so you know exactly when to come pick it up. <span className="font-medium">(Optional)</span>
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={notifEmail}
+                      onChange={(e) => { setNotifEmail(e.target.value); setEmailError('') }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveEmail()}
+                      placeholder="your@email.com"
+                      className="flex-1 text-sm px-3 py-2 border border-blue-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                    />
+                    <button
+                      onClick={handleSaveEmail}
+                      disabled={emailSaving}
+                      className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
+                    >
+                      {emailSaving ? 'Saving...' : 'Notify Me'}
+                    </button>
+                  </div>
+                  {emailError && (
+                    <p className="text-red-500 text-xs mt-1.5">{emailError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Order Details */}
           <div className="border-t pt-4 sm:pt-6 mt-4 sm:mt-6">

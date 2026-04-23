@@ -1,7 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { getAllActiveShops } from '../utils/supabase'
-import { Printer, Search, Store, Clock, Star, MapPin, Phone, ArrowRight, Zap, Shield, Award, Globe, Upload, Settings, FileCheck, Package, Mail, Facebook, Twitter, Instagram, Linkedin, Sparkles, ChevronDown, Check } from 'lucide-react'
+import { Printer, Search, Store, Clock, Star, MapPin, Phone, ArrowRight, Zap, Shield, Award, Globe, Upload, Settings, FileCheck, Package, Mail, Sparkles, ChevronDown, Check, CreditCard } from 'lucide-react'
+
+// Helper: Check if a shop is currently open based on operating_hours
+const isShopOpen = (shop) => {
+  if (!shop?.operating_hours) return null // unknown
+  const now = new Date()
+  const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']
+  const today = days[now.getDay()]
+  const todayHours = shop.operating_hours[today]
+  if (!todayHours) return null
+  if (todayHours === 'Closed' || (typeof todayHours === 'object' && todayHours.closed)) return false
+  let openTime, closeTime
+  if (typeof todayHours === 'string' && todayHours.includes('-')) {
+    [openTime, closeTime] = todayHours.split('-').map(t => t.trim())
+  } else if (typeof todayHours === 'object') {
+    openTime = todayHours.open
+    closeTime = todayHours.close
+  }
+  if (!openTime || !closeTime) return null
+  const [oh, om] = openTime.split(':').map(Number)
+  const [ch, cm] = closeTime.split(':').map(Number)
+  const nowMins = now.getHours() * 60 + now.getMinutes()
+  const openMins = oh * 60 + (om || 0)
+  const closeMins = ch * 60 + (cm || 0)
+  return nowMins >= openMins && nowMins < closeMins
+}
 
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -215,11 +240,12 @@ const HomePage = () => {
                         <span className="text-sm truncate">{shop.address}</span>
                       </div>
                       <div className="flex items-center gap-4 text-sm">
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-500" />
-                          <span className="text-gray-700">4.8</span>
-                        </div>
-                        <span className="text-green-600 font-medium">Open</span>
+                        {(() => {
+                          const open = isShopOpen(shop)
+                          if (open === true) return <span className="text-green-600 font-medium">Open</span>
+                          if (open === false) return <span className="text-red-500 font-medium">Closed</span>
+                          return <span className="text-gray-400 font-medium">Hours N/A</span>
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -358,13 +384,24 @@ const HomePage = () => {
 
                       <div className="flex items-center justify-between pt-5 border-t border-gray-50 relative z-10">
                         <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100/50">
-                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                            <span className="text-sm font-bold text-amber-700">4.8</span>
-                          </div>
-                          <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100/50">
-                            OPEN
-                          </span>
+                          {(() => {
+                            const open = isShopOpen(shop)
+                            if (open === true) return (
+                              <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100/50">
+                                OPEN
+                              </span>
+                            )
+                            if (open === false) return (
+                              <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-red-50 text-red-600 border border-red-100/50">
+                                CLOSED
+                              </span>
+                            )
+                            return (
+                              <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-gray-50 text-gray-500 border border-gray-100/50">
+                                HOURS N/A
+                              </span>
+                            )
+                          })()}
                         </div>
                         <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
                           <ArrowRight className="w-4 h-4" />
@@ -558,35 +595,29 @@ const HomePage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
             {/* Company Info */}
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
                   <Printer className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-white font-bold text-lg">PrintFlow Pro</h3>
+                <h3 className="text-white font-bold text-xl tracking-tight">
+                  Print<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Get</span>
+                </h3>
               </div>
-              <p className="text-sm text-gray-400 mb-4">
+              <p className="text-sm text-gray-400 mb-4 leading-relaxed">
                 Your trusted platform for convenient printing services. Connect with local print shops and get your documents printed quickly.
               </p>
-              <div className="flex gap-3">
-                <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors">
-                  <Facebook className="w-4 h-4" />
-                </a>
-                <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors">
-                  <Twitter className="w-4 h-4" />
-                </a>
-                <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors">
-                  <Instagram className="w-4 h-4" />
-                </a>
-                <a href="#" className="w-9 h-9 bg-gray-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors">
-                  <Linkedin className="w-4 h-4" />
-                </a>
-              </div>
             </div>
 
             {/* Quick Links */}
             <div>
               <h4 className="text-white font-semibold mb-4">Quick Links</h4>
               <ul className="space-y-2 text-sm">
+                <li>
+                  <a href="/payment/demo" className="text-blue-400 font-bold hover:text-blue-300 transition-colors flex items-center gap-1">
+                    <CreditCard className="w-3.5 h-3.5" />
+                    Payment Demo
+                  </a>
+                </li>
                 <li>
                   <a href="#all-shops" className="hover:text-blue-400 transition-colors">Find Shops</a>
                 </li>
@@ -607,16 +638,25 @@ const HomePage = () => {
               <h4 className="text-white font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <a href="#" className="hover:text-blue-400 transition-colors">About Us</a>
+                  <Link to="/about" className="hover:text-blue-400 transition-colors">About Us</Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-blue-400 transition-colors">Terms of Service</a>
+                  <Link to="/terms" className="hover:text-blue-400 transition-colors">Terms of Service</Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-blue-400 transition-colors">Privacy Policy</a>
+                  <Link to="/privacy" className="hover:text-blue-400 transition-colors">Privacy Policy</Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-blue-400 transition-colors">Cookie Policy</a>
+                  <Link to="/faq" className="hover:text-blue-400 transition-colors">FAQ / Help</Link>
+                </li>
+                <li>
+                  <Link to="/refund-policy" className="hover:text-blue-400 transition-colors">Refund & Cancellation Policy</Link>
+                </li>
+                <li>
+                  <Link to="/cookie-policy" className="hover:text-blue-400 transition-colors">Cookie Policy</Link>
+                </li>
+                <li>
+                  <Link to="/contact" className="hover:text-blue-400 transition-colors">Contact Us</Link>
                 </li>
               </ul>
             </div>
@@ -631,12 +671,13 @@ const HomePage = () => {
           <div className="border-t border-gray-800 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <p className="text-sm text-gray-400">
-                © {new Date().getFullYear()} PrintFlow Pro. All rights reserved.
+                © {new Date().getFullYear()} PrintGet. All rights reserved.
               </p>
               <div className="flex gap-6 text-sm">
-                <a href="#" className="hover:text-blue-400 transition-colors">Terms</a>
-                <a href="#" className="hover:text-blue-400 transition-colors">Privacy</a>
-                <a href="#" className="hover:text-blue-400 transition-colors">Cookies</a>
+                <Link to="/terms" className="hover:text-blue-400 transition-colors">Terms</Link>
+                <Link to="/privacy" className="hover:text-blue-400 transition-colors">Privacy</Link>
+                <Link to="/cookie-policy" className="hover:text-blue-400 transition-colors">Cookies</Link>
+                <Link to="/contact" className="hover:text-blue-400 transition-colors">Contact</Link>
               </div>
             </div>
           </div>

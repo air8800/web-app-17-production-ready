@@ -265,9 +265,14 @@ export const calculateOrderCost = async (shopId, orderData) => {
     let pricePerPage = matchingConfig.base_price
     let appliedTier = null
 
+    let bulkTiers = matchingConfig.bulk_tiers
+    if (typeof bulkTiers === 'string') {
+      try { bulkTiers = JSON.parse(bulkTiers) } catch (e) { bulkTiers = [] }
+    }
+
     // Check for bulk pricing
-    if (matchingConfig.bulk_tiers && matchingConfig.bulk_tiers.length > 0) {
-      const tier = matchingConfig.bulk_tiers
+    if (Array.isArray(bulkTiers) && bulkTiers.length > 0) {
+      const tier = bulkTiers
         .filter(t => orderData.copies >= t.min_copies)
         .filter(t => !t.max_copies || orderData.copies <= t.max_copies)
         .sort((a, b) => b.min_copies - a.min_copies)[0]

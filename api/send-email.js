@@ -226,17 +226,17 @@ export default async function handler(req, res) {
     
     // Scenario 1: Order just became 'pending' + 'paid' (Order Submitted)
     if (record.job_status === 'pending' && record.payment_status === 'paid' && old_record?.payment_status !== 'paid') {
-      subject = '⏳ Order Confirmed: Print Job Received!';
+      subject = 'Order Confirmed - Print Job Received';
       emailHTML = buildConfirmedHTML(record.customer_name, record.filename, null, record.id);
     } 
     // Scenario 2: Order became 'completed' (Print Ready)
     else if (record.job_status === 'completed' && old_record?.job_status !== 'completed') {
-      subject = '🖨️ Your Print is Ready for Pickup!';
+      subject = 'Your Print is Ready for Pickup';
       emailHTML = buildReadyHTML(record.customer_name, record.filename, null, record.id);
     }
     // Scenario 3: Order became 'cancelled'
     else if (record.job_status === 'cancelled' && old_record?.job_status !== 'cancelled') {
-      subject = '❌ Order Cancelled';
+      subject = 'Order Cancelled - PrintGet';
       emailHTML = buildCancelledHTML(record.customer_name, record.filename, null, record.id);
     } 
     // Ignore all other updates
@@ -247,7 +247,7 @@ export default async function handler(req, res) {
     console.log(`📧 Sending "${subject}" to: ${customerEmail}`);
 
     await transporter.sendMail({
-      from: `"PrintGet" <orders@printget.in>`, // The alias seen by users
+      from: `"PrintGet" <hello@printget.in>`, // Must match authenticated email to avoid spam
       replyTo: 'support@printget.in', // If they reply, it goes to support
       to: customerEmail,
       subject: subject,

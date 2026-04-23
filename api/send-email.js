@@ -7,7 +7,7 @@ const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER, // hello@printget.in
+    user: process.env.EMAIL_USER, // orders@printget.in
     pass: process.env.EMAIL_PASS, // App Password (NOT regular password)
   },
 });
@@ -256,11 +256,15 @@ export default async function handler(req, res) {
 
     console.log(`📧 Sending "${subject}" to: ${customerEmail}`);
 
+    // Strip HTML tags for plain text fallback (helps avoid spam filters)
+    const emailText = emailHTML.replace(/<[^>]*>?/gm, '\n').replace(/\n\s*\n/g, '\n').trim();
+
     await transporter.sendMail({
-      from: `"PrintGet" <hello@printget.in>`, // Must match authenticated email to avoid spam
-      replyTo: 'support@printget.in', // If they reply, it goes to support
+      from: `"PrintGet Orders" <orders@printget.in>`,
+      replyTo: 'support@printget.in',
       to: customerEmail,
       subject: subject,
+      text: emailText,
       html: emailHTML,
     });
 

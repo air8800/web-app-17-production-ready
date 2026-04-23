@@ -2372,14 +2372,18 @@ const OrderPage = () => {
                 onClick={() => setIsCostBreakupExpanded(!isCostBreakupExpanded)}
                 className="w-full flex justify-between items-center p-3"
               >
-                <div className="flex flex-col items-start">
-                  <span className="text-sm font-medium">Total Cost & Payment</span>
+                <div className="flex flex-col items-start gap-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <HandCoins className="w-3.5 h-3.5 text-blue-500" />
+                    <span className="text-xs text-blue-600 font-semibold uppercase tracking-wide">Cash on Delivery</span>
+                  </div>
+                  <span className="text-[11px] text-gray-400">Tap to see breakdown</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <span className="text-xl font-bold text-blue-600">
                     {formatCurrency(costInfo.cost)}
                   </span>
-                  <ChevronRight className={`w-4 h-4 text-gray-600 transition-transform ${isCostBreakupExpanded ? 'rotate-90' : ''}`} />
+                  <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${isCostBreakupExpanded ? 'rotate-90' : ''}`} />
                 </div>
               </button>
 

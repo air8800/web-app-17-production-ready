@@ -247,7 +247,7 @@ const HomePage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Top Navigation Bar */}
-      <nav className="sticky top-0 z-50 bg-gradient-to-r from-white/80 via-blue-50/80 to-white/80 backdrop-blur-xl border-b border-blue-100/50 px-4 py-3 sm:py-4 overflow-hidden">
+      <nav className="sticky top-0 z-50 bg-gradient-to-r from-white/50 via-blue-50/40 to-white/50 backdrop-blur-xl px-4 py-3 sm:py-4 overflow-hidden">
         {/* Decorative Background Accent */}
         <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-0 -right-4 w-24 h-24 bg-gradient-to-bl from-blue-600/15 via-blue-400/5 to-transparent rounded-bl-[80px] pointer-events-none" />

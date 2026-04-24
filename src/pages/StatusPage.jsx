@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { getJobStatus, getShopInfo, subscribeToJobUpdates, startJobStatusPolling, formatCurrency, updatePrintJob } from '../utils/supabase'
 import { Mail } from 'lucide-react'
 
@@ -7,6 +7,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 
 const StatusPage = () => {
   const { jobId } = useParams()
+  const navigate = useNavigate()
   const [job, setJob] = useState(null)
   const [shop, setShop] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -92,6 +93,11 @@ const StatusPage = () => {
   const handleRefresh = () => {
     console.log('🔄 Manual refresh requested')
     loadJobStatus()
+  }
+
+  const handleDismissTracking = () => {
+    localStorage.removeItem('printget_recent_order')
+    navigate('/')
   }
 
   const handleSaveEmail = async () => {
@@ -191,26 +197,28 @@ const StatusPage = () => {
       <div className="max-w-2xl mx-auto px-4 py-4 sm:py-8">
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           {/* Header with refresh button */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold">Order Status</h1>
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Connection status indicator */}
-              <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-                <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500' :
-                    connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
-                      'bg-red-500'
-                  }`}></div>
-                <span className="text-gray-600">
-                  {connectionStatus === 'connected' ? 'Live' :
-                    connectionStatus === 'connecting' ? 'Connecting' :
-                      'Offline'}
-                </span>
-              </div>
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-3">
+              <h1 className="text-xl sm:text-2xl font-bold">Order Status</h1>
               <button
                 onClick={handleRefresh}
-                className="bg-blue-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm hover:bg-blue-700 transition-colors"
+                className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm"
               >
                 Refresh
+              </button>
+            </div>
+            
+            <div className="flex justify-start">
+              <button
+                onClick={handleDismissTracking}
+                disabled={job.job_status !== 'completed'}
+                className={`px-6 py-2 rounded-lg text-sm font-bold transition-colors border ${
+                  job.job_status === 'completed' 
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-sm' 
+                    : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-75'
+                }`}
+              >
+                Got my prints!
               </button>
             </div>
           </div>
@@ -350,44 +358,55 @@ const StatusPage = () => {
           {job && !job.customer_email && job.job_status !== 'completed' && job.job_status !== 'cancelled' && (
             <div className="border-t pt-4 sm:pt-6 mt-4 sm:mt-6">
               {emailSaved ? (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Mail className="w-4 h-4 text-green-600" />
+                <div className="bg-green-50 border border-green-200 rounded-2xl p-5 flex items-start gap-4 shadow-sm animate-fadeIn">
+                  <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <Mail className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="font-semibold text-green-800 text-sm">You're all set! 🎉</p>
-                    <p className="text-green-600 text-xs mt-0.5">We'll email you at <span className="font-medium">{notifEmail}</span> the moment your print is ready for pickup.</p>
+                    <p className="font-extrabold text-green-800 text-base">You're all set! 🎉</p>
+                    <p className="text-green-700 text-sm mt-1 leading-relaxed">
+                      We'll email your <span className="font-bold">Receipt</span> and <span className="font-bold">Order ID</span> to <span className="font-bold underline text-green-800">{notifEmail}</span>, and alert you the second your prints are ready.
+                    </p>
                   </div>
                 </div>
               ) : (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Mail className="w-4 h-4 text-blue-600" />
-                    <p className="font-semibold text-blue-900 text-sm">Get notified when ready</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-blue-100 flex-shrink-0">
+                      <Mail className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <h4 className="font-extrabold text-blue-900 text-lg leading-tight">Get Live Updates & Receipt</h4>
                   </div>
-                  <p className="text-blue-700 text-xs mb-3">
-                    Enter your email and we'll send you a notification the moment the shop marks your print job as completed — so you know exactly when to come pick it up. <span className="font-medium">(Optional)</span>
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      type="email"
-                      value={notifEmail}
-                      onChange={(e) => { setNotifEmail(e.target.value); setEmailError('') }}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSaveEmail()}
-                      placeholder="your@email.com"
-                      className="flex-1 text-sm px-3 py-2 border border-blue-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                    />
-                    <button
-                      onClick={handleSaveEmail}
-                      disabled={emailSaving}
-                      className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
-                    >
-                      {emailSaving ? 'Saving...' : 'Notify Me'}
-                    </button>
+                  
+                  <div className="space-y-4 ml-0 sm:ml-[52px]">
+                    <div>
+                      <span className="inline-block bg-blue-600 text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm mb-2.5">Recommended</span>
+                      <p className="text-blue-700 text-sm leading-relaxed">
+                        Receive your <span className="font-bold text-blue-900">Order Receipt</span>, <span className="font-bold text-blue-900">Order ID</span>, and an <span className="font-bold text-blue-900">Instant Alert</span> when your prints are ready.
+                      </p>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <input
+                        type="email"
+                        value={notifEmail}
+                        onChange={(e) => { setNotifEmail(e.target.value); setEmailError('') }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveEmail()}
+                        placeholder="your@email.com"
+                        className="w-full sm:flex-1 text-sm px-3 py-2 border border-blue-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                      />
+                      <button
+                        onClick={handleSaveEmail}
+                        disabled={emailSaving}
+                        className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
+                      >
+                        {emailSaving ? 'Saving...' : 'Notify Me'}
+                      </button>
+                    </div>
+                    {emailError && (
+                      <p className="text-red-500 text-xs mt-1">{emailError}</p>
+                    )}
                   </div>
-                  {emailError && (
-                    <p className="text-red-500 text-xs mt-1.5">{emailError}</p>
-                  )}
                 </div>
               )}
             </div>
@@ -397,34 +416,34 @@ const StatusPage = () => {
           <div className="border-t pt-4 sm:pt-6 mt-4 sm:mt-6">
             <h3 className="text-sm sm:text-base font-medium mb-3">Order Details</h3>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Order ID:</span>
-                <span className="font-mono">{job.id.slice(0, 8)}</span>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500 flex-shrink-0">Order ID:</span>
+                <span className="font-mono text-gray-900 truncate">{job.id.slice(0, 8)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>File:</span>
-                <span>{job.filename}</span>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500 flex-shrink-0">File:</span>
+                <span className="text-gray-900 truncate text-right max-w-[200px] sm:max-w-none" title={job.filename}>{job.filename}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Copies:</span>
-                <span>{job.copies}</span>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500 flex-shrink-0">Copies:</span>
+                <span className="text-gray-900">{job.copies}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Specifications:</span>
-                <span>{job.paper_size} {job.color_mode} {job.print_type}</span>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500 flex-shrink-0">Specifications:</span>
+                <span className="text-gray-900 truncate text-right max-w-[150px] sm:max-w-none">{job.paper_size} {job.color_mode} {job.print_type}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Customer:</span>
-                <span>{job.customer_name}</span>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500 flex-shrink-0">Customer:</span>
+                <span className="text-gray-900 truncate text-right max-w-[150px] sm:max-w-none">{job.customer_name}</span>
               </div>
-              <div className="flex justify-between font-medium">
-                <span>Total Cost:</span>
-                <span>{formatCurrency(job.total_cost)}</span>
+              <div className="flex justify-between gap-4 font-medium pt-1">
+                <span className="text-gray-900 flex-shrink-0">Total Cost:</span>
+                <span className="text-gray-900">{formatCurrency(job.total_cost)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Payment Method:</span>
-                <span className={job.payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600'}>
-                  {job.payment_status === 'paid' ? 'Cash on Delivery' : 'Pending'}
+              <div className="flex justify-between gap-4 pt-1">
+                <span className="text-gray-500 flex-shrink-0">Payment Method:</span>
+                <span className={`text-right ${job.payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}>
+                  {job.payment_status === 'paid' ? 'Cash on Delivery' : 'Pending Confirmation'}
                 </span>
               </div>
             </div>

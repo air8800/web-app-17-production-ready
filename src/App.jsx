@@ -19,6 +19,7 @@ import ShopPage from './pages/ShopPage'
 import OrderPage from './pages/OrderPage'
 import PaymentPage from './pages/PaymentPage'
 import StatusPage from './pages/StatusPage'
+import HistoryPage from './pages/HistoryPage'
 import DesignMockup from './pages/DesignMockup'
 import TermsPage from './pages/TermsPage'
 import PrivacyPage from './pages/PrivacyPage'
@@ -57,6 +58,7 @@ function App() {
           <Route path="/shop/:shopId/order" element={<OrderPage />} />
           <Route path="/payment/:jobId" element={<PaymentPage />} />
           <Route path="/status/:jobId" element={<StatusPage />} />
+          <Route path="/history" element={<HistoryPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/about" element={<AboutPage />} />

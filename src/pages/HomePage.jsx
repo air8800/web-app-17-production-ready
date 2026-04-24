@@ -126,6 +126,21 @@ const HomePage = () => {
   const cityRef = useRef(null)
   const [cityVisible, setCityVisible] = useState(false)
   const [shouldGlow, setShouldGlow] = useState(false)
+  const [recentOrder, setRecentOrder] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('printget_recent_order') || 'null')
+      if (!stored) return null
+      // Show banner only if order is less than 24 hours old
+      const ageHours = (Date.now() - stored.timestamp) / (1000 * 60 * 60)
+      if (ageHours > 24) {
+        localStorage.removeItem('printget_recent_order')
+        return null
+      }
+      return stored
+    } catch {
+      return null
+    }
+  })
 
   useEffect(() => {
     loadShops()
@@ -231,6 +246,32 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Top Navigation Bar */}
+      <nav className="sticky top-0 z-50 bg-gradient-to-r from-white/80 via-blue-50/80 to-white/80 backdrop-blur-xl border-b border-blue-100/50 px-4 py-3 sm:py-4 overflow-hidden">
+        {/* Decorative Background Accent */}
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 -right-4 w-24 h-24 bg-gradient-to-bl from-blue-600/15 via-blue-400/5 to-transparent rounded-bl-[80px] pointer-events-none" />
+        
+        <div className="max-w-7xl mx-auto flex items-center justify-between relative z-10">
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-active:scale-95 transition-transform">
+              <Printer className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="font-bold text-xl tracking-tight text-gray-900">
+              Print<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Get</span>
+            </h3>
+          </Link>
+          
+          <Link 
+            to="/history" 
+            className="flex items-center gap-2 px-3 py-1.5 sm:px-5 sm:py-2.5 bg-white/80 border border-blue-100 rounded-2xl text-sm font-bold text-gray-800 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all active:scale-95 shadow-sm shadow-blue-100/20 group"
+          >
+            <Clock className="w-4 h-4 text-blue-500 group-hover:text-white transition-colors" />
+            <span>My Orders</span>
+          </Link>
+        </div>
+      </nav>
+
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         {/* Background Pattern */}
@@ -278,6 +319,41 @@ const HomePage = () => {
         <div className="absolute bottom-20 left-1/4 w-12 h-12 bg-indigo-500/10 rounded-full animate-float" style={{ animationDelay: '4s' }} />
       </div>
 
+
+      {/* Recent Order Banner */}
+      {recentOrder && (
+        <div className="max-w-7xl mx-auto px-4 pt-4 sm:pt-6">
+          <div className="bg-white border border-blue-200 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 shadow-sm shadow-blue-100">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-200">
+                <Package className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-bold text-gray-900 text-sm">You have a recent order</p>
+                <p className="text-gray-500 text-xs truncate">Order ID: <span className="font-mono font-semibold text-blue-600">{recentOrder.jobId?.slice(0, 8)}</span></p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Link
+                to={`/status/${recentOrder.jobId}`}
+                className="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              >
+                Track Order →
+              </Link>
+              <button
+                onClick={() => {
+                  setRecentOrder(null)
+                  localStorage.removeItem('printget_recent_order')
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 py-4 sm:py-16">
 
@@ -693,6 +769,9 @@ const HomePage = () => {
                   >
                     Features
                   </button>
+                </li>
+                <li>
+                  <Link to="/history" className="hover:text-blue-400 transition-colors">My Orders</Link>
                 </li>
               </ul>
             </div>

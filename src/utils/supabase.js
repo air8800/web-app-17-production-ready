@@ -526,6 +526,31 @@ export const getJobStatus = async (jobId) => {
   }
 }
 
+export const getJobsByIds = async (jobIds) => {
+  try {
+    if (!jobIds || !Array.isArray(jobIds) || jobIds.length === 0) {
+      return { data: [], error: null }
+    }
+
+    const { data, error } = await supabase
+      .from('print_jobs')
+      .select('*, shops:shop_id(name, address)')
+      .in('id', jobIds)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('❌ Jobs history error:', error)
+      throw new Error(`Failed to get jobs history: ${error.message}`)
+    }
+
+    return { data, error: null }
+
+  } catch (error) {
+    console.error('❌ Jobs history error:', error)
+    return { data: [], error: { message: error.message } }
+  }
+}
+
 export const updatePrintJob = async (jobId, updates) => {
   try {
     if (!jobId) {

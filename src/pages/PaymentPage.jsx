@@ -50,6 +50,23 @@ const PaymentPage = () => {
       // even though it's technically Cash on Delivery.
       await updatePaymentStatus(jobId, 'paid')
       setPaymentConfirmed(true)
+      // Save order ID for tracking
+      localStorage.setItem('printget_recent_order', JSON.stringify({
+        jobId,
+        shopId: location?.state?.shopId || null,
+        timestamp: Date.now()
+      }))
+      
+      // Save to full order history
+      try {
+        const history = JSON.parse(localStorage.getItem('printget_order_history') || '[]')
+        if (!history.includes(jobId)) {
+          history.push(jobId)
+          localStorage.setItem('printget_order_history', JSON.stringify(history))
+        }
+      } catch (e) {
+        console.error('Failed to save to order history', e)
+      }
       setTimeout(() => {
         navigate(`/status/${jobId}`)
       }, 2000)

@@ -45,6 +45,18 @@ function App() {
   useEffect(() => {
     console.log('🚀 [App] Mounted - React + Router ready')
     logDetailedMemory('App Startup Baseline (before any PDF)')
+
+    // Initialize Unique Device ID for tracking history/preferences without login
+    if (typeof window !== 'undefined') {
+      let deviceId = localStorage.getItem('printget_device_id')
+      if (!deviceId) {
+        deviceId = `pg_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`
+        localStorage.setItem('printget_device_id', deviceId)
+        console.log('📱 Created new Unique Device ID:', deviceId)
+      } else {
+        console.log('📱 Existing Device ID found:', deviceId)
+      }
+    }
   }, [])
 
   return (

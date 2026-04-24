@@ -57,6 +57,14 @@ const StatusPage = () => {
     }
   }, [jobId])
 
+  // Auto-fill email from local storage
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('printget_user_email')
+    if (savedEmail && !notifEmail) {
+      setNotifEmail(savedEmail)
+    }
+  }, [])
+
   const loadJobStatus = async () => {
     try {
       setLoading(true)
@@ -115,6 +123,8 @@ const StatusPage = () => {
     try {
       await updatePrintJob(job.id, { customer_email: notifEmail.trim() })
       setEmailSaved(true)
+      // Save email to device for future auto-fill
+      localStorage.setItem('printget_user_email', notifEmail.trim())
     } catch (err) {
       setEmailError('Something went wrong. Please try again.')
     } finally {

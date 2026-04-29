@@ -138,6 +138,7 @@ const OrderPage = () => {
     return saved !== null ? saved === 'true' : true
   })
   const [showBackgroundInfo, setShowBackgroundInfo] = useState(false)
+  const [showAllPaperSizes, setShowAllPaperSizes] = useState(false)
   const [showFullFilename, setShowFullFilename] = useState(false) // Toggle for long filename display
   const [agreedToTerms, setAgreedToTerms] = useState(() => {
     return localStorage.getItem('printget_agreed_terms') === 'true'
@@ -2218,6 +2219,75 @@ const OrderPage = () => {
             </div>
           )}
 
+          {/* All Paper Sizes Popup */}
+          {showAllPaperSizes && (
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in"
+              onClick={() => setShowAllPaperSizes(false)}
+            >
+              <div
+                className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden animate-scale-in"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-4 flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-white">
+                    <FileText className="w-5 h-5 opacity-80" />
+                    <h3 className="font-bold">Choose Paper Size</h3>
+                  </div>
+                  <button
+                    onClick={() => setShowAllPaperSizes(false)}
+                    className="text-white/80 hover:text-white transition-colors"
+                    aria-label="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="p-5 space-y-4">
+                  <p className="text-xs text-gray-600">
+                    {availablePaperSizes.length} paper size{availablePaperSizes.length === 1 ? '' : 's'} available at this shop. Tap one to select.
+                  </p>
+
+                  <div className="grid grid-cols-3 gap-2 max-h-[50vh] overflow-y-auto pr-1">
+                    {availablePaperSizes.map(size => {
+                      const isSelected = orderData.paperSize === size
+                      return (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => {
+                            setOrderData(prev => ({ ...prev, paperSize: size }))
+                            setShowAllPaperSizes(false)
+                          }}
+                          className={`relative px-3 py-3 text-sm font-semibold rounded-lg transition-all border-2 ${isSelected
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                            : 'bg-gray-50 text-gray-800 border-gray-200 hover:bg-blue-50 hover:border-blue-300'
+                            }`}
+                        >
+                          {isSelected && (
+                            <span className="absolute top-1 right-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-white text-blue-600 text-[10px] font-bold">
+                              ✓
+                            </span>
+                          )}
+                          {size}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="px-5 py-3 bg-gray-50 flex justify-end">
+                  <button
+                    onClick={() => setShowAllPaperSizes(false)}
+                    className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-all shadow-md active:scale-95"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Compact Print Settings - Show after file upload */}
           {(orderData.file || orderData.files.length > 0) && (
             <div id="print-settings-container" className="bg-white border-2 border-gray-200 rounded-xl p-3 space-y-3">
@@ -2246,10 +2316,15 @@ const OrderPage = () => {
                     ))}
                     {availablePaperSizes.length > 4 && (
                       <button
+                        type="button"
+                        onClick={() => setShowAllPaperSizes(true)}
                         className="px-3 py-2 text-xs font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-1"
                       >
                         <MoreHorizontal className="w-3.5 h-3.5" />
                         <span>More</span>
+                        <span className="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-white text-[10px] font-semibold">
+                          +{availablePaperSizes.length - 4}
+                        </span>
                       </button>
                     )}
                   </div>

@@ -2401,7 +2401,7 @@ const OrderPage = () => {
                       <button
                         onClick={() => setOrderData(prev => ({ ...prev, pagesPerSheet: 1 }))}
                         className={`flex items-center justify-center gap-2 px-2 py-2 text-xs font-medium rounded-lg transition-all h-9 ${orderData.pagesPerSheet === 1
-                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md hover:shadow-lg'
+                          ? 'bg-blue-600 text-white shadow-md hover:shadow-lg'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           }`}
                       >
@@ -2704,15 +2704,15 @@ const OrderPage = () => {
 
           {/* Cost Display - Collapsible */}
           {costInfo.cost > 0 ? (
-            <div className="bg-white border border-indigo-100 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white border border-blue-100 rounded-xl overflow-hidden shadow-sm">
               {/* Header - Always visible */}
               <button
                 onClick={() => setIsCostBreakupExpanded(!isCostBreakupExpanded)}
                 className="payment-tap-btn w-full flex items-center gap-3 px-3.5 py-3 text-left"
               >
                 {/* Icon */}
-                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
-                  <HandCoins className="text-indigo-600" style={{ width: '20px', height: '20px' }} />
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+                  <HandCoins className="text-blue-600" style={{ width: '20px', height: '20px' }} />
                 </div>
 
                 {/* Middle: 2 clean rows */}
@@ -2721,21 +2721,21 @@ const OrderPage = () => {
                     <span className="text-[11px] font-extrabold text-gray-900 uppercase tracking-wider leading-none">
                       Payment
                     </span>
-                    <span className="text-[10px] font-semibold text-indigo-400 leading-none truncate">
+                    <span className="text-[10px] font-semibold text-blue-400 leading-none truncate">
                       {isCostBreakupExpanded ? 'Hide breakdown' : 'Tap to see breakdown'}
                     </span>
                   </div>
-                  <span className="text-[14px] font-bold text-indigo-700 leading-tight truncate">
+                  <span className="text-[14px] font-bold text-blue-700 leading-tight truncate">
                     Cash on Delivery
                   </span>
                 </div>
 
                 {/* Right: price + chevron */}
                 <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-[17px] font-extrabold text-indigo-600 tabular-nums leading-none">
+                  <span className="text-[17px] font-extrabold text-blue-600 tabular-nums leading-none">
                     {formatCurrency(costInfo.cost)}
                   </span>
-                  <ChevronRight className={`w-4 h-4 text-indigo-300 transition-transform duration-150 ${isCostBreakupExpanded ? 'rotate-90' : ''}`} />
+                  <ChevronRight className={`w-4 h-4 text-blue-300 transition-transform duration-150 ${isCostBreakupExpanded ? 'rotate-90' : ''}`} />
                 </div>
               </button>
 
@@ -2820,7 +2820,7 @@ const OrderPage = () => {
             }
             className={`w-full group relative overflow-hidden py-2.5 sm:py-3 px-4 sm:px-5 rounded-xl font-bold text-[17px] sm:text-base transition-all duration-300 shadow-lg active:scale-[0.98] ${isSubmitting || !agreedToTerms || costInfo.cost <= 0
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
-                : 'bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-600 bg-[length:200%_auto] hover:bg-right text-white shadow-indigo-200'
+                : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 bg-[length:200%_auto] hover:bg-right text-white shadow-blue-200'
               }`}
           >
             {isSubmitting ? (

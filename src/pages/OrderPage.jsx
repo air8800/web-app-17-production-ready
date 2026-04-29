@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react'
+import React, { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
-import { getShopInfo, getShopPricing, calculateOrderCost, uploadFile, uploadFileChunked, submitPrintJob, formatCurrency, updatePaymentStatus, updatePrintJob } from '../utils/supabase'
+import { getShopInfo, getShopPricing, calculateOrderCost, uploadFile, uploadFileChunked, submitPrintJob, submitPrintJobImmediate, formatCurrency, updatePaymentStatus, updatePrintJob, sanitizeFilename } from '../utils/supabase'
+import useUploadStore from '../stores/uploadStore'
 import { usePdfController, USE_NEW_PDF_CONTROLLER } from '../utils/pdf2/controller/usePdfController'
 import usePDFStore from '../stores/pdfStore'
 import PDFPageSelector from '../components/PDFPageSelector'
@@ -21,6 +22,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 const OrderPage = () => {
   const { shopId } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [shop, setShop] = useState(null)
 
   usePageTitle(shop?.name ? `Order - ${shop.name}` : 'Order')
@@ -85,7 +87,11 @@ const OrderPage = () => {
 
   // State for edited PDF and pre-uploaded URL
   const [editedPages, setEditedPages] = useState({})
-  const { controller } = usePdfController()
+  const { controller, resetAll: resetPdfController } = usePdfController()
+  const { reset: resetPdfStore } = usePDFStore()
+  const { startUpload, setProgress: setUploadStoreProgress, finishUpload, setError: setUploadError, setPendingJobId } = useUploadStore()
+  // Read uploadStore state without subscribing (for use in callbacks)
+  const getUploadStoreState = useUploadStore.getState
 
   // Pre-generated PDF blob (ready to upload on submit)
   const [readyPDFBlob, setReadyPDFBlob] = useState(null)
@@ -101,6 +107,7 @@ const OrderPage = () => {
   const [showAltText, setShowAltText] = useState(false)
   const [backgroundUploadProgress, setBackgroundUploadProgress] = useState(0)
   const [currentUploadRef, setCurrentUploadRef] = useState(null)
+  const uploadContextRef = useRef({ fileName: null, pendingJobId: null })
 
   // Submission popup state
   const [showSubmitPopup, setShowSubmitPopup] = useState(false)
@@ -124,6 +131,8 @@ const OrderPage = () => {
   // N-up conversion loading state
   const [isConvertingNup, setIsConvertingNup] = useState(false)
 
+
+
   const [backgroundSubmission, setBackgroundSubmission] = useState(() => {
     const saved = localStorage.getItem('printflow_background_submission')
     return saved !== null ? saved === 'true' : true
@@ -134,10 +143,65 @@ const OrderPage = () => {
     return localStorage.getItem('printget_agreed_terms') === 'true'
   })
 
+  // Limits and Warning states
+  const MAX_FILE_SIZE = 300 * 1024 * 1024 // 300MB
+  const MAX_IMAGES = 30
+  const [sizeWarning, setSizeWarning] = useState({ show: false, type: null }) // type: 'size' or 'count'
+
   // Persist background submission setting
   useEffect(() => {
     localStorage.setItem('printflow_background_submission', backgroundSubmission)
   }, [backgroundSubmission])
+
+  // SYNC MODAL STATES WITH URL (Enables mobile back button support)
+  const modalView = searchParams.get('view')
+  useEffect(() => {
+    // Sync local states based on URL view param
+    setShowInfoPopup(modalView === 'info')
+    setShowPdfEditorModal(modalView === 'pdf-editor')
+    setShowPdfEditPopup(modalView === 'page-editor')
+    setShowPdfSheetEditPopup(modalView === 'sheet-editor')
+    setShowEditor(modalView === 'image-editor')
+
+    // Cleanup extra states when modals close via back button
+    if (!modalView) {
+      setEditingSheetData(null)
+      setEditPopupPage(null)
+      setEditPopupPageIndex(-1)
+      setEditPopupController(null)
+      setEditPopupApplyEdit(null)
+      setEditorType(null)
+      setEditorError(null)
+      setIsDirectPageEdit(false)
+    }
+  }, [modalView])
+
+  // Helpers for URL-based navigation (Enables mobile back button)
+  const openModal = useCallback((view) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev)
+      newParams.set('view', view)
+      return newParams
+    })
+    document.body.style.overflow = 'hidden' // Prevent background scrolling
+  }, [setSearchParams])
+
+  const closeModal = useCallback(() => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev)
+      newParams.delete('view')
+      return newParams
+    }, { replace: true })
+    setPdfEditorModalPageIndex(0)
+    setEditingSheetData(null)
+    document.body.style.overflow = 'unset' // Restore background scrolling
+  }, [setSearchParams])
+
+  // CRITICAL: Reset PDF store on mount to prevent stale edits from previous sessions
+  useEffect(() => {
+    resetPdfStore()
+    if (resetPdfController) resetPdfController()
+  }, [])
 
   // Handle pagesPerSheet change with async conversion
   const handlePagesPerSheetChange = (newValue) => {
@@ -172,13 +236,6 @@ const OrderPage = () => {
     const handlePDFEditorUpdate = (event) => {
       if (event.detail && event.detail.editedPages) {
         const editedPagesData = event.detail.editedPages
-        console.log('📝 Received edited pages from PDFEditor:', Object.keys(editedPagesData).length, 'pages')
-
-        // Log canvas availability
-        Object.keys(editedPagesData).forEach(pageNum => {
-          const hasCanvas = editedPagesData[pageNum].canvas ? '✅' : '❌'
-          console.log(`  Page ${pageNum}: ${hasCanvas} canvas available`)
-        })
 
         setEditedPages(prevEdited => ({
           ...prevEdited,
@@ -187,12 +244,10 @@ const OrderPage = () => {
 
         // CRITICAL: Use the finalPDF from PDFEditor (vector-based export, no rasterization!)
         if (event.detail.finalPDF) {
-          console.log('✅ Using vector-based finalPDF from PDFEditor (ZERO rasterization!)')
           setReadyPDFBlob(event.detail.finalPDF)
           setIsGeneratingPDF(false)
 
           // Upload the vector-based PDF immediately
-          console.log('📤 Uploading vector-based PDF in background...')
           uploadInBackground(event.detail.finalPDF)
         } else {
           console.warn('⚠️ No finalPDF provided - falling back to regeneration (should not happen!)')
@@ -410,8 +465,6 @@ const OrderPage = () => {
     // Default to 0 if no file is uploaded
     const pageCount = orderData.file ? (selectedCount > 0 ? selectedCount : (totalCount || 0)) : 0
 
-    console.log(`💰 Calculating cost for: ${pageCount} pages, ${orderData.copies} copies`)
-
     const result = await calculateOrderCost(shopId, {
       paperSize: orderData.paperSize,
       colorMode: orderData.colorMode,
@@ -435,7 +488,6 @@ const OrderPage = () => {
       setConversionProgress(0)
 
       const totalImages = imageFiles.length
-      console.log(`📸 Converting ${totalImages} image(s) to PDF...`)
 
       // Create PDF document
       const pdfDoc = await PDFDocument.create()
@@ -507,15 +559,6 @@ const OrderPage = () => {
         { type: 'application/pdf' }
       )
 
-      // Calculate original vs compressed sizes
-      const originalSize = imageFiles.reduce((sum, file) => sum + file.size, 0)
-      const compressedSize = pdfFile.size
-      const savings = ((originalSize - compressedSize) / originalSize * 100).toFixed(1)
-
-      console.log('✅ Images converted to PDF successfully')
-      console.log(`📊 Original size: ${(originalSize / 1024 / 1024).toFixed(2)} MB`)
-      console.log(`📊 Compressed PDF size: ${(compressedSize / 1024 / 1024).toFixed(2)} MB`)
-      console.log(`💾 File size reduced by ${savings}% (saved ${((originalSize - compressedSize) / 1024 / 1024).toFixed(2)} MB)`)
       setConversionMessage('Conversion complete!')
 
       // Brief delay to show completion
@@ -541,18 +584,50 @@ const OrderPage = () => {
     const fileList = filesOrFile.length ? Array.from(filesOrFile) : [filesOrFile]
     const firstFile = fileList[0]
 
-    console.log('📁 Files selected:', fileList.length, 'files')
-    console.log('📄 First file type:', firstFile.type, 'Name:', firstFile.name)
+    // CHECK LIMITS
+    const totalSize = fileList.reduce((sum, f) => sum + f.size, 0)
+    if (totalSize > MAX_FILE_SIZE) {
+      setSizeWarning({ show: true, type: 'size' })
+      return
+    }
+    if (fileList.length > MAX_IMAGES && firstFile.type.startsWith('image/')) {
+      setSizeWarning({ show: true, type: 'count' })
+      return
+    }
+
+    // Abort previous upload if exists before starting new one
+    if (currentUploadRef) {
+      try { currentUploadRef.abort() } catch (e) {}
+      setCurrentUploadRef(null)
+    }
+
+    // CRITICAL: Reset edits state but DO NOT reset the entire PDF store/controller
+    // here. The controller is a singleton in the Zustand store — wiping it
+    // mid-flight orphans the instance that PDFEditorNew is about to call
+    // loadDocument() on. The controller's own loadDocument() correctly handles
+    // reloading a new file (it destroys the previous pdfDoc internally).
+    //
+    // We DO need to clear the stale thumbnails/pages from the pdfStore so the
+    // selector doesn't show the previous file's pages while the new one loads.
+    setEditedPages({})
+    if (resetPdfController) resetPdfController()
+    usePDFStore.setState({
+      pages: new Map(),
+      loadedPages: new Set(),
+      dirtyPages: new Set(),
+      renderQueue: [],
+      thumbnails: new Map(),
+      fastPageCount: 0,
+      totalPages: 0,
+    })
 
     // Clear any pre-generated PDF and pre-uploaded URL from previous upload
     setReadyPDFBlob(null)
     setPreUploadedFileUrl(null)
     preUploadedFileUrlRef.current = null
-    setEditedPages({})
     setUploadProgress(0)
 
     // Check if it's PDF or images
-    console.log('🔍 Checking file type... isPDF?', firstFile.type === 'application/pdf')
     if (firstFile.type === 'application/pdf') {
       // =========================================================================
       // VISUAL NORMALIZATION: No longer modify the PDF file!
@@ -561,10 +636,6 @@ const OrderPage = () => {
       // documentLoader.ts for preview purposes only. 
       // Background upload is skipped for large files to assume "Visual Only" mode.
       // =========================================================================
-
-      console.log('📄 Using VISUAL normalization (no file modification)')
-      console.log('   → Raw PDF will be uploaded to server')
-      console.log('   → Canvas rendering applies A4 scaling for preview')
 
       // Use raw file directly
       const normalizeResult = {
@@ -577,8 +648,6 @@ const OrderPage = () => {
       setIsNormalizingPDF(false)
       setNormalizationProgress(100)
       setNormalizationMessage('Ready')
-
-      console.log(`🔄 Setting orderData.file to RAW PDF (${firstFile.name}, ${(firstFile.size / 1024 / 1024).toFixed(2)} MB)`)
 
       // Store page count (will be updated by pdf.js)
       setPdfPageCount(0)
@@ -593,19 +662,19 @@ const OrderPage = () => {
       }))
       setShowEditor(false)
 
-      // Pre-generate PDF immediately for instant submit
-      // OPTIMIZATION: Skip background upload for large files (> 10MB) 
-      if (firstFile.size > 10 * 1024 * 1024) {
-        console.log('⚠️ Skipping background PDF generation for large file (>10MB)')
+      // Kick off background upload immediately on file select.
+      // Big files benefit MORE from background upload, not less — they take
+      // longer to upload, so starting early while the user edits is the whole
+      // point. The previous 10MB skip defeated the purpose.
+      if (!backgroundSubmission) {
+        console.warn('⚠️ [FILE-CHANGE] Background submission toggle is OFF. Background upload will be skipped. Toggle it ON in the UI to enable.')
       } else {
-        console.log('🚀 Pre-generating PDF for instant submission...')
         generateInitialPDF(firstFile, [])
       }
     } else if (firstFile.type.startsWith('image/')) {
       // Images - auto-convert to PDF
       try {
         const allImages = fileList.filter(f => f.type.startsWith('image/'))
-        console.log(`🖼️ Auto-converting ${allImages.length} image(s) to PDF...`)
 
         // Convert images to PDF with progress tracking
         const { pdfFile, pageCount } = await convertImagesToPDFWithProgress(allImages)
@@ -628,11 +697,7 @@ const OrderPage = () => {
 
         setShowEditor(false)
 
-        // Show success message
-        console.log(`✅ Images automatically converted to PDF (${pageCount} pages, all selected)`)
-
         // Pre-generate PDF immediately after conversion (for instant submit)
-        console.log('🚀 Pre-generating PDF for instant submission...')
         generateInitialPDF(pdfFile, allPages)
 
       } catch (error) {
@@ -683,8 +748,7 @@ const OrderPage = () => {
   }
 
   // Handle pages loaded from PDFPageSelector
-  const handlePagesLoaded = (pages, totalCount) => {
-    console.log(`📦 OrderPage received ${pages.length} pages from selector, total: ${totalCount}`)
+  const handlePagesLoaded = useCallback((pages, totalCount) => {
     setPdfPagesData(pages)
     // Update the page count for the header display
     // Priority: totalCount (actual PDF count) > pages.length (loaded thumbnails)
@@ -692,10 +756,9 @@ const OrderPage = () => {
     if (effectiveCount > 0) {
       setPdfPageCount(effectiveCount)
     }
-  }
+  }, [setPdfPagesData, setPdfPageCount])
 
   const handleEditFile = (pageIndex) => {
-    console.log('OrderPage.handleEditFile called with pageIndex:', pageIndex)
     if (!orderData.file) {
       console.warn('OrderPage.handleEditFile: No file available')
       return
@@ -714,17 +777,16 @@ const OrderPage = () => {
         // Page 0,1 -> Sheet 0 (pages 1-2)
         // Page 2,3 -> Sheet 1 (pages 3-4)
         editorPageIndex = Math.floor(editorPageIndex / 2)
-        console.log(`🔄 N-up mode: Converting page ${pageIndex} to sheet ${editorPageIndex}`)
       }
 
       setInitialEditPageIndex(editorPageIndex)
 
       if (orderData.file.type === 'application/pdf') {
         setPdfEditorModalPageIndex(editorPageIndex)
-        setShowPdfEditorModal(true)
+        openModal('pdf-editor')
       } else if (orderData.file.type.startsWith('image/')) {
         setEditorType('image')
-        setShowEditor(true)
+        openModal('image-editor')
       }
     } catch (error) {
       console.error('❌ Error opening editor:', error)
@@ -733,16 +795,13 @@ const OrderPage = () => {
   }
 
   // Handler for direct popup editing from PDFPageSelector single view
-  const handleDirectEditPage = (pageIndex, page, controller, applyEdit) => {
-    console.log('OrderPage.handleDirectEditPage:', { pageIndex, page: !!page, controller: !!controller })
+  const handleDirectEditPage = useCallback((pageIndex, page, controller, applyEdit) => {
     if (!page) {
       console.warn('No page data provided for direct edit')
       return
     }
     if (page.isSheet && page.containsPages) {
       // 📄 Handle Sheet Edit (N-up Mode)
-      console.log('📄 OrderPage: Opening Sheet Editor for', page.pageNumber)
-
       const p1Num = page.containsPages[0]
       const p2Num = page.containsPages[1] || null
 
@@ -760,7 +819,7 @@ const OrderPage = () => {
       }
 
       setEditingSheetData(sheetData)
-      setShowPdfSheetEditPopup(true)
+      openModal('sheet-editor')
       return
     }
 
@@ -769,8 +828,8 @@ const OrderPage = () => {
     setEditPopupPageIndex(pageIndex)
     setEditPopupController(controller)
     setEditPopupApplyEdit(() => applyEdit)
-    setShowPdfEditPopup(true)
-  }
+    openModal('page-editor')
+  }, [pdfPagesData, orderData.pagesPerSheet])
 
   // Handler for closing the sheet edit popup
   const handleCloseSheetEditPopup = () => {
@@ -781,9 +840,8 @@ const OrderPage = () => {
   // Handler for direct sheet editing from PDFPageSelector (N-up mode)
   // Receives sheetData directly from PDFEditorNew via PDFPageSelector
   const handleDirectEditSheet = (sheetData) => {
-    console.log('📄 OrderPage.handleDirectEditSheet:', sheetData)
     setEditingSheetData(sheetData)
-    setShowPdfSheetEditPopup(true)
+    openModal('sheet-editor')
   }
 
   const handleCloseEditPopup = () => {
@@ -793,7 +851,6 @@ const OrderPage = () => {
   }
 
   const handleEditPopupApply = (pageIndex, edits) => {
-    console.log('Edit applied to page:', pageIndex, edits)
     // Dispatch event to sync with PDFEditorNew
     window.dispatchEvent(new CustomEvent('pdfPageEdited', {
       detail: { pageIndex, edits }
@@ -801,7 +858,6 @@ const OrderPage = () => {
   }
 
   const handleEditPopupApplyAll = (edits) => {
-    console.log('Edit applied to all pages:', edits)
     // Dispatch event to sync with PDFEditorNew
     window.dispatchEvent(new CustomEvent('pdfAllPagesEdited', {
       detail: { edits }
@@ -847,13 +903,10 @@ const OrderPage = () => {
 
   // 🧹 Proper cleanup when removing file - destroys controller, cancels uploads, resets store
   const handleRemoveFile = () => {
-    console.log('🧹 [handleRemoveFile] Starting full cleanup...')
-
     // 1. Destroy the PDF controller to release memory (250-600MB for large PDFs)
     if (controller) {
       try {
         controller.destroy()
-        console.log('✅ Controller destroyed')
       } catch (e) {
         console.warn('⚠️ Error destroying controller:', e)
       }
@@ -861,7 +914,6 @@ const OrderPage = () => {
 
     // 2. Reset the shared PDF store
     usePDFStore.getState().reset()
-    console.log('✅ PDF store reset')
 
     // 3. Clear all order state
     setOrderData(prev => ({
@@ -885,11 +937,22 @@ const OrderPage = () => {
     setPdfPageCount(0)
     setPdfPagesData([])
     setShowFullFilename(false) // Reset filename display state
+    setInitialEditPageIndex(0)
+    setPdfEditorModalPageIndex(0)
+    setPreviewPageSize(DEFAULT_PAGE_SIZE)
 
     // 5. Dispatch event to notify other components (PDFPageSelector listens for this)
     window.dispatchEvent(new CustomEvent('pdfCleared'))
 
-    console.log('✅ [handleRemoveFile] Full cleanup complete')
+    // 6. Abort any current background upload if it exists
+    if (currentUploadRef) {
+      try {
+        currentUploadRef.abort()
+      } catch (e) {
+        console.warn('⚠️ Error aborting upload:', e)
+      }
+    }
+    setCurrentUploadRef(null)
   }
 
   const processSelectedPages = async (originalFile, selectedPages) => {
@@ -905,11 +968,8 @@ const OrderPage = () => {
 
       if (selectedPages.length === totalPages &&
         selectedPages.every((page, index) => page === index + 1)) {
-        console.log('✅ All pages selected, using original file')
         return originalFile
       }
-
-      console.log(`📄 Processing ${selectedPages.length} selected pages from ${totalPages} total pages`)
 
       // Remove unselected pages (in reverse order to maintain indices)
       const pagesToRemove = []
@@ -929,7 +989,6 @@ const OrderPage = () => {
         type: 'application/pdf'
       })
 
-      console.log('✅ PDF processed successfully')
       return modifiedFile
 
     } catch (error) {
@@ -941,43 +1000,57 @@ const OrderPage = () => {
   // Background PDF regeneration when edits are saved
   // Generate initial PDF right after upload (even without edits) AND upload it
   const generateInitialPDF = async (file, selectedPages = []) => {
-    const startTime = performance.now()
-    console.log('🚀 [TIMING] Starting PDF preparation and background upload...')
     setIsGeneratingPDF(true)
 
     try {
       // For PDFs, just use the original file
       if (file && file.type === 'application/pdf') {
         setReadyPDFBlob(file)
-        console.log(`⏱️ [TIMING] PDF prepared in ${((performance.now() - startTime) / 1000).toFixed(3)}s`)
-        console.log('✅ Original PDF ready - starting background upload...')
 
-        // Upload immediately in background
-        uploadInBackground(file)
+        // Upload immediately in background (fire-and-forget — let it run)
+        uploadInBackground(file).catch((e) => {
+          console.error('❌ [INIT-PDF] uploadInBackground threw:', e)
+        })
+      } else {
+        console.warn('⚠️ [INIT-PDF] File is not a PDF, skipping background upload. type=', file?.type)
       }
     } catch (error) {
-      console.error('❌ Error preparing PDF:', error)
+      console.error('❌ [INIT-PDF] Error preparing PDF:', error)
     } finally {
       setIsGeneratingPDF(false)
     }
   }
 
   // Upload file in background immediately after PDF is ready
-  const uploadInBackground = async (file) => {
-    if (!backgroundSubmission) {
-      console.log('🛑 Background submission is DISABLED by user. Skipping background upload.')
+  const uploadInBackground = async (file, force = false) => {
+    if (!file) {
+      console.warn('🛑 [BG-UPLOAD] No file provided, aborting')
+      return
+    }
+    if (!shopId) {
+      console.warn('🛑 [BG-UPLOAD] No shopId yet, aborting')
+      return
+    }
+    if (!backgroundSubmission && !force) {
+      console.warn('🛑 [BG-UPLOAD] Background submission is OFF in settings. Toggle it ON to enable instant submit.')
       return
     }
 
-    const uploadStartTime = performance.now()
-    console.log('📤 [TIMING] Starting background upload with CHUNKED protocol...')
-    console.log(`📊 File size: ${(file.size / 1024 / 1024).toFixed(2)} MB`)
     setIsUploading(true)
     setUploadProgress(0)
     setBackgroundUploadProgress(0)
+    // Tell uploadStore we are uploading (no jobId yet — submit hasn't happened)
+    startUpload(null)
+
+    const originalName = file.name || 'document.pdf'
+    const fileName = `${shopId}/${Date.now()}_${sanitizeFilename(originalName)}`
+    uploadContextRef.current = { fileName, pendingJobId: null }
 
     try {
       setSubmitPopupMessage('Uploading in background...')
+
+      // Generate a consistent filename for this upload session to enable TUS resumption
+      localStorage.setItem('printget_active_upload_name', fileName)
 
       let uploadRef = null
       const uploadResult = await uploadFileChunked(
@@ -988,11 +1061,16 @@ const OrderPage = () => {
           setUploadProgress(progress)
           setBackgroundUploadProgress(progress)
           setSubmitPopupMessage(`Uploading... ${percentage}%`)
+          // Feed progress to global store — StatusPage reads from here
+          setUploadStoreProgress(progress)
+          // Store progress for history page
+          localStorage.setItem('printget_active_upload_progress', percentage)
         },
         (upload) => {
           uploadRef = upload
           setCurrentUploadRef(upload)
-        }
+        },
+        fileName // Pass the custom filename for resumption
       )
 
       if (uploadResult.error) {
@@ -1000,36 +1078,63 @@ const OrderPage = () => {
         setPreUploadedFileUrl(null)
         preUploadedFileUrlRef.current = null
         setCurrentUploadRef(null)
+        setUploadError(uploadResult.error.message || 'Upload failed')
+        // If submit already happened, mark the DB job as error
+        const pendingJobId = uploadContextRef.current.pendingJobId || useUploadStore.getState().pendingJobId
+        if (pendingJobId) {
+          updatePrintJob(pendingJobId, { job_status: 'error' }).catch(() => { })
+        }
         return
       }
 
-      const uploadTime = ((performance.now() - uploadStartTime) / 1000).toFixed(2)
-      console.log(`⏱️ [TIMING] Background upload completed in ${uploadTime}s`)
-      console.log('✅ File pre-uploaded! Submit will be instant!')
-      console.log('📎 Pre-uploaded URL:', uploadResult.data.publicUrl)
-
       const publicUrl = uploadResult.data.publicUrl
       setPreUploadedFileUrl(publicUrl)
-      preUploadedFileUrlRef.current = publicUrl // Also set ref for polling
+      preUploadedFileUrlRef.current = publicUrl
       setUploadProgress(100)
       setBackgroundUploadProgress(100)
       setSubmitPopupMessage('✅ Ready to submit!')
       setCurrentUploadRef(null)
+
+      // If submit already happened, update the DB record with the real URL
+      const pendingJobId = uploadContextRef.current.pendingJobId || useUploadStore.getState().pendingJobId
+      if (pendingJobId) {
+        try {
+          await updatePrintJob(pendingJobId, { file_url: publicUrl, job_status: 'pending' })
+          await updatePaymentStatus(pendingJobId, 'paid')
+        } catch (e) {
+          // Silent fail — the shop operator can still see the order
+        }
+      }
+
+      finishUpload()
+
+      // Clean up persistence
+      const currentJobId = pendingJobId
+      if (currentJobId) {
+        localStorage.removeItem(`printget_upload_name_${currentJobId}`)
+        localStorage.removeItem(`printget_upload_progress_${currentJobId}`)
+      }
+      localStorage.removeItem('printget_active_upload_name')
+      localStorage.removeItem('printget_active_upload_progress')
+
     } catch (error) {
       if (error.message && error.message.includes('aborted')) {
-        console.log('⏸️ Background upload was aborted (user submitted)')
+        // Upload was intentionally aborted, no-op
       } else {
         console.error('❌ Background upload error:', error)
+        setUploadError(error.message || 'Upload failed')
       }
       setSubmitPopupMessage('')
       setCurrentUploadRef(null)
     } finally {
+      if (uploadContextRef.current.fileName === fileName) {
+        uploadContextRef.current = { fileName: null, pendingJobId: null }
+      }
       setIsUploading(false)
     }
   }
 
   const regeneratePDFInBackground = async (editedPagesData) => {
-    console.log('🔄 Pre-generating PDF in background...')
     setIsGeneratingPDF(true)
 
     // Clear stale pre-uploaded URL since we're creating a new PDF
@@ -1056,9 +1161,7 @@ const OrderPage = () => {
 
       if (pdfBlob) {
         setReadyPDFBlob(pdfBlob)
-        console.log('✅ PDF with edits pre-generated successfully!')
         // Upload the new edited PDF immediately
-        console.log('📤 Uploading edited PDF in background...')
         uploadInBackground(pdfBlob)
       }
     } catch (error) {
@@ -1072,11 +1175,6 @@ const OrderPage = () => {
   // Generate final PDF with edits applied
   const generateEditedPDF = async (pdfFile, selectedPages, editedPagesData) => {
     try {
-      console.log('📄 Generating PDF with edits...', {
-        hasEdits: Object.keys(editedPagesData).length,
-        selectedPages: selectedPages.length
-      })
-
       // If no edits, return null (will use original file)
       if (Object.keys(editedPagesData).length === 0) {
         return null
@@ -1123,7 +1221,6 @@ const OrderPage = () => {
       const pdfBytes = await newPdfDoc.save()
       const pdfBlob = new File([pdfBytes], pdfFile.name, { type: 'application/pdf' })
 
-      console.log('✅ PDF with edits generated successfully')
       return pdfBlob
 
     } catch (error) {
@@ -1134,14 +1231,6 @@ const OrderPage = () => {
 
   const createPDFFromImages = async (imageFiles, selectedImageIndices, pageSize, pagesPerSheet, editedPagesOverride = null) => {
     try {
-      console.log('📄 Creating PDF from images...', {
-        totalImages: imageFiles.length,
-        selectedCount: selectedImageIndices.length,
-        pageSize,
-        pagesPerSheet,
-        hasEditedPages: Object.keys(editedPages).length > 0
-      })
-
       const pdfDoc = await PDFDocument.create()
       const pageDimensions = getPageSize(pageSize)
 
@@ -1150,8 +1239,6 @@ const OrderPage = () => {
         .map(index => imageFiles[index - 1])
         .filter(file => file != null)
 
-      console.log('📄 Processing', selectedFiles.length, 'selected images')
-
       // Handle mix of edited and unedited pages
       const pagesToUse = editedPagesOverride || editedPages
       const hasEdits = Object.keys(pagesToUse).length > 0
@@ -1159,7 +1246,6 @@ const OrderPage = () => {
 
       if (hasEdits) {
         // Mix of edited and unedited pages - handle each individually
-        console.log('✂️ Using mix of edited and original canvases')
         const imagePromises = selectedImageIndices.map((pageNum, idx) => {
           const editedPage = pagesToUse[pageNum]
           if (editedPage && editedPage.canvas) {
@@ -1186,7 +1272,6 @@ const OrderPage = () => {
         loadedImages = (await Promise.all(imagePromises)).filter(img => img !== null)
       } else {
         // No edits - load original image files
-        console.log('📄 Using original image files (no edits)')
         const imagePromises = selectedFiles.map(file => {
           return new Promise((resolve, reject) => {
             const reader = new FileReader()
@@ -1276,7 +1361,6 @@ const OrderPage = () => {
       const pdfBytes = await pdfDoc.save()
       const pdfFile = new File([pdfBytes], 'images.pdf', { type: 'application/pdf' })
 
-      console.log('✅ PDF created successfully from images')
       return pdfFile
 
     } catch (error) {
@@ -1286,6 +1370,163 @@ const OrderPage = () => {
   }
 
   const handleSubmitOrder = async () => {
+    // Validate
+    if (!orderData.customerName) {
+      alert('Please enter customer name')
+      return
+    }
+    if (orderData.file) {
+      if (orderData.file.type === 'application/pdf' && orderData.selectedPages.length === 0) {
+        alert('Please select at least one page to print')
+        return
+      }
+    } else if (orderData.files && orderData.files.length > 0) {
+      if (orderData.selectedImages.length === 0) {
+        alert('Please select at least one image to print')
+        return
+      }
+    } else {
+      alert('Please upload a file')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      // Export recipe (edit metadata for desktop app — raw file is already uploaded)
+      let recipe = null
+      let hasEdits = false
+      if (USE_NEW_PDF_CONTROLLER && controller) {
+        try {
+          recipe = controller.exportRecipe()
+          if (recipe && recipe.pages && Array.isArray(recipe.pages)) {
+            hasEdits = recipe.pages.some(p => p.hasEdits === true)
+          }
+        } catch (_) { }
+      } else {
+        hasEdits = Object.keys(editedPages).length > 0
+      }
+
+      // ── Case A: Background upload already finished ──
+      // The file has been uploading since the user selected it.
+      // If it's done by now, we can use the real URL immediately.
+      if (preUploadedFileUrl) {
+        const jobResult = await submitPrintJobImmediate({
+          shop_id: shopId,
+          filename: orderData.filename,
+          copies: orderData.copies,
+          paper_size: orderData.paperSize,
+          color_mode: orderData.colorMode,
+          print_type: orderData.printType,
+          pages_per_sheet: orderData.pagesPerSheet,
+          customer_name: orderData.customerName,
+          customer_email: orderData.customerEmail || null,
+          customer_phone: orderData.customerPhone || null,
+          total_cost: costInfo.cost,
+          selected_pages: orderData.selectedPages,
+          total_pages: pdfPageCount,
+          recipe: recipe ? JSON.stringify(recipe) : null,
+          has_edits: hasEdits,
+        })
+        if (jobResult.error) throw new Error(jobResult.error.message)
+        const jobId = jobResult.data.id
+
+        // Update the DB record to use the real URL (overwrite placeholder)
+        await updatePrintJob(jobId, { file_url: preUploadedFileUrl, job_status: 'pending' })
+        await updatePaymentStatus(jobId, 'paid')
+
+        // Save to localStorage
+        localStorage.setItem('printget_recent_order', JSON.stringify({ jobId, shopId, timestamp: Date.now() }))
+        try {
+          const history = JSON.parse(localStorage.getItem('printget_order_history') || '[]')
+          if (!history.includes(jobId)) { history.push(jobId); localStorage.setItem('printget_order_history', JSON.stringify(history)) }
+        } catch (_) { }
+
+        // Show upload as done instantly
+        startUpload(jobId)
+        finishUpload()
+        navigate(`/status/${jobId}`)
+        return
+      }
+
+      // ── Fallback Case: Upload never started or failed ──
+      if (!isUploading && !preUploadedFileUrl) {
+        let fileToUpload = null
+        if (orderData.file) {
+          fileToUpload = readyPDFBlob || orderData.file
+        } else if (orderData.files && orderData.files.length > 0) {
+          if (readyPDFBlob) {
+            fileToUpload = readyPDFBlob
+          } else {
+            throw new Error('Please process images to PDF first')
+          }
+        }
+
+        if (fileToUpload) {
+          uploadInBackground(fileToUpload, true) // Force start
+        } else {
+          throw new Error('No valid file to upload')
+        }
+      }
+
+      // ── Case B: Upload still in progress (or just started) ──
+      // Create the DB record now, tell uploadStore the pendingJobId,
+      // and navigate. uploadInBackground will update the DB when it finishes.
+      const jobResult = await submitPrintJobImmediate({
+        shop_id: shopId,
+        filename: orderData.filename,
+        copies: orderData.copies,
+        paper_size: orderData.paperSize,
+        color_mode: orderData.colorMode,
+        print_type: orderData.printType,
+        pages_per_sheet: orderData.pagesPerSheet,
+        customer_name: orderData.customerName,
+        customer_email: orderData.customerEmail || null,
+        customer_phone: orderData.customerPhone || null,
+        total_cost: costInfo.cost,
+        selected_pages: orderData.selectedPages,
+        total_pages: pdfPageCount,
+        recipe: recipe ? JSON.stringify(recipe) : null,
+        has_edits: hasEdits,
+      })
+      if (jobResult.error) throw new Error(jobResult.error.message)
+      const jobId = jobResult.data.id
+
+      // Move temporary upload filename to job-specific storage for resumption
+      const activeFileName = localStorage.getItem('printget_active_upload_name')
+      if (activeFileName) {
+        localStorage.setItem(`printget_upload_name_${jobId}`, activeFileName)
+        const activeProgress = localStorage.getItem('printget_active_upload_progress')
+        if (activeProgress) {
+          localStorage.setItem(`printget_upload_progress_${jobId}`, activeProgress)
+        }
+        // Don't remove 'active' keys yet, as uploadInBackground might still be running 
+        // and using them for the current session. They'll be cleaned up in finishUpload.
+      }
+
+      // Tell the upload store: "when the current upload finishes, update THIS job"
+      uploadContextRef.current.pendingJobId = jobId
+      setPendingJobId(jobId)
+      // Also mark the store as uploading for this job so StatusPage shows progress
+      startUpload(jobId)
+
+      // Save to localStorage
+      localStorage.setItem('printget_recent_order', JSON.stringify({ jobId, shopId, timestamp: Date.now() }))
+      try {
+        const history = JSON.parse(localStorage.getItem('printget_order_history') || '[]')
+        if (!history.includes(jobId)) { history.push(jobId); localStorage.setItem('printget_order_history', JSON.stringify(history)) }
+      } catch (_) { }
+
+      // Navigate immediately — uploadInBackground handles the rest
+      navigate(`/status/${jobId}`)
+
+    } catch (error) {
+      alert('Failed to submit order: ' + error.message)
+      setIsSubmitting(false)
+    }
+  }
+
+  const _handleSubmitOrderOLD = async () => {
     if (!orderData.customerName) {
       alert('Please enter customer name')
       return
@@ -1313,22 +1554,17 @@ const OrderPage = () => {
     setShowSubmitPopup(true)
     setSubmitPopupMessage('Preparing your order...')
     setIsSubmitting(true)
-    const submitStartTime = performance.now()
     const popupStartTime = performance.now()
-    console.log('🚀 [TIMING] === ORDER SUBMISSION STARTED ===')
 
     try {
       let fileUrl = null
 
       // ⚡ INSTANT SUBMIT: Check if we already uploaded the file in background
       if (preUploadedFileUrl) {
-        console.log('⚡⚡⚡ [TIMING] INSTANT SUBMIT! Using pre-uploaded file URL')
-        console.log('📎 Pre-uploaded URL:', preUploadedFileUrl)
         fileUrl = preUploadedFileUrl
         setSubmitPopupMessage('Finalizing order...')
       } else if (currentUploadRef && isUploading) {
         // Background upload is still running - continue from its progress
-        console.log(`📤 [TIMING] Background upload in progress at ${backgroundUploadProgress}%... continuing`)
         setSubmitPopupMessage(`Uploading... ${Math.round(backgroundUploadProgress)}%`)
 
         // Wait for background upload to complete using ref for reliable polling
@@ -1337,7 +1573,6 @@ const OrderPage = () => {
             const checkInterval = setInterval(() => {
               // Check ref instead of state for reliable polling
               if (preUploadedFileUrlRef.current) {
-                console.log('✅ Background upload completed while waiting!')
                 clearInterval(checkInterval)
                 resolve(preUploadedFileUrlRef.current)
               }
@@ -1347,13 +1582,12 @@ const OrderPage = () => {
             setTimeout(() => {
               clearInterval(checkInterval)
               reject(new Error('Background upload timeout'))
-            }, 120000)
+            }, 1800000)
           })
 
           fileUrl = backgroundResult
           setSubmitPopupMessage('Finalizing order...')
         } catch (error) {
-          console.log('⚠️ Background upload did not complete in time, starting new upload...')
           // Cancel background and start fresh
           if (currentUploadRef) {
             currentUploadRef.abort()
@@ -1365,51 +1599,37 @@ const OrderPage = () => {
 
       if (!fileUrl) {
         // Fallback: Upload now if not pre-uploaded
-        console.log('⚠️ [TIMING] File not pre-uploaded, uploading now...')
-
         // Start visual progress from where background left off
         const startProgress = backgroundUploadProgress > 0 ? backgroundUploadProgress : 0
-        console.log(`📊 Starting visual progress from ${startProgress}%`)
 
         let fileToUpload = null
         const hasEdits = Object.keys(editedPages).length > 0
 
         // Handle different file types
-        const fileSelectionStart = performance.now()
         if (orderData.file) {
           // Check if we have pre-generated PDF with edits
           if (hasEdits && readyPDFBlob) {
-            console.log('⚡ Using pre-generated PDF with edits')
             fileToUpload = readyPDFBlob
           } else if (readyPDFBlob) {
-            console.log('⚡ Using pre-generated PDF')
             fileToUpload = readyPDFBlob
           } else {
             // Use original file
             fileToUpload = orderData.file
-            console.log('📤 Using original file')
           }
         } else if (orderData.files && orderData.files.length > 0) {
           // Multiple images - use pre-generated PDF if available
           if (readyPDFBlob) {
-            console.log('⚡ Using pre-generated PDF')
             fileToUpload = readyPDFBlob
           } else {
             setSubmitPopupMessage('Creating PDF from images...')
-            console.log('📤 Combining images into PDF...')
-            const pdfGenStart = performance.now()
             fileToUpload = await createPDFFromImages(orderData.files, orderData.selectedImages, previewPageSize, orderData.pagesPerSheet)
-            console.log(`⏱️ [TIMING] PDF generation took: ${((performance.now() - pdfGenStart) / 1000).toFixed(2)}s`)
           }
         } else {
           throw new Error('No file to upload')
         }
-        console.log(`⏱️ [TIMING] File selection took: ${((performance.now() - fileSelectionStart) / 1000).toFixed(2)}s`)
-        console.log(`📊 File size to upload: ${(fileToUpload.size / 1024 / 1024).toFixed(2)} MB`)
 
         // Upload the file with chunked upload - continue from background progress
         setSubmitPopupMessage(`Uploading... ${Math.round(startProgress)}%`)
-        const uploadStart = performance.now()
 
         const quickFileResult = await uploadFileChunked(fileToUpload, shopId, (bytesUploaded, bytesTotal, percentage) => {
           // Show smooth continuation from background progress
@@ -1419,7 +1639,6 @@ const OrderPage = () => {
           setSubmitPopupMessage(`Uploading... ${Math.round(visualProgress)}%`)
         })
 
-        console.log(`⏱️ [TIMING] Upload took: ${((performance.now() - uploadStart) / 1000).toFixed(2)}s`)
         if (quickFileResult.error) throw new Error('File upload failed: ' + quickFileResult.error.message)
 
         fileUrl = quickFileResult.data.publicUrl
@@ -1427,7 +1646,6 @@ const OrderPage = () => {
 
       // Create job record with the uploaded file URL
       setSubmitPopupMessage('Finalizing order...')
-      const dbStart = performance.now()
       const jobData = {
         shop_id: shopId,
         filename: orderData.filename,
@@ -1456,7 +1674,6 @@ const OrderPage = () => {
           if (recipe && recipe.pages && Array.isArray(recipe.pages)) {
             hasEdits = recipe.pages.some(p => p.hasEdits === true)
           }
-          console.log('📄 Exported Recipe:', { recipe, hasEdits })
         } catch (recipeError) {
           console.error('❌ Failed to export recipe:', recipeError)
         }
@@ -1465,21 +1682,14 @@ const OrderPage = () => {
         hasEdits = Object.keys(editedPages).length > 0
       }
 
-      console.log('📝 Job Submission - Has Edits:', hasEdits)
-
       const jobResult = await submitPrintJob({
         ...jobData,
         recipe: recipe ? JSON.stringify(recipe) : null,
         has_edits: hasEdits
       })
-      console.log(`⏱️ [TIMING] Database job creation took: ${((performance.now() - dbStart) / 1000).toFixed(3)}s`)
       if (jobResult.error) throw new Error('Failed to submit order: ' + jobResult.error.message)
 
       const jobId = jobResult.data.id
-
-      const totalTime = ((performance.now() - submitStartTime) / 1000).toFixed(2)
-      console.log(`⏱️ [TIMING] === TOTAL SUBMISSION TIME: ${totalTime}s ===`)
-      console.log(`✅ Order submitted successfully in ${totalTime}s`)
 
       // Ensure popup shows for at least 1.5 seconds for visual feedback
       const popupElapsed = performance.now() - popupStartTime
@@ -1495,7 +1705,7 @@ const OrderPage = () => {
         shopId,
         timestamp: Date.now()
       }))
-      
+
       // Save to full order history
       try {
         const history = JSON.parse(localStorage.getItem('printget_order_history') || '[]')
@@ -1511,8 +1721,7 @@ const OrderPage = () => {
 
       // BACKGROUND: Process PDF pages if needed (after navigation)
       if (orderData.file?.type === 'application/pdf' && orderData.selectedPages.length > 0 && orderData.selectedPages.length < orderData.file.size) {
-        console.log('📄 Background: Processing PDF with selected pages...')
-          ; (async () => {
+        ; (async () => {
             try {
               const processedFile = await processSelectedPages(orderData.file, orderData.selectedPages)
               const processedResult = await uploadFileChunked(processedFile, shopId)
@@ -1524,7 +1733,6 @@ const OrderPage = () => {
 
               // Update with processed file
               await updatePrintJob(jobId, { file_url: processedResult.data.publicUrl })
-              console.log('✅ Background processing completed - Updated with processed PDF')
             } catch (bgError) {
               console.error('❌ Background processing error:', bgError)
             }
@@ -1627,7 +1835,7 @@ const OrderPage = () => {
         <ImageEditor
           file={orderData.file}
           onSave={handleSaveEdits}
-          onCancel={handleCancelEdit}
+          onCancel={closeModal}
           pageSize={previewPageSize}
           onPageSizeChange={setPreviewPageSize}
           colorMode={orderData.colorMode}
@@ -1681,7 +1889,7 @@ const OrderPage = () => {
                 </div>
               </button>
               <button
-                onClick={() => setShowInfoPopup(true)}
+                onClick={() => openModal('info')}
                 className="flex-shrink-0 p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
                 title="Shop Information"
               >
@@ -1765,7 +1973,7 @@ const OrderPage = () => {
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">Hours</h3>
                     <div className="space-y-1">
-                      {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map((day) => {
+                      {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
                         const hours = shop.operating_hours[day]
                         let display = hours
                         if (!hours) display = 'Not set'
@@ -1910,10 +2118,13 @@ const OrderPage = () => {
               ) : (
                 <div>
                   <p className="text-sm sm:text-base text-gray-600 mb-2">Drag and drop or</p>
-                  <input
-                    type="file"
-                    onChange={(e) => handleFileChange(e.target.files)}
-                    accept=".pdf,.doc,.docx,.jpg,.png,.jpeg"
+                    <input
+                      type="file"
+                      onChange={(e) => {
+                        handleFileChange(e.target.files)
+                        e.target.value = '' // Clear input so same file can be re-selected
+                      }}
+                      accept=".pdf,.doc,.docx,.jpg,.png,.jpeg"
                     multiple
                     className="hidden"
                     id="file-upload"
@@ -2383,55 +2594,53 @@ const OrderPage = () => {
 
           {/* Cost Display - Collapsible */}
           {costInfo.cost > 0 ? (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg overflow-hidden">
+            <div className="bg-white border border-indigo-100 rounded-xl overflow-hidden shadow-sm">
               {/* Header - Always visible */}
               <button
                 onClick={() => setIsCostBreakupExpanded(!isCostBreakupExpanded)}
-                className="w-full flex justify-between items-center p-3"
+                className="payment-tap-btn w-full flex items-center gap-3 px-3.5 py-3 text-left"
               >
-                <div className="flex flex-col items-start gap-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <HandCoins className="w-3.5 h-3.5 text-blue-500" />
-                    <span className="text-xs text-blue-600 font-semibold uppercase tracking-wide">Cash on Delivery</span>
-                  </div>
-                  <span className="text-[11px] text-gray-400">Tap to see breakdown</span>
+                {/* Icon */}
+                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
+                  <HandCoins className="text-indigo-600" style={{ width: '20px', height: '20px' }} />
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xl font-bold text-blue-600">
+
+                {/* Middle: 2 clean rows */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+                  <div className="flex items-baseline gap-2 min-w-0">
+                    <span className="text-[11px] font-extrabold text-gray-900 uppercase tracking-wider leading-none">
+                      Payment
+                    </span>
+                    <span className="text-[10px] font-semibold text-indigo-400 leading-none truncate">
+                      {isCostBreakupExpanded ? 'Hide breakdown' : 'Tap to see breakdown'}
+                    </span>
+                  </div>
+                  <span className="text-[14px] font-bold text-indigo-700 leading-tight truncate">
+                    Cash on Delivery
+                  </span>
+                </div>
+
+                {/* Right: price + chevron */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-[17px] font-extrabold text-indigo-600 tabular-nums leading-none">
                     {formatCurrency(costInfo.cost)}
                   </span>
-                  <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${isCostBreakupExpanded ? 'rotate-90' : ''}`} />
+                  <ChevronRight className={`w-4 h-4 text-indigo-300 transition-transform duration-150 ${isCostBreakupExpanded ? 'rotate-90' : ''}`} />
                 </div>
               </button>
 
               {/* Expandable Details - with ID for tour */}
-              <div id="pricing-info">
-                {/* Expandable Details */}
-                {isCostBreakupExpanded && (
-                  <div className="px-3 pb-3 border-t border-blue-200 pt-3 space-y-3">
-                    <div className="space-y-1">
-                      {costInfo.appliedTier && (
-                        <div className="text-xs text-green-600">
-                          <p>✓ Bulk discount: {costInfo.appliedTier.name}</p>
-                          <p>You save: {formatCurrency(costInfo.savings)}</p>
-                        </div>
-                      )}
-
-                      <div className="text-xs text-gray-600">
-                        <p>Price per page: {formatCurrency(costInfo.pricePerPage)}</p>
-                        <p>{orderData.copies} copies × {formatCurrency(costInfo.pricePerPage)} = {formatCurrency(costInfo.cost)}</p>
-                      </div>
+              <div id="pricing-info" className={`payment-grid-container ${isCostBreakupExpanded ? 'is-expanded' : ''}`}>
+                <div className="payment-grid-content">
+                  <div className="border-t border-blue-100 px-3 pb-3 pt-3 space-y-2">
+                    <p className="text-xs font-medium text-gray-700">Payment Method</p>
+                    <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-100/50 p-2 rounded-lg border border-blue-100">
+                      <HandCoins className="w-4 h-4" />
+                      <span>Cash on Delivery (Pay at Shop)</span>
                     </div>
-
-                    <div className="border-t border-blue-100 pt-2">
-                      <p className="text-xs font-medium text-gray-700 mb-1.5">Payment Method</p>
-                      <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-100/50 p-2.5 rounded-lg border border-blue-100">
-                        <HandCoins className="w-4 h-4" />
-                        <span>Cash on Delivery (Pay at Shop)</span>
-                      </div>
-                    </div>
+                    <p className="text-xs font-semibold text-gray-700">Total payable at shop: {formatCurrency(costInfo.cost)}</p>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           ) : (orderData.file || orderData.files.length > 0) ? (
@@ -2499,7 +2708,10 @@ const OrderPage = () => {
               (orderData.file?.type === 'application/pdf' && orderData.selectedPages.length === 0) ||
               (orderData.files?.length > 0 && orderData.selectedImages.length === 0)
             }
-            className="w-full bg-blue-600 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base flex items-center justify-center gap-2"
+            className={`w-full group relative overflow-hidden py-2.5 sm:py-3 px-4 sm:px-5 rounded-xl font-bold text-[17px] sm:text-base transition-all duration-300 shadow-lg active:scale-[0.98] ${isSubmitting || !agreedToTerms || costInfo.cost <= 0
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                : 'bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-600 bg-[length:200%_auto] hover:bg-right text-white shadow-indigo-200'
+              }`}
           >
             {isSubmitting ? (
               <>
@@ -2512,7 +2724,9 @@ const OrderPage = () => {
                 <span>Getting page count...</span>
               </>
             ) : (
-              'Submit Order'
+              <div className="flex items-center justify-center gap-2 relative z-10">
+                <span>Submit & Print Now</span>
+              </div>
             )}
           </button>
 
@@ -2555,10 +2769,41 @@ const OrderPage = () => {
         </div>
       )}
 
+      {/* File Size / Count Warning Popup */}
+      {sizeWarning.show && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-md w-full animate-scale-in border border-gray-100">
+            <div className="flex flex-col items-center gap-6">
+              <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-8 h-8 text-amber-500" />
+              </div>
+
+              <div className="text-center space-y-3">
+                <h3 className="text-xl font-bold text-gray-900">
+                  {sizeWarning.type === 'size' ? 'File Too Large' : 'Too Many Images'}
+                </h3>
+                <p className="text-gray-600 leading-relaxed">
+                  {sizeWarning.type === 'size'
+                    ? 'Currently, the file size limit is 300MB. Soon the file size limit will be increased. Please select a file size less than 300MB.'
+                    : 'You can select up to 30 images at once. Please reduce the number of images to proceed.'}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setSizeWarning({ show: false, type: null })}
+                className="w-full py-3.5 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition-all shadow-lg active:scale-[0.98]"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* PDF Editor Modal Popup */}
       <PDFEditorModal
         isOpen={showPdfEditorModal}
-        onClose={() => setShowPdfEditorModal(false)}
+        onClose={closeModal}
         file={orderData.file}
         initialPageIndex={pdfEditorModalPageIndex}
         onSave={handleSaveEdits}
@@ -2573,7 +2818,7 @@ const OrderPage = () => {
       {/* Direct PDF Editor Popup (from page selector) */}
       <PDFEditorPopup
         isOpen={showPdfEditPopup}
-        onClose={handleCloseEditPopup}
+        onClose={closeModal}
         page={editPopupPage}
         pageNumber={editPopupPage?.pageNumber || 1}
         pageIndex={editPopupPageIndex}
@@ -2587,9 +2832,9 @@ const OrderPage = () => {
       {/* Direct Sheet Editor Popup (from N-up page selector) */}
       <PDFEditorSheetPopup
         isOpen={showPdfSheetEditPopup}
-        onClose={handleCloseSheetEditPopup}
+        onClose={closeModal}
         sheetData={editingSheetData}
-        onApply={() => handleCloseSheetEditPopup()} // Edits applied internally via passed applyEdit
+        onApply={closeModal} // Edits applied internally via passed applyEdit
         onApplyAll={handleEditPopupApplyAll}
         pageSize={previewPageSize}
       />

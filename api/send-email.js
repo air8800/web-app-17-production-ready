@@ -1,16 +1,36 @@
 import nodemailer from 'nodemailer';
 
-// Webhook secret to verify requests come from Supabase
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
-// Gmail SMTP transporter using Google Workspace App Password
+// SMTP auth account — must be the REAL Google Workspace user (not an alias).
+// `orders@printget.in` is only an alias of `hello@printget.in`, so sending
+// from the alias caused Gmail to silently rewrite the From header / break
+// DMARC alignment, which sent everything to spam. We now send from `hello@`
+// directly (the real authenticated user) and just keep `support@printget.in`
+// as the Reply-To so customer replies still go to support, not the inbox owner.
+const FROM_EMAIL = process.env.EMAIL_USER || 'hello@printget.in';
+const FROM_DOMAIN = (FROM_EMAIL.split('@')[1] || 'printget.in').toLowerCase();
+
+// Use explicit SMTP config (host/port/secure) instead of `service: 'gmail'`.
+// This lets us reuse a pooled, keep-alive connection and gives nodemailer
+// enough information to generate a proper Message-ID using our own domain
+// (instead of a generic nodemailer.com one), which improves deliverability.
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  pool: true,
   auth: {
-    user: process.env.EMAIL_USER, // orders@printget.in
+    user: FROM_EMAIL,
     pass: process.env.EMAIL_PASS,
   },
 });
+
+// Hidden preheader text — appears in the inbox preview line in Gmail/Apple Mail
+// without being visible in the email body. Helps deliverability + UX.
+function buildPreheader(text) {
+  return `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#f1f5f9;opacity:0;">${text}</div>`;
+}
 
 /**
  * Generates the HTML for "Order Confirmed" 
@@ -24,6 +44,7 @@ function buildConfirmedHTML(customerName, filename, shopName, orderId, amount, p
   <title>Order Confirmed</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  ${buildPreheader(`Hi ${customerName || 'there'}, your PrintGet order ${orderId ? orderId.slice(0,8) : ''} has been received and is now in the print queue.`)}
   <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 16px;">
     <tr>
       <td align="center">
@@ -65,6 +86,7 @@ function buildReadyHTML(customerName, filename, shopName, orderId, amount, payme
   <title>Your Print is Ready!</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  ${buildPreheader(`Hi ${customerName || 'there'}, your print job for "${filename || 'your document'}" is ready. Please collect it from the shop.`)}
   <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 16px;">
     <tr>
       <td align="center">
@@ -106,6 +128,7 @@ function buildCancelledHTML(customerName, filename, shopName, orderId, amount, p
   <title>Order Cancelled</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  ${buildPreheader(`Hi ${customerName || 'there'}, your PrintGet order ${orderId ? orderId.slice(0,8) : ''} has been cancelled by the shop.`)}
   <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 16px;">
     <tr>
       <td align="center">
@@ -191,9 +214,40 @@ function buildFooter() {
     <td style="background-color: #f8fafc; padding: 20px 24px; text-align: center; border-top: 1px solid #e2e8f0;">
       <p style="color: #94a3b8; font-size: 11px; margin: 0 0 4px 0;">This email was sent by <strong style="color: #64748b;">PrintGet</strong></p>
       <p style="color: #94a3b8; font-size: 11px; margin: 0;"><a href="mailto:support@printget.in" style="color: #2563eb; text-decoration: none;">support@printget.in</a></p>
+      <p style="color: #cbd5e1; font-size: 10px; margin: 8px 0 0 0;">You're receiving this because you placed an order on PrintGet.</p>
     </td>
   </tr>
   `;
+}
+
+/**
+ * Build a clean, human-readable plain-text alternative.
+ * A real plaintext body (not stripped HTML) significantly lowers the spam score.
+ */
+function buildPlainText({ heading, intro, customerName, filename, shopName, orderId, statusText, amount, paymentMethod }) {
+  const lines = [
+    heading,
+    '='.repeat(heading.length),
+    '',
+    `Hi ${customerName || 'there'},`,
+    '',
+    intro,
+    '',
+    'Order Details',
+    '-------------',
+    `File:           ${filename || 'Document'}`,
+    `Shop:           ${shopName || 'PrintGet Partner Shop'}`,
+    `Order ID:       ${orderId ? orderId.slice(0, 8) : '—'}`,
+    `Amount Paid:    Rs. ${amount || '0'}`,
+    `Payment:        ${paymentMethod || 'Cash on Delivery'}`,
+    `Status:         ${statusText}`,
+    '',
+    'Need help? Reply to this email or contact support@printget.in',
+    '',
+    '— PrintGet',
+    'https://printget.in',
+  ];
+  return lines.join('\n');
 }
 
 /**
@@ -219,53 +273,94 @@ export default async function handler(req, res) {
   try {
     const { type, table, record, old_record } = req.body;
     
-    // Safety check - we only care about print_jobs
     if (table !== 'print_jobs') {
       return res.status(200).json({ message: 'Ignored: not a print_jobs event' });
     }
 
-    // Ignore if there is no customer email saved
     const customerEmail = record?.customer_email || old_record?.customer_email;
     if (!customerEmail) {
       return res.status(200).json({ message: 'Skipped: no customer email' });
     }
 
-    // Detect state changes
+    const customerName = record.customer_name;
+    const filename = record.filename;
+    const orderId = record.id;
+    const amount = record.total_cost;
+    const paymentMethod = 'Cash on Delivery';
+
     let subject = '';
     let emailHTML = '';
-    
+    let emailText = '';
+    let entityRef = '';
+
     // Scenario 1: Order just became 'pending' + 'paid' (Order Submitted)
     if (record.job_status === 'pending' && record.payment_status === 'paid' && old_record?.payment_status !== 'paid') {
-      subject = 'Order Confirmed - Print Job Received';
-      emailHTML = buildConfirmedHTML(record.customer_name, record.filename, null, record.id, record.total_cost, 'Cash on Delivery');
+      subject = `Order received — ${orderId ? orderId.slice(0, 8) : 'PrintGet'}`;
+      entityRef = `confirmed-${orderId}`;
+      emailHTML = buildConfirmedHTML(customerName, filename, null, orderId, amount, paymentMethod);
+      emailText = buildPlainText({
+        heading: 'Order received',
+        intro: 'Your payment was successful and your print job is now in the queue. We will notify you again as soon as it is ready for pickup.',
+        customerName, filename, shopName: null, orderId, amount, paymentMethod,
+        statusText: 'In Queue',
+      });
     } 
     // Scenario 2: Order became 'completed' (Print Ready)
     else if (record.job_status === 'completed' && old_record?.job_status !== 'completed') {
-      subject = 'Your Print is Ready for Pickup';
-      emailHTML = buildReadyHTML(record.customer_name, record.filename, null, record.id, record.total_cost, 'Cash on Delivery');
+      subject = `Your print is ready for pickup — ${orderId ? orderId.slice(0, 8) : 'PrintGet'}`;
+      entityRef = `ready-${orderId}`;
+      emailHTML = buildReadyHTML(customerName, filename, null, orderId, amount, paymentMethod);
+      emailText = buildPlainText({
+        heading: 'Your print is ready',
+        intro: 'Great news! Your print job has been completed and is waiting for you to collect it from the shop.',
+        customerName, filename, shopName: null, orderId, amount, paymentMethod,
+        statusText: 'Ready for Pickup',
+      });
     }
     // Scenario 3: Order became 'cancelled'
     else if (record.job_status === 'cancelled' && old_record?.job_status !== 'cancelled') {
-      subject = 'Order Cancelled - PrintGet';
-      emailHTML = buildCancelledHTML(record.customer_name, record.filename, null, record.id, record.total_cost, 'Cash on Delivery');
+      subject = `Your order was cancelled — ${orderId ? orderId.slice(0, 8) : 'PrintGet'}`;
+      entityRef = `cancelled-${orderId}`;
+      emailHTML = buildCancelledHTML(customerName, filename, null, orderId, amount, paymentMethod);
+      emailText = buildPlainText({
+        heading: 'Order cancelled',
+        intro: 'Unfortunately, your print job has been cancelled by the shop. Please contact them for more details, or reply to this email and we will help.',
+        customerName, filename, shopName: null, orderId, amount, paymentMethod,
+        statusText: 'Cancelled',
+      });
     } 
-    // Ignore all other updates
     else {
       return res.status(200).json({ message: 'Ignored: no relevant status change' });
     }
 
     console.log(`📧 Sending "${subject}" to: ${customerEmail}`);
 
-    // Strip HTML tags for plain text fallback (helps avoid spam filters)
-    const emailText = emailHTML.replace(/<[^>]*>?/gm, '\n').replace(/\n\s*\n/g, '\n').trim();
+    // Generate a Message-ID anchored to our own domain (printget.in) instead of
+    // nodemailer's default. Mailbox providers cross-check this against SPF/DKIM.
+    const messageId = `<${entityRef}.${Date.now()}@${FROM_DOMAIN}>`;
+
+    // Mailto-based unsubscribe is fine for transactional mail and is required
+    // by Gmail/Yahoo bulk-sender rules (Feb 2024) once you cross 5k/day; adding
+    // it now is harmless and helps deliverability today.
+    const listUnsubscribeMailto = `mailto:support@printget.in?subject=Unsubscribe%20${encodeURIComponent(orderId || '')}`;
 
     await transporter.sendMail({
-      from: `"Order PrintGet" <orders@printget.in>`,
+      from: `"PrintGet Orders" <${FROM_EMAIL}>`,
+      sender: FROM_EMAIL,
       replyTo: 'support@printget.in',
       to: customerEmail,
       subject: subject,
       text: emailText,
       html: emailHTML,
+      messageId,
+      headers: {
+        'List-Unsubscribe': `<${listUnsubscribeMailto}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        'X-Entity-Ref-ID': entityRef,
+        'X-Auto-Response-Suppress': 'OOF, AutoReply',
+        'Auto-Submitted': 'auto-generated',
+        'Precedence': 'transactional',
+      },
     });
 
     return res.status(200).json({ success: true, message: `Email sent: ${subject}` });

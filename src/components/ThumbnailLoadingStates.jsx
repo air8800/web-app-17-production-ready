@@ -16,7 +16,7 @@ export const ShimmerLoader = ({ width = '100%', height = '200px', className = ''
       style={{ width, height }}
       aria-label="Loading thumbnail"
     >
-      <style jsx>{`
+      <style>{`
         .thumbnail-shimmer {
           position: relative;
           overflow: hidden;
@@ -56,7 +56,7 @@ export const PulseLoader = ({ width = '100%', height = '200px', className = '' }
       style={{ width, height }}
       aria-label="Loading thumbnail"
     >
-      <style jsx>{`
+      <style>{`
         .thumbnail-pulse {
           position: relative;
           background: #f5f5f5;
@@ -88,7 +88,7 @@ export const SkeletonLoader = ({ width = '100%', height = '200px', className = '
       aria-label="Loading thumbnail"
     >
       <div className="skeleton-wave"></div>
-      <style jsx>{`
+      <style>{`
         .thumbnail-skeleton {
           position: relative;
           background: #f0f0f0;
@@ -131,7 +131,7 @@ export const SpinnerLoader = ({ size = 40, className = '' }) => {
   return (
     <div className={`thumbnail-spinner-container ${className}`}>
       <div className="thumbnail-spinner" style={{ width: size, height: size }}>
-        <style jsx>{`
+        <style>{`
           .thumbnail-spinner-container {
             display: flex;
             align-items: center;
@@ -171,7 +171,7 @@ export const DotsLoader = ({ className = '' }) => {
         <span className="dot dot-2"></span>
         <span className="dot dot-3"></span>
       </div>
-      <style jsx>{`
+      <style>{`
         .thumbnail-dots-container {
           display: flex;
           align-items: center;
@@ -258,7 +258,7 @@ export const ThumbnailContainer = ({
           <div className="placeholder-icon">📄</div>
         </div>
       )}
-      <style jsx>{`
+      <style>{`
         .thumbnail-container {
           position: relative;
           overflow: hidden;

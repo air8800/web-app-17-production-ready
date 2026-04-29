@@ -30,21 +30,8 @@ import FAQPage from './pages/FAQPage'
 import NotFoundPage from './pages/NotFoundPage'
 import RefundPolicyPage from './pages/RefundPolicyPage'
 
-
-import { logDetailedMemory } from './utils/memoryProfiler'
-
-// Log baseline memory immediately on module load
-console.log('🚀 [App Module] Loading...')
-if (typeof window !== 'undefined' && performance.memory) {
-  const mb = (b) => (b / 1024 / 1024).toFixed(1)
-  console.log(`📊 [Module Load Baseline] JS Heap: ${mb(performance.memory.usedJSHeapSize)}MB / Total: ${mb(performance.memory.totalJSHeapSize)}MB`)
-}
-
 function App() {
-  // Log detailed memory when App mounts (after React + Router initialized)
   useEffect(() => {
-    console.log('🚀 [App] Mounted - React + Router ready')
-    logDetailedMemory('App Startup Baseline (before any PDF)')
 
     // Initialize Unique Device ID for tracking history/preferences without login
     if (typeof window !== 'undefined') {
@@ -52,16 +39,14 @@ function App() {
       if (!deviceId) {
         deviceId = `pg_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`
         localStorage.setItem('printget_device_id', deviceId)
-        console.log('📱 Created new Unique Device ID:', deviceId)
       } else {
-        console.log('📱 Existing Device ID found:', deviceId)
       }
     }
   }, [])
 
   return (
     <>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -81,8 +66,8 @@ function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
-      <Analytics />
-      <SpeedInsights />
+      <Analytics debug={false} />
+      <SpeedInsights debug={false} />
     </>
   )
 }

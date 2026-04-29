@@ -41,21 +41,29 @@ export class DocumentLoader {
 
     // ⏱️ PERFORMANCE: Start measuring
     const loadStart = performance.now()
-    console.log(`📄 [DocumentLoader] Starting loadFile for ${file.name}`)
+
+    // CRITICAL: Destroy previous document before loading new one.
+    // Without this, pdf.js holds the old document + worker state, causing the
+    // second-file load to hang or use stale data.
+    if (this.pdfDoc) {
+      try {
+        await this.pdfDoc.destroy()
+      } catch (e) {
+        console.warn('[DocumentLoader] Error destroying previous pdfDoc:', e)
+      }
+      this.pdfDoc = null
+      this.pageProxies.clear()
+    }
 
     try {
       // MEMORY OPTIMIZATION: Load PDF in 64KB chunks instead of entire file
       const fileSize = file.size
       const CHUNK_SIZE = 65536 // 64KB chunks
 
-      console.log(`📄 [DocumentLoader] Loading PDF in chunks (file size: ${(fileSize / 1024 / 1024).toFixed(2)} MB)`)
-
-      // ⏱️ STEP 1: Read initial chunk
       const chunkStart = performance.now()
       const initialChunk = file.slice(0, Math.min(CHUNK_SIZE, fileSize))
       const initialData = new Uint8Array(await initialChunk.arrayBuffer())
       const chunkTime = ((performance.now() - chunkStart) / 1000).toFixed(3)
-      console.log(`⏱️ [CHUNK READ] Initial chunk read in ${chunkTime}s`)
 
       // Create range transport for on-demand chunk loading
       const transport = new pdfjsLib.PDFDataRangeTransport(fileSize, initialData)
@@ -68,7 +76,6 @@ export class DocumentLoader {
 
       // ⏱️ STEP 2: PDF.js document parsing
       const parseStart = performance.now()
-      console.log(`⏱️ [PDF.JS PARSE START] Calling pdfjsLib.getDocument...`)
 
       const loadingTask = pdfjsLib.getDocument({
         range: transport,
@@ -82,7 +89,6 @@ export class DocumentLoader {
       this.pdfDoc = await loadingTask.promise
 
       const parseTime = ((performance.now() - parseStart) / 1000).toFixed(2)
-      console.log(`⏱️ [PDF.JS PARSE COMPLETE] PDF.js parsing took ${parseTime}s`)
 
       const totalPages = this.pdfDoc.numPages
       const documentId = this.generateDocumentId(file)
@@ -91,7 +97,6 @@ export class DocumentLoader {
 
       // ⏱️ STEP 3: FULL PAGE LOADING - Load all page proxies now
       const pagesStart = performance.now()
-      console.log(`⏱️ [FULL LOADING] Loading all ${totalPages} pages immediately...`)
 
       const pages: PageInfo[] = []
 
@@ -127,12 +132,10 @@ export class DocumentLoader {
       }
 
       const pagesTime = ((performance.now() - pagesStart) / 1000).toFixed(2)
-      console.log(`⏱️ [FULL LOADING COMPLETE] Loaded ${totalPages} pages in ${pagesTime}s`)
 
       this.progressBus.emitLoadComplete(totalPages)
 
       const totalTime = ((performance.now() - loadStart) / 1000).toFixed(2)
-      console.log(`⏱️ [DOCUMENT LOADER COMPLETE] Total loadFile time: ${totalTime}s`)
 
       return {
         documentId,
@@ -177,8 +180,6 @@ export class DocumentLoader {
     signal?: AbortSignal,
     applyA4Normalization: boolean = true
   ): Promise<void> {
-    console.log(`📄 [DocumentLoader] renderPageToCanvas(${pageNumber}, scale=${scale}) START`)
-
     // Load page proxy on-demand if not cached
     let page = this.pageProxies.get(pageNumber)
     if (!page) {
@@ -211,7 +212,6 @@ export class DocumentLoader {
     // Wait for any previous render on this page to complete
     const existingLock = this.renderLocks.get(pageNumber)
     if (existingLock) {
-      console.log(`📄 [DocumentLoader] renderPageToCanvas(${pageNumber}) - Waiting for previous render...`)
       await existingLock
     }
 
@@ -253,8 +253,6 @@ export class DocumentLoader {
           canvas.height = viewport.height
         }
 
-        console.log(`📄 [DocumentLoader] renderPageToCanvas(${pageNumber}) - Canvas: ${canvas.width}x${canvas.height}`)
-
         const ctx = canvas.getContext('2d')
         if (!ctx) {
           throw new Error('Failed to get canvas context')
@@ -277,16 +275,12 @@ export class DocumentLoader {
         if (signal) {
           signal.addEventListener('abort', () => {
             renderTask.cancel()
-            console.log(`📄 [DocumentLoader] renderPageToCanvas(${pageNumber}) - Render cancelled by signal.`)
           }, { once: true })
         }
 
         await renderTask.promise
-
-        console.log(`📄 [DocumentLoader] renderPageToCanvas(${pageNumber}) COMPLETE`)
       } catch (error: any) {
         if (error.name === 'RenderingCancelledException') {
-          console.log(`📄 [DocumentLoader] renderPageToCanvas(${pageNumber}) - Render cancelled.`)
         } else {
           console.error(`📄 [DocumentLoader] Error rendering page ${pageNumber}:`, error)
           throw error

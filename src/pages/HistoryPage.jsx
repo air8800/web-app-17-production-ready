@@ -65,12 +65,17 @@ const HistoryPage = () => {
     }).format(date)
   }
 
-  const getStatusBadge = (status) => {
-    switch (status) {
+  const getStatusBadge = (order) => {
+    const normalizedStatus = String(order?.job_status || '').trim().toLowerCase()
+    const isInterruptedUpload = order?.file_url === '__uploading__'
+
+    if (normalizedStatus.includes('cancel') || isInterruptedUpload || normalizedStatus === 'error') {
+      return <span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-md border border-red-200">Cancelled</span>
+    }
+
+    switch (normalizedStatus) {
       case 'completed':
         return <span className="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-md border border-green-200">Completed</span>
-      case 'cancelled':
-        return <span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-md border border-red-200">Cancelled</span>
       case 'printing':
         return <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-md border border-blue-200 animate-pulse">Printing</span>
       default:
@@ -162,7 +167,7 @@ const HistoryPage = () => {
                     </p>
                   </div>
                   <div className="flex-shrink-0 flex flex-col items-end gap-2">
-                    {getStatusBadge(order.job_status)}
+                    {getStatusBadge(order)}
                     <span className="font-bold text-gray-900">{formatCurrency(order.total_cost)}</span>
                   </div>
                 </div>

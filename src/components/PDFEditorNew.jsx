@@ -38,8 +38,7 @@ const PDFEditorNew = forwardRef(({
   onPagesLoaded = null
 }, ref) => {
   useEffect(() => {
-    console.log('📄 PDFEditorNew MOUNTED (actual component mount)')
-    return () => console.log('📄 PDFEditorNew UNMOUNTED')
+    logMemory('PDFEditor Initialized')
   }, [])
 
   const { setThumbnail, reset: resetPdfStore } = usePDFStore()
@@ -157,19 +156,14 @@ const PDFEditorNew = forwardRef(({
         setLoading(true)
         setLoadingStage('parsing')
         setError(null)
-
-        console.log('📄 [PDFEditorNew] Loading PDF via controller...')
-        await loadDocument(file)
+await loadDocument(file)
 
         const pageCount = controller?.getPageCount() || 0
-        console.log(`📄 [PDFEditorNew] Loaded ${pageCount} pages`)
-
-        // Check if this is a large PDF (>= 10MB) for optimized loading BEFORE creating pages
+// Check if this is a large PDF (>= 10MB) for optimized loading BEFORE creating pages
         const fileSizeMB = file.size / (1024 * 1024)
         const largePdf = fileSizeMB >= 10
         setIsLargePdf(largePdf)
         if (largePdf) {
-          console.log(`📄 [PDFEditorNew] Large PDF detected (${fileSizeMB.toFixed(1)}MB) - using on-demand thumbnail loading`)
           loadedThumbnailsRef.current.clear()
           loadingPagesRef.current.clear()
         }
@@ -227,14 +221,20 @@ const PDFEditorNew = forwardRef(({
         }
 
       } catch (err) {
-        console.error('❌ [PDFEditorNew] Load failed:', err)
-        setError(err.message || 'Failed to load PDF')
+setError(err.message || 'Failed to load PDF')
         setLoading(false)
       }
     }
 
     loadPDF()
   }, [file])
+
+  // Sync pages to parent (deferred from render to avoid setState-during-render)
+  useEffect(() => {
+    if (pages.length > 0 && onPagesLoaded) {
+      onPagesLoaded(pages, pages.length)
+    }
+  }, [pages])
 
   // Combine two page canvases into a single landscape thumbnail (Blob URL version)
   const combinePagesThumbnail = useCallback(async (page1Data, page2Data) => {
@@ -312,8 +312,7 @@ const PDFEditorNew = forwardRef(({
         resolve(canvas)
       }
       img.onerror = (e) => {
-        console.error('❌ dataUrlToCanvas failed', e)
-        resolve(null)
+resolve(null)
       }
       img.src = dataUrl
     })
@@ -322,10 +321,12 @@ const PDFEditorNew = forwardRef(({
   // Memory logging helper - uses trackMemoryOverTime for quick snapshots
   const logMemory = useCallback((label) => {
     trackMemoryOverTime(label)
-    if (performance.memory) {
-      const mb = (bytes) => (bytes / 1024 / 1024).toFixed(1)
-      console.log(`📊 [Memory ${label}] Used: ${mb(performance.memory.usedJSHeapSize)}MB / Total: ${mb(performance.memory.totalJSHeapSize)}MB / Limit: ${mb(performance.memory.jsHeapSizeLimit)}MB`)
-    }
+    return
+  }, [])
+
+  useEffect(() => {
+    // Initial memory tracking
+    logMemory('PDFEditor Initialized')
   }, [])
 
   // On-demand loader for N-up sheets with SMART REUSE
@@ -369,8 +370,7 @@ const PDFEditorNew = forwardRef(({
 
       if (p1HasThumbnail && p2HasThumbnail) {
         // FAST PATH: Reuse existing thumbnails!
-        console.log(`♻️ [Sheet ${sheetNum}] Reusing existing page thumbnails`)
-        logMemory(`before sheet ${sheetNum}`)
+logMemory(`before sheet ${sheetNum}`)
 
         const [canvas1, canvas2] = await Promise.all([
           dataUrlToCanvas(p1.thumbnail || p1.baseImage),
@@ -395,8 +395,7 @@ const PDFEditorNew = forwardRef(({
       }
 
       // ========== FALLBACK: Progressive Loading from pdf.js ==========
-      console.log(`🖼️ [Sheet ${sheetNum}] No cached thumbnails, rendering from pdf.js`)
-      logMemory(`before pdf.js sheet ${sheetNum}`)
+logMemory(`before pdf.js sheet ${sheetNum}`)
 
       // STAGE 1: Ultra-Low-Res (0.03x) for instant display
       if (!lowResLoadedRef.current.has(sheetNum)) {
@@ -457,8 +456,7 @@ const PDFEditorNew = forwardRef(({
       if (err.message === 'Aborted' || err.name === 'AbortError') {
         setSheets(prev => prev.map(s => s.sheetNumber === sheetNum ? { ...s, isLoading: false } : s))
       } else {
-        console.error(`❌ [Sheet ${sheetNum}] Error:`, err)
-      }
+}
     } finally {
       loadingSheetsRef.current.delete(sheetNum)
       sheetControllersRef.current.delete(sheetNum)
@@ -527,8 +525,7 @@ const PDFEditorNew = forwardRef(({
         }
       }
     } catch (err) {
-      console.warn(`⚠️ Thumbnail ${pageNum} failed:`, err)
-    } finally {
+} finally {
       loadingPagesRef.current.delete(pageNum)
 
       // Pipelined Queue: Trigger next page immediately to keep concurrency full
@@ -542,7 +539,6 @@ const PDFEditorNew = forwardRef(({
           if (pending.length > 0) {
             // Pick the next one (prioritize sequential scan)
             const nextPage = pending[0]
-            console.log(`🔄 [Queue] Pipelining page: ${nextPage} (active: ${loadingPagesRef.current.size})`)
             loadThumbnailOnDemand(nextPage)
           }
         }
@@ -559,8 +555,7 @@ const PDFEditorNew = forwardRef(({
         // Individual pages
         if (isLargePdf) {
           const count = Math.min(6, pages.length)
-          console.log(`📄 [PDFEditorNew] Large PDF: Fast-loading first ${count} pages`)
-          for (let i = 1; i <= count; i++) {
+for (let i = 1; i <= count; i++) {
             loadThumbnailOnDemand(i, true)
           }
         } else {
@@ -573,8 +568,7 @@ const PDFEditorNew = forwardRef(({
         // N-up sheets (already has its own generator but we ensure loading starts)
         if (isLargePdf) {
           const count = Math.min(4, sheets.length)
-          console.log(`📄 [PDFEditorNew] Large PDF: Fast-loading first ${count} sheets`)
-          for (let i = 1; i <= count; i++) {
+for (let i = 1; i <= count; i++) {
             loadSheetThumbnailOnDemand(i, true)
           }
         } else {
@@ -603,8 +597,7 @@ const PDFEditorNew = forwardRef(({
         .slice(0, slotsAvailable)
 
       if (pagesToLoad.length > 0) {
-        console.log(`📷 [Debounce Fired] Loading ${pagesToLoad.length} pages`)
-        pagesToLoad.forEach(pageNum => loadThumbnailOnDemand(pageNum))
+pagesToLoad.forEach(pageNum => loadThumbnailOnDemand(pageNum))
       }
     }
 
@@ -621,8 +614,7 @@ const PDFEditorNew = forwardRef(({
         .slice(0, slotsAvailable)
 
       if (sheetsToLoad.length > 0) {
-        console.log(`📷 [Sheet Loader] Starting ${sheetsToLoad.length} sheets`)
-        sheetsToLoad.forEach(sheetNum => loadSheetThumbnailOnDemand(sheetNum))
+sheetsToLoad.forEach(sheetNum => loadSheetThumbnailOnDemand(sheetNum))
       }
     }
   }, [pagesPerSheet, sheets.length, isLargePdf, loadThumbnailOnDemand, loadSheetThumbnailOnDemand])
@@ -644,10 +636,8 @@ const PDFEditorNew = forwardRef(({
       // Find the scrollable parent container
       const scrollContainer = thumbnailGridRef.current.closest('.overflow-auto') ||
         thumbnailGridRef.current.closest('[style*="overflow"]') ||
-        document.querySelector('.overflow-auto') || // Fallback to common class
+        document.querySelector('.overflow-auto') ||
         null
-
-      console.log('📷 [Observer] Scroll container:', scrollContainer ? 'found' : 'not found (using viewport)')
 
       // Scroll Handler - Reset debounce on scroll
       const handleScroll = () => {
@@ -685,7 +675,6 @@ const PDFEditorNew = forwardRef(({
                 visibleSheetsRef.current.delete(sheetNum)
                 // Cancel if currently loading and scrolled away
                 if (loadingSheetsRef.current.has(sheetNum) && sheetControllersRef.current.has(sheetNum)) {
-                  console.log(`🛑 Cancelling sheet ${sheetNum} (scrolled away)`)
                   sheetControllersRef.current.get(sheetNum).abort()
                   sheetControllersRef.current.delete(sheetNum)
                 }
@@ -706,7 +695,6 @@ const PDFEditorNew = forwardRef(({
 
       // Observe all thumbnail containers (both pages and sheets)
       const thumbnailElements = thumbnailGridRef.current.querySelectorAll('[data-page-num], [data-sheet-num]')
-      console.log(`📷 [Observer] Observing ${thumbnailElements.length} elements (pages/sheets)`)
       thumbnailElements.forEach(el => observer.observe(el))
     }, 200)
 
@@ -725,8 +713,7 @@ const PDFEditorNew = forwardRef(({
   // Sync pagesPerSheet with controller for N-up layout
   useEffect(() => {
     if (controller && isReady && pagesPerSheet) {
-      console.log(`📄 [PDFEditorNew] Setting pagesPerSheet to ${pagesPerSheet}`)
-      controller.setPagesPerSheet?.(pagesPerSheet)
+controller.setPagesPerSheet?.(pagesPerSheet)
 
       // When pagesPerSheet changes, recalculate sheets
       if (pagesPerSheet > 1 && pages.length > 0) {
@@ -784,14 +771,11 @@ const PDFEditorNew = forwardRef(({
 
     // 2. If Large PDF: Stop here, let Effect/Observer handle loading
     if (isLargePdf) {
-      console.log(`📄 [PDFEditorNew] Large PDF N-up: Created ${sheetCount} placeholders. Waiting for effect/scroll.`)
-      return
+return
     }
 
     // 3. If Small PDF: Load all in background (legacy/fast behavior)
-    console.log(`📄 [PDFEditorNew] Small PDF N-up: Loading all ${sheetCount} sheets in background...`)
-
-    // Use the same on-demand function but loop through all
+// Use the same on-demand function but loop through all
     // (We could batch this but reusing the logic is cleaner)
     for (let i = 1; i <= sheetCount; i++) {
       loadSheetThumbnailOnDemand(i)
@@ -868,15 +852,11 @@ const PDFEditorNew = forwardRef(({
           ))
         }
       } catch (err) {
-        console.warn(`Failed to regenerate sheet ${sheetNumber} thumbnail:`, err)
-      }
+}
     }
 
     if (onPagesLoaded) {
-      setPages(prev => {
-        onPagesLoaded(prev, prev.length)
-        return prev
-      })
+      queueMicrotask(() => onPagesLoaded(pages, pages.length))
     }
 
     setTimeout(() => {
@@ -908,9 +888,6 @@ const PDFEditorNew = forwardRef(({
         },
         edited: true
       }))
-      if (onPagesLoaded) {
-        onPagesLoaded(updated, updated.length)
-      }
       return updated
     })
 
@@ -938,9 +915,7 @@ const PDFEditorNew = forwardRef(({
 
   const handleAllSheetsEdited = useCallback((e) => {
     const { editsPage1, editsPage2 } = e.detail
-    console.log('🔵 handleAllSheetsEdited: Bulk Applying Edits', { editsPage1, editsPage2 })
-
-    setPages(prev => prev.map((p, idx) => {
+setPages(prev => prev.map((p, idx) => {
       if (pagesPerSheet < 2) return p
       const slot = idx % pagesPerSheet
       let edits = null
@@ -1009,10 +984,7 @@ const PDFEditorNew = forwardRef(({
     }))
 
     if (onPagesLoaded) {
-      setPages(prev => {
-        onPagesLoaded(prev, prev.length)
-        return prev
-      })
+      queueMicrotask(() => onPagesLoaded(pages, pages.length))
     }
 
     try {
@@ -1033,8 +1005,7 @@ const PDFEditorNew = forwardRef(({
         }
       }
     } catch (err) {
-      console.warn('Failed to update sheet thumbnail:', err)
-    }
+}
 
     setTimeout(() => {
       const recipe = exportRecipe()
@@ -1091,8 +1062,7 @@ const PDFEditorNew = forwardRef(({
           ))
         }
       } catch (err) {
-        console.warn('Failed to load page canvas:', err)
-      }
+}
     }
 
     setShowEditPopup(true)
@@ -1277,8 +1247,7 @@ const PDFEditorNew = forwardRef(({
       }
 
     } catch (err) {
-      console.error('❌ Save failed:', err)
-      setError(err.message)
+setError(err.message)
     } finally {
       setIsApplying(false)
       setApplyProgress(0)
@@ -1556,12 +1525,10 @@ const PDFEditorNew = forwardRef(({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation()
-                        console.log('Edit clicked:', { index, page, controller, applyEdit, onEditPage: !!onEditPage })
-                        if (onEditPage) {
+if (onEditPage) {
                           onEditPage(index, page, controller, applyEdit)
                         } else {
-                          console.warn('onEditPage prop not provided')
-                        }
+}
                       }}
                       className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-b-lg transition-all shadow-sm active:scale-95"
                     >

@@ -14,7 +14,6 @@
  */
 export async function extractPageCountFast(file: File): Promise<number | null> {
     const startTime = performance.now()
-    console.log(`⚡ [FastPageCount] Starting extraction for ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`)
 
     try {
         // STRATEGY 1: Trailer Jumping (Standard PDF structure)
@@ -40,14 +39,12 @@ export async function extractPageCountFast(file: File): Promise<number | null> {
         }
 
         // STRATEGY 4: Greedy Regex Search (The "Desperate" Fallback)
-        console.log(`⚡ [FastPageCount] Standard strategies failed, trying greedy regex...`)
         const greedyCount = await tryGreedyRegex(file)
         if (greedyCount) {
             logSuccess('Greedy Regex', greedyCount, startTime)
             return greedyCount
         }
 
-        console.log(`⚡ [FastPageCount] All strategies failed`)
         return null
 
     } catch (error) {
@@ -58,7 +55,6 @@ export async function extractPageCountFast(file: File): Promise<number | null> {
 
 function logSuccess(strategy: string, count: number, startTime: number) {
     const elapsed = ((performance.now() - startTime)).toFixed(0)
-    console.log(`⚡ [FastPageCount] SUCCESS via ${strategy}: ${count} pages (${elapsed}ms)`)
 }
 
 // ==========================================

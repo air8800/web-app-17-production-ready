@@ -8,9 +8,6 @@ import {
   FULL_PAGE_BOX
 } from '../utils/pdf2/ui/coordinateTransforms'
 
-// Set to true to enable verbose crop debugging
-const DEBUG_CROP = true
-
 const CropOverlay = ({
   cropArea,
   onCropChange,
@@ -49,70 +46,6 @@ const CropOverlay = ({
     width: Math.max(0.05, Math.min(1 - displayMargin - Math.max(displayMargin, rawScreenCrop.x), rawScreenCrop.width)),
     height: Math.max(0.05, Math.min(1 - displayMargin - Math.max(displayMargin, rawScreenCrop.y), rawScreenCrop.height))
   } : null
-
-  // 🔍 DEBUG: Log crop coordinate transformations for debugging overlay vs actual crop
-  // Also include pixel-level comparison for visual verification
-  const imageRect = imageRef?.current?.getBoundingClientRect()
-  const imagePixelWidth = imageRect?.width || 0
-  const imagePixelHeight = imageRect?.height || 0
-
-  if (DEBUG_CROP && cropArea && screenCrop) {
-    const overlayPixelX = screenCrop.x * imagePixelWidth
-    const overlayPixelY = screenCrop.y * imagePixelHeight
-    const overlayPixelWidth = screenCrop.width * imagePixelWidth
-    const overlayPixelHeight = screenCrop.height * imagePixelHeight
-
-    console.log(`\n🎯 [CropOverlay] CROP COORDINATES DEBUG
-    ═══════════════════════════════════════════════════════════════
-    📊 Input Parameters:
-       - rotation: ${rotation}°
-       - scale: ${scale}
-       - aspectRatio: ${aspectRatio?.toFixed(4) || 'null'}
-       - committedCrop: ${committedCrop ? JSON.stringify(committedCrop) : 'null'}
-    
-    📐 IMAGE ELEMENT DIMENSIONS (visible on screen):
-       width: ${imagePixelWidth.toFixed(0)}px
-       height: ${imagePixelHeight.toFixed(0)}px
-       aspect ratio: ${imagePixelWidth && imagePixelHeight ? (imagePixelWidth / imagePixelHeight).toFixed(4) : 'N/A'}
-    
-    📍 CROP COORDINATE CHAIN:
-    ───────────────────────────────────────────────────────────────
-    [1] cropArea (relative/draft - passed from parent):
-        x: ${cropArea.x.toFixed(4)} (${(cropArea.x * 100).toFixed(1)}%)
-        y: ${cropArea.y.toFixed(4)} (${(cropArea.y * 100).toFixed(1)}%)
-        width: ${cropArea.width.toFixed(4)} (${(cropArea.width * 100).toFixed(1)}%)
-        height: ${cropArea.height.toFixed(4)} (${(cropArea.height * 100).toFixed(1)}%)
-    
-    [2] absoluteCrop (after composeCrop with committedCrop):
-        x: ${absoluteCrop.x.toFixed(4)} (${(absoluteCrop.x * 100).toFixed(1)}%)
-        y: ${absoluteCrop.y.toFixed(4)} (${(absoluteCrop.y * 100).toFixed(1)}%)
-        width: ${absoluteCrop.width.toFixed(4)} (${(absoluteCrop.width * 100).toFixed(1)}%)
-        height: ${absoluteCrop.height.toFixed(4)} (${(absoluteCrop.height * 100).toFixed(1)}%)
-    
-    [3] rawScreenCrop (after forwardTransformBox - screen space):
-        x: ${rawScreenCrop.x.toFixed(4)} (${(rawScreenCrop.x * 100).toFixed(1)}%)
-        y: ${rawScreenCrop.y.toFixed(4)} (${(rawScreenCrop.y * 100).toFixed(1)}%)
-        width: ${rawScreenCrop.width.toFixed(4)} (${(rawScreenCrop.width * 100).toFixed(1)}%)
-        height: ${rawScreenCrop.height.toFixed(4)} (${(rawScreenCrop.height * 100).toFixed(1)}%)
-    
-    [4] screenCrop (after clamping - DISPLAYED ON OVERLAY):
-        x: ${screenCrop.x.toFixed(4)} (${(screenCrop.x * 100).toFixed(1)}%)
-        y: ${screenCrop.y.toFixed(4)} (${(screenCrop.y * 100).toFixed(1)}%)
-        width: ${screenCrop.width.toFixed(4)} (${(screenCrop.width * 100).toFixed(1)}%)
-        height: ${screenCrop.height.toFixed(4)} (${(screenCrop.height * 100).toFixed(1)}%)
-    
-    🎨 VISUAL OVERLAY (actual pixels on screen):
-       x: ${overlayPixelX.toFixed(0)}px
-       y: ${overlayPixelY.toFixed(0)}px
-       width: ${overlayPixelWidth.toFixed(0)}px
-       height: ${overlayPixelHeight.toFixed(0)}px
-       
-    ⚠️ VISUAL vs CONTENT HEIGHT RATIO:
-       Overlay height: ${(screenCrop.height * 100).toFixed(2)}% of display
-       Content height (cropArea): ${(cropArea.height * 100).toFixed(2)}% of content
-       DIFFERENCE: ${((screenCrop.height - cropArea.height) * 100).toFixed(2)}%
-    ═══════════════════════════════════════════════════════════════\n`)
-  }
 
   const getPointerPosition = useCallback((e) => {
     if (!imageRef?.current) return { x: 0, y: 0 }
@@ -192,26 +125,6 @@ const CropOverlay = ({
 
     // Step 3: Clamp relative crop to valid [0,1] range (relative to visible area)
     const clampedCrop = clampBox(relativeCrop, 0.05)
-
-    // 🔍 DEBUG: Log inverse transform chain when user drags/resizes
-    console.log(`🔄 [CropOverlay] INVERSE TRANSFORM (on drag/resize)
-    ───────────────────────────────────────────────────────────────
-    [A] newScreenCrop (user's screen selection):
-        x: ${newScreenCrop.x.toFixed(4)}, y: ${newScreenCrop.y.toFixed(4)}
-        w: ${newScreenCrop.width.toFixed(4)}, h: ${newScreenCrop.height.toFixed(4)}
-    
-    [B] absoluteContentCrop (after inverseTransformBox):
-        x: ${absoluteContentCrop.x.toFixed(4)}, y: ${absoluteContentCrop.y.toFixed(4)}
-        w: ${absoluteContentCrop.width.toFixed(4)}, h: ${absoluteContentCrop.height.toFixed(4)}
-    
-    [C] relativeCrop (after decomposeCrop):
-        x: ${relativeCrop.x.toFixed(4)}, y: ${relativeCrop.y.toFixed(4)}
-        w: ${relativeCrop.width.toFixed(4)}, h: ${relativeCrop.height.toFixed(4)}
-    
-    [D] clampedCrop (FINAL - sent to onCropChange):
-        x: ${clampedCrop.x.toFixed(4)}, y: ${clampedCrop.y.toFixed(4)}
-        w: ${clampedCrop.width.toFixed(4)}, h: ${clampedCrop.height.toFixed(4)}
-    ───────────────────────────────────────────────────────────────`)
 
     onCropChange(clampedCrop)
   }, [activeHandle, dragStart, initialCrop, getPointerPosition, onCropChange, rotation, scale, aspectRatio, committedCrop])

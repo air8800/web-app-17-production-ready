@@ -41,20 +41,14 @@ export function detectContentBounds(
     tempCanvas.height = Math.floor(sh);
     const ctx = tempCanvas.getContext('2d');
     if (!ctx) {
-        console.log('❌ detectContentBounds: Failed to get canvas context');
         return null;
     }
 
-    console.log(`🔍 detectContentBounds: Starting scan...
-        Source: ${source.width || (source as HTMLImageElement).naturalWidth} x ${source.height || (source as HTMLImageElement).naturalHeight}
-        Crop region: sx=${sx.toFixed(0)}, sy=${sy.toFixed(0)}, sw=${sw.toFixed(0)}, sh=${sh.toFixed(0)}
-        Temp canvas: ${tempCanvas.width} x ${tempCanvas.height}`);
 
     // Draw the cropped region
     try {
         ctx.drawImage(source, sx, sy, sw, sh, 0, 0, tempCanvas.width, tempCanvas.height);
     } catch (e) {
-        console.log('❌ detectContentBounds: drawImage failed', e);
         return null;
     }
 
@@ -74,7 +68,6 @@ export function detectContentBounds(
         const idx = (pos.y * tempCanvas.width + pos.x) * 4;
         samplePixels.push(`(${pos.x},${pos.y}): RGB(${data[idx]},${data[idx + 1]},${data[idx + 2]})`);
     }
-    console.log(`🔍 Sample pixels: ${samplePixels.join(' | ')}`);
 
     let minX = tempCanvas.width, minY = tempCanvas.height, maxX = 0, maxY = 0;
     let hasContent = false;
@@ -101,10 +94,7 @@ export function detectContentBounds(
         }
     }
 
-    console.log(`🔍 Scan result: ${contentCount} content pixels, ${whiteCount} white pixels, hasContent=${hasContent}`);
-
     if (!hasContent) {
-        console.log('❌ detectContentBounds: No content found (all white)');
         return null;
     }
 
@@ -114,8 +104,6 @@ export function detectContentBounds(
         width: maxX - minX + 1,
         height: maxY - minY + 1
     };
-
-    console.log(`✅ detectContentBounds: Content box detected at (${result.offsetX}, ${result.offsetY}) size ${result.width}x${result.height}`);
 
     return result;
 }

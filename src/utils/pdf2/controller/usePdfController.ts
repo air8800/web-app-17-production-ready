@@ -9,7 +9,7 @@
  * - true: Uses ModernAdapter with new pdf2 services
  */
 
-import { useEffect, useCallback, useState, useMemo } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import {
   PdfController,
   EditCommand,
@@ -57,13 +57,11 @@ export function usePdfController(
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Initialize adapter synchronously using useMemo to ensure it's available immediately
-  // FIXED: Only create if no shared controller exists
-  useMemo(() => {
+  // Initialize adapter in useEffect to avoid setState during render warning
+  useEffect(() => {
     if (useNew && !sharedController) {
       const adapter = new ModernAdapter(options)
       setController(adapter)
-      console.log('[usePdfController] ModernAdapter created and shared via store')
     } else if (!useNew && !sharedController) {
       const adapter = new LegacyAdapter()
       setController(adapter)

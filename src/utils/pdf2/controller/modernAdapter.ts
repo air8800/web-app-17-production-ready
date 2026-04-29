@@ -93,17 +93,28 @@ export class ModernAdapter implements PdfController {
    */
   async loadDocument(file: File): Promise<void> {
     if (this.currentFile === file && this.isInitialized) {
-      console.log(`📥 [ModernAdapter] Document already loaded for ${file.name}, skipping load`)
       return
     }
 
     // ⏱️ PERFORMANCE: Start measuring total load time
     const totalLoadStart = performance.now()
-    console.log(`📥 [ModernAdapter] loadDocument START - file: ${file.name}, size: ${(file.size / 1024 / 1024).toFixed(2)}MB`)
-    console.log(`⏱️ [TOTAL LOAD START] Measuring end-to-end load time...`)
 
     // Memory checkpoint: Before loading
     logDetailedMemory('Before pdf.js load', { pdfArrayBuffer: file.size })
+
+    // CRITICAL: If a previous document was loaded, clear all caches and state
+    // before loading the new one. Without this, thumbnails/previews from the
+    // old PDF can linger and the new file appears "stuck".
+    if (this.isInitialized || this.currentFile) {
+      this.previewCache.clear()
+      this.pendingRenders.clear()
+      this.pageVersions.clear()
+      this.pagePreviewService.clearCache()
+      this.thumbnailService.invalidateAll()
+      this.gridService.clearCache()
+      this.metadataStore.clear?.()
+      this.isInitialized = false
+    }
 
     this.currentFile = file
     this.uiState.startLoading('parsing')
@@ -117,9 +128,6 @@ export class ModernAdapter implements PdfController {
       fastPageCount = await extractPageCountFast(file)
 
       if (fastPageCount) {
-        console.log(`⚡ [FAST GRID] Showing grid with ${fastPageCount} pages IMMEDIATELY!`)
-
-        // Update store so PDFPageSelector can read it immediately (solves timing issue)
         pdfStore.getState().setFastPageCount(fastPageCount)
 
         // Emit early grid event so UI can display placeholders instantly
@@ -131,24 +139,19 @@ export class ModernAdapter implements PdfController {
       }
     } catch (e) {
       console.error(`⚡ [FAST PAGE COUNT ERROR] Detail:`, e) // Explicit error logging
-      console.log(`⚡ [FAST PAGE COUNT] Could not extract fast page count, falling back to full parse`)
     }
 
     try {
       // ⏱️ PERFORMANCE: Measure PDF parsing time specifically
       const pdfParseStart = performance.now()
-      console.log(`⏱️ [PDF PARSE START] Starting PDF.js document loading...`)
 
       const result: LoadResult = await this.documentLoader.loadFile(file)
 
       const pdfParseEnd = performance.now()
       const pdfParseTime = ((pdfParseEnd - pdfParseStart) / 1000).toFixed(2)
-      console.log(`⏱️ [PDF PARSE COMPLETE] PDF.js loading took ${pdfParseTime}s`)
-      console.log(`📥 [ModernAdapter] Document loaded - ${result.totalPages} pages, docId: ${result.documentId}`)
 
       // Check if fast page count was accurate
       if (fastPageCount && fastPageCount !== result.totalPages) {
-        console.log(`⚡ [FAST PAGE COUNT] Correction: was ${fastPageCount}, actual is ${result.totalPages}`)
         // Emit correction event for UI to update
         this.progressBus.emit({
           type: 'pageCountCorrected',
@@ -171,9 +174,7 @@ export class ModernAdapter implements PdfController {
 
       // Pre-render first page preview immediately
       this.isInitialized = true
-      console.log(`📥 [ModernAdapter] Generating first page preview...`)
       await this.ensurePreview(1)
-      console.log(`📥 [ModernAdapter] First page preview complete`)
 
       // Memory checkpoint: After first preview
       logDetailedMemory('After first preview render', {
@@ -184,26 +185,20 @@ export class ModernAdapter implements PdfController {
       // ⏱️ PERFORMANCE: Grid should be ready now
       const gridReadyTime = performance.now()
       const gridDelay = ((gridReadyTime - totalLoadStart) / 1000).toFixed(2)
-      console.log(`⏱️ [GRID READY] Grid should appear now (${gridDelay}s after loadDocument started)`)
 
       // Generate remaining previews and thumbnails in background
       // CRITICAL: Disable background processing for LARGE PDFs (>= 10MB) 
       // We will rely on UI-driven on-demand loading to save CPU/Memory
       const fileSizeMB = file.size / (1024 * 1024)
       if (fileSizeMB < 10) {
-        console.log(`📥 [ModernAdapter] Small PDF detected (${fileSizeMB.toFixed(1)}MB), starting background generation`)
         this.generatePreviewsAsync(result.totalPages)
         this.generateThumbnailsAsync()
-      } else {
-        console.log(`📥 [ModernAdapter] Large PDF detected (${fileSizeMB.toFixed(1)}MB), background generation SKIPPED`)
       }
 
       this.uiState.finishLoading()
 
       const totalLoadEnd = performance.now()
       const totalLoadTime = ((totalLoadEnd - totalLoadStart) / 1000).toFixed(2)
-      console.log(`⏱️ [TOTAL LOAD COMPLETE] Total loadDocument time: ${totalLoadTime}s`)
-      console.log(`📥 [ModernAdapter] loadDocument COMPLETE`)
     } catch (error) {
       console.error(`📥 [ModernAdapter] loadDocument FAILED:`, error)
       const message = error instanceof Error ? error.message : 'Failed to load PDF'
@@ -733,7 +728,6 @@ export class ModernAdapter implements PdfController {
    * This releases the pdf.js worker memory (~250-600MB for large PDFs)
    */
   destroy(): void {
-    console.log('🧹 [ModernAdapter] Destroying adapter and releasing memory...')
     this.documentLoader.destroy()
     this.pageVersions.clear()
     this.previewCache.clear()
@@ -745,7 +739,6 @@ export class ModernAdapter implements PdfController {
     this.uiState.reset()
     this.currentFile = null
     this.isInitialized = false
-    console.log('✅ [ModernAdapter] All resources released')
   }
 
   // ============================================
@@ -861,7 +854,6 @@ export class ModernAdapter implements PdfController {
    * Set pages per sheet (1, 2, or 4)
    */
   setPagesPerSheet(pps: 1 | 2 | 4): void {
-    console.log(`📄 [ModernAdapter] Setting pagesPerSheet to ${pps}`)
     this.gridService.setPagesPerSheet(pps)
   }
 

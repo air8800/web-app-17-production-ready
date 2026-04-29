@@ -292,12 +292,7 @@ export function forwardTransformBox(
   }
 
   // 🔍 DEBUG: Log forward transform details
-  console.log(`🟢 [coordinateTransforms] forwardTransformBox()
-    Input contentBox: x=${contentBox.x.toFixed(4)}, y=${contentBox.y.toFixed(4)}, w=${contentBox.width.toFixed(4)}, h=${contentBox.height.toFixed(4)}
-    rotation=${rotationDeg}°, scale=${scaleFactor.toFixed(4)}, aspectRatio=${aspectRatio.toFixed(4)}
-    contentBounds: x=${contentBounds.x.toFixed(4)}, y=${contentBounds.y.toFixed(4)}, w=${contentBounds.width.toFixed(4)}, h=${contentBounds.height.toFixed(4)}
-    rotatedBox: x=${rotatedBox.x.toFixed(4)}, y=${rotatedBox.y.toFixed(4)}, w=${rotatedBox.width.toFixed(4)}, h=${rotatedBox.height.toFixed(4)}
-    OUTPUT screenBox: x=${result.x.toFixed(4)}, y=${result.y.toFixed(4)}, w=${result.width.toFixed(4)}, h=${result.height.toFixed(4)}`)
+  
 
   return result
 }
@@ -342,12 +337,7 @@ export function inverseTransformBox(
   const result = getBoundingBox(contentCorners)
 
   // 🔍 DEBUG: Log inverse transform details
-  console.log(`🟡 [coordinateTransforms] inverseTransformBox()
-    Input screenBox: x=${screenBox.x.toFixed(4)}, y=${screenBox.y.toFixed(4)}, w=${screenBox.width.toFixed(4)}, h=${screenBox.height.toFixed(4)}
-    rotation=${rotationDeg}°, scale=${scaleFactor.toFixed(4)}, aspectRatio=${aspectRatio.toFixed(4)}
-    contentBounds: x=${contentBounds.x.toFixed(4)}, y=${contentBounds.y.toFixed(4)}, w=${contentBounds.width.toFixed(4)}, h=${contentBounds.height.toFixed(4)}
-    rotatedBox (after unmap): x=${rotatedBox.x.toFixed(4)}, y=${rotatedBox.y.toFixed(4)}, w=${rotatedBox.width.toFixed(4)}, h=${rotatedBox.height.toFixed(4)}
-    OUTPUT contentBox: x=${result.x.toFixed(4)}, y=${result.y.toFixed(4)}, w=${result.width.toFixed(4)}, h=${result.height.toFixed(4)}`)
+  
 
   return result
 }

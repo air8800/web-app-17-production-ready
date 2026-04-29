@@ -12,11 +12,6 @@ const projectId = supabaseUrl.match(/https:\/\/([^.]+)/)?.[1]
 
 export const supabaseStorageUrl = `https://${projectId}.storage.supabase.co`
 
-console.log('🔧 Supabase Configuration:')
-console.log('URL:', supabaseUrl)
-console.log('Storage URL:', supabaseStorageUrl)
-console.log('Key:', supabaseKey ? `${supabaseKey.substring(0, 20)}...` : 'NOT SET')
-
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: false,
@@ -34,7 +29,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 // ============================================================================
 
 // Sanitize filename to avoid special characters that Supabase storage rejects
-const sanitizeFilename = (filename) => {
+export const sanitizeFilename = (filename) => {
   // Extract extension
   const lastDotIndex = filename.lastIndexOf('.')
   const name = lastDotIndex > 0 ? filename.substring(0, lastDotIndex) : filename
@@ -57,9 +52,9 @@ const sanitizeFilename = (filename) => {
 
 export const testConnection = async () => {
   try {
-    console.log('🔍 Testing Supabase connection...')
-    console.log('🔧 URL:', supabaseUrl)
-    console.log('🔧 Key length:', supabaseKey?.length || 0)
+    
+    
+    
 
     // Test 1: Basic connection
     const { data: healthCheck, error: healthError } = await supabase
@@ -76,7 +71,7 @@ export const testConnection = async () => {
       }
     }
 
-    console.log('✅ Basic connection successful')
+    
 
     // Test 2: Check if shops table exists and has data
     const { data: shopsData, error: shopsError } = await supabase
@@ -93,12 +88,12 @@ export const testConnection = async () => {
       }
     }
 
-    console.log('✅ Shops table accessible')
-    console.log('📊 Found shops:', shopsData?.length || 0)
+    
+    
 
     if (shopsData) {
       shopsData.forEach(shop => {
-        console.log(`  - ${shop.name} (${shop.is_active ? 'active' : 'inactive'})`)
+        
       })
     }
 
@@ -117,8 +112,8 @@ export const testConnection = async () => {
       }
     }
 
-    console.log('✅ RLS policies working')
-    console.log('📊 Active shops found:', activeShops?.length || 0)
+    
+    
 
     return {
       success: true,
@@ -142,8 +137,6 @@ export const testConnection = async () => {
 
 export const getShopInfo = async (shopId) => {
   try {
-    console.log('🔍 Fetching shop info for:', shopId)
-
     if (!shopId) {
       throw new Error('Shop ID is required')
     }
@@ -165,7 +158,6 @@ export const getShopInfo = async (shopId) => {
       return { data: null, error: { message: 'Shop not found or inactive' } }
     }
 
-    console.log('✅ Shop info loaded:', data.name)
     return { data, error: null }
 
   } catch (error) {
@@ -176,8 +168,6 @@ export const getShopInfo = async (shopId) => {
 
 export const getAllActiveShops = async () => {
   try {
-    console.log('🔍 Fetching all active shops...')
-
     const { data, error } = await supabase
       .from('shops')
       .select('*')
@@ -189,7 +179,6 @@ export const getAllActiveShops = async () => {
       throw new Error(`Failed to fetch shops: ${error.message}`)
     }
 
-    console.log('✅ Active shops loaded:', data?.length || 0)
     return { data: data || [], error: null }
 
   } catch (error) {
@@ -204,8 +193,6 @@ export const getAllActiveShops = async () => {
 
 export const getShopPricing = async (shopId) => {
   try {
-    console.log('💰 Fetching pricing for shop:', shopId)
-
     if (!shopId) {
       throw new Error('Shop ID is required')
     }
@@ -221,7 +208,6 @@ export const getShopPricing = async (shopId) => {
       throw new Error(`Failed to fetch pricing: ${error.message}`)
     }
 
-    console.log('✅ Pricing loaded:', data?.length || 0, 'configurations')
     return { data: data || [], error: null }
 
   } catch (error) {
@@ -287,13 +273,6 @@ export const calculateOrderCost = async (shopId, orderData) => {
     const totalCost = pricePerPage * orderData.copies * pages;
     const savings = appliedTier ? (matchingConfig.base_price - pricePerPage) * orderData.copies * pages : 0;
 
-    console.log('💰 Cost calculated:', {
-      totalCost: totalCost,
-      pricePerPage: pricePerPage,
-      appliedTier: appliedTier?.name,
-      savings: savings
-    })
-
     return {
       cost: totalCost,
       pricePerPage: pricePerPage,
@@ -318,81 +297,122 @@ export const calculateOrderCost = async (shopId, orderData) => {
 // FILE UPLOAD FUNCTIONS
 // ============================================================================
 
-export const uploadFileChunked = async (file, shopId, onProgress = null, getUploadRef = null) => {
+export const uploadFileChunked = async (file, shopId, onProgress = null, getUploadRef = null, customFileName = null) => {
   return new Promise((resolve, reject) => {
     try {
-      if (!file) {
-        reject(new Error('No file provided'))
-        return
-      }
+      
+      
+      if (!file) return reject(new Error('No file provided'))
+      if (!shopId) return reject(new Error('Shop ID is required'))
 
-      if (!shopId) {
-        reject(new Error('Shop ID is required'))
-        return
-      }
-
-      const sanitizedName = sanitizeFilename(file.name)
-      const fileName = `${shopId}/${Date.now()}_${sanitizedName}`
+      // Ensure we have a valid string for sanitization
+      const nameToSanitize = file.name || 'document.pdf'
+      const sanitizedName = sanitizeFilename(String(nameToSanitize))
+      
+      // Use the provided name (for resuming) or generate a new one
+      const fileName = customFileName || `${shopId}/${Date.now()}_${sanitizedName}`
       const bucketName = 'print-files'
 
-      const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
-      console.log(`🚀 Starting CHUNKED upload for ${fileSizeMB} MB file...`)
-      console.log('📁 Using direct storage endpoint:', supabaseStorageUrl)
+      
 
       const upload = new tus.Upload(file, {
         endpoint: `${supabaseStorageUrl}/storage/v1/upload/resumable`,
         retryDelays: [0, 1000, 3000, 5000, 10000],
+        fingerprint: (uploadFile, options) => Promise.resolve([
+          'printget',
+          options.endpoint,
+          options.metadata?.bucketName,
+          options.metadata?.objectName,
+          uploadFile.name || 'blob',
+          uploadFile.type || 'application/octet-stream',
+          uploadFile.size || 0,
+        ].join('-')),
         headers: {
           authorization: `Bearer ${supabaseKey}`,
           'x-upsert': 'false',
         },
-        uploadDataDuringCreation: true,
+        // IMPORTANT for resumption:
+        // - uploadDataDuringCreation:false → server returns upload URL first,
+        //   tus-js-client saves it to localStorage BEFORE any bytes are sent.
+        //   If the user closes the tab mid-upload, the URL is already stored
+        //   and findPreviousUploads() can resume from the last completed chunk.
+        // - 2 MB chunks → checkpoints every 2 MB. Supabase accepts any size.
+        uploadDataDuringCreation: false,
         removeFingerprintOnSuccess: true,
+        storeFingerprintForResuming: true,
         metadata: {
           bucketName: bucketName,
           objectName: fileName,
           contentType: file.type || 'application/pdf',
           cacheControl: '3600',
         },
-        chunkSize: 6 * 1024 * 1024,
+        chunkSize: 2 * 1024 * 1024,
         onError: (error) => {
-          console.error('❌ Chunked upload failed:', error)
-          reject(new Error(`Upload failed: ${error.message}`))
+          console.error('❌ [TUS] Upload failed:', error)
+          reject(error)
         },
         onProgress: (bytesUploaded, bytesTotal) => {
           const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(1)
-          console.log(`📤 Upload progress: ${percentage}% (${(bytesUploaded / 1024 / 1024).toFixed(2)} MB / ${fileSizeMB} MB)`)
-
-          if (onProgress) {
-            onProgress(bytesUploaded, bytesTotal, percentage)
-          }
+          
+          if (onProgress) onProgress(bytesUploaded, bytesTotal, percentage)
         },
         onSuccess: () => {
+          
           const { data: { publicUrl } } = supabase.storage
             .from(bucketName)
             .getPublicUrl(fileName)
 
-          console.log('✅ Chunked upload complete!')
-          console.log('📎 File URL:', publicUrl)
-
-          resolve({
-            data: {
-              path: fileName,
-              publicUrl
-            },
-            error: null
-          })
+          resolve({ data: { path: fileName, publicUrl }, error: null })
         }
       })
 
-      if (getUploadRef) {
-        getUploadRef(upload)
-      }
+      if (getUploadRef) getUploadRef(upload)
 
-      upload.start()
+      // Debug: dump every tus:: key + sweep stale entries (>24h old)
+      try {
+        const STALE_MS = 24 * 60 * 60 * 1000 // 24 hours
+        const now = Date.now()
+        const tusKeys = []
+        const staleKeys = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i)
+          if (!k || !k.startsWith('tus::')) continue
+          tusKeys.push(k)
+          try {
+            const entry = JSON.parse(localStorage.getItem(k))
+            const created = entry?.creationTime ? new Date(entry.creationTime).getTime() : 0
+            if (created && now - created > STALE_MS) staleKeys.push(k)
+          } catch (_) {
+            // Malformed entry — treat as stale
+            staleKeys.push(k)
+          }
+        }
+        
+        staleKeys.forEach((k) => {
+          
+          localStorage.removeItem(k)
+        })
+      } catch (_) {}
+
+      upload.findPreviousUploads()
+        .then((previousUploads) => {
+          
+          if (previousUploads.length > 0) {
+            
+            // Pick the most recent one (last in array)
+            upload.resumeFromPreviousUpload(previousUploads[previousUploads.length - 1])
+          } else {
+            
+          }
+          upload.start()
+        })
+        .catch((error) => {
+          console.warn('⚠️ [TUS] Could not check previous uploads, starting fresh:', error)
+          upload.start()
+        })
 
     } catch (error) {
-      console.error('❌ Chunked upload error:', error)
+      console.error('❌ [TUS] Critical setup error:', error)
       reject(error)
     }
   })
@@ -411,7 +431,7 @@ export const uploadFile = async (file, shopId) => {
     const sanitizedName = sanitizeFilename(file.name)
     const fileName = `${shopId}/${Date.now()}_${sanitizedName}`
 
-    console.log('📁 Uploading file:', fileName)
+    
 
     const { data, error } = await supabase.storage
       .from('print-files')
@@ -426,7 +446,7 @@ export const uploadFile = async (file, shopId) => {
       .from('print-files')
       .getPublicUrl(fileName)
 
-    console.log('✅ File uploaded successfully:', publicUrl)
+    
     return { data: { path: data.path, publicUrl }, error: null }
 
   } catch (error) {
@@ -441,7 +461,7 @@ export const uploadFile = async (file, shopId) => {
 
 export const submitPrintJob = async (jobData) => {
   try {
-    console.log('📝 Submitting print job:', jobData)
+    
 
     if (!jobData.shop_id) {
       throw new Error('Shop ID is required')
@@ -474,12 +494,7 @@ export const submitPrintJob = async (jobData) => {
       has_edits: jobData.has_edits || false
     }
 
-    console.log('📋 Job data with recipe:', {
-      hasRecipe: !!insertData.recipe,
-      totalPages: insertData.total_pages,
-      selectedPagesCount: insertData.selected_pages?.length,
-      hasEdits: insertData.has_edits
-    })
+    
 
     const { data, error } = await supabase
       .from('print_jobs')
@@ -492,11 +507,57 @@ export const submitPrintJob = async (jobData) => {
       throw new Error(`Failed to submit job: ${error.message}`)
     }
 
-    console.log('✅ Print job submitted successfully:', data.id)
+    
     return { data, error: null }
 
   } catch (error) {
     console.error('❌ Submit error:', error)
+    return { data: null, error: { message: error.message } }
+  }
+}
+
+// ============================================================================
+// INSTANT JOB CREATION (before file upload completes)
+// Creates the job record immediately with job_status='uploading' and file_url=null.
+// Call updatePrintJob(id, { file_url, job_status: 'pending' }) when upload finishes.
+// ============================================================================
+export const submitPrintJobImmediate = async (jobData) => {
+  try {
+    if (!jobData.shop_id) throw new Error('Shop ID is required')
+    if (!jobData.filename) throw new Error('Filename is required')
+
+    const insertData = {
+      shop_id: jobData.shop_id,
+      filename: jobData.filename,
+      file_url: '__uploading__',  // Placeholder — replaced with real URL after upload
+      copies: jobData.copies,
+      paper_size: jobData.paper_size,
+      color_mode: jobData.color_mode,
+      print_type: jobData.print_type,
+      pages_per_sheet: jobData.pages_per_sheet,
+      customer_name: jobData.customer_name,
+      customer_email: jobData.customer_email || null,
+      customer_phone: jobData.customer_phone || null,
+      total_cost: jobData.total_cost,
+      payment_status: 'paid',
+      job_status: 'pending',    // Reverted from 'uploading' because of DB constraint. We will filter on the desktop app instead.
+      recipe: jobData.recipe || null,
+      total_pages: jobData.total_pages || null,
+      selected_pages: jobData.selected_pages || null,
+      has_edits: jobData.has_edits || false
+    }
+
+    const { data, error } = await supabase
+      .from('print_jobs')
+      .insert(insertData)
+      .select()
+      .single()
+
+    if (error) throw new Error(`Failed to create job: ${error.message}`)
+
+    return { data, error: null }
+  } catch (error) {
+    console.error('❌ Immediate submit error:', error)
     return { data: null, error: { message: error.message } }
   }
 }
@@ -572,7 +633,7 @@ export const updatePrintJob = async (jobId, updates) => {
       throw new Error(`Failed to update job: ${error.message}`)
     }
 
-    console.log('✅ Job updated successfully:', jobId)
+    
     return { data, error: null }
 
   } catch (error) {
@@ -616,7 +677,7 @@ export const updatePaymentStatus = async (jobId, status) => {
 
 export const updateJobStatus = async (jobId, status, estimatedCompletion = null) => {
   try {
-    console.log(`🔄 Updating job ${jobId} status to: ${status}`)
+    
 
     if (!jobId) {
       throw new Error('Job ID is required')
@@ -643,7 +704,7 @@ export const updateJobStatus = async (jobId, status, estimatedCompletion = null)
       throw new Error(`Failed to update job status: ${error.message}`)
     }
 
-    console.log('✅ Job status updated successfully:', data)
+    
     return { data, error: null }
 
   } catch (error) {
@@ -669,7 +730,7 @@ export const markJobAsCancelled = async (jobId) => {
 // ============================================================================
 
 export const subscribeToJobUpdates = (jobId, callback) => {
-  console.log('🔄 Setting up real-time subscription for job:', jobId)
+  
 
   return supabase
     .channel(`job_updates_${jobId}`)
@@ -681,17 +742,17 @@ export const subscribeToJobUpdates = (jobId, callback) => {
         filter: `id=eq.${jobId}`
       },
       (payload) => {
-        console.log('🔄 Real-time job update received:', payload.new)
+        
         callback(payload.new)
       }
     )
     .subscribe((status) => {
-      console.log('🔄 Subscription status:', status)
+      
     })
 }
 
 export const subscribeToAllJobUpdates = (shopId, callback) => {
-  console.log('🔄 Setting up real-time subscription for shop jobs:', shopId)
+  
 
   return supabase
     .channel(`shop_jobs_${shopId}`)
@@ -703,7 +764,7 @@ export const subscribeToAllJobUpdates = (shopId, callback) => {
         filter: `shop_id=eq.${shopId}`
       },
       (payload) => {
-        console.log('🔄 Real-time shop job update:', payload)
+        
         callback(payload)
       }
     )
@@ -715,7 +776,7 @@ export const subscribeToAllJobUpdates = (shopId, callback) => {
 // ============================================================================
 
 export const startJobStatusPolling = (jobId, callback, intervalMs = 30000) => {
-  console.log(`🔄 Starting polling for job ${jobId} every ${intervalMs}ms`)
+  
 
   const pollInterval = setInterval(async () => {
     try {
@@ -730,7 +791,7 @@ export const startJobStatusPolling = (jobId, callback, intervalMs = 30000) => {
 
   // Return cleanup function
   return () => {
-    console.log('🔄 Stopping job status polling')
+    
     clearInterval(pollInterval)
   }
 }
@@ -760,7 +821,7 @@ export const isValidFileType = (filename) => {
 // ============================================================================
 
 export const runDatabaseDiagnostics = async () => {
-  console.log('🔧 Running comprehensive database diagnostics...')
+  
 
   const results = {
     connection: null,
@@ -806,7 +867,7 @@ export const runDatabaseDiagnostics = async () => {
       results.storage = { success: false, error: error.message }
     }
 
-    console.log('🔧 Diagnostics complete:', results)
+    
     return results
 
   } catch (error) {

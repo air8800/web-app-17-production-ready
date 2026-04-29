@@ -55,7 +55,7 @@ export class PagePreviewService {
     // N-up mode: disable A4 normalization
     const applyA4Normalization = !isNupMode
     if (isNupMode) {
-      console.log('%c🔲 [N-UP PREVIEW] Page ' + pageNumber + ' - A4 Normalization: DISABLED', 'color: red; font-weight: bold; background: #ffeeee; padding: 2px 6px;')
+      
     }
     await this.documentLoader.renderPageToCanvas(pageNumber, baseCanvas, scale, signal, applyA4Normalization)
 
@@ -249,17 +249,17 @@ export class PagePreviewService {
 
     // Check raw preview cache first
     if (this.rawPreviewCache.has(cacheKey)) {
-      console.log(`⚡ [getRawPreview] Cache HIT: page ${pageNumber} @ ${scale}`)
+      
       return this.rawPreviewCache.get(cacheKey)!
     }
 
-    console.log(`🖼️ [getRawPreview] Cache MISS: Rendering page ${pageNumber} @ ${scale}`)
+    
     const canvas = document.createElement('canvas')
 
     // N-up mode: disable A4 normalization
     const applyA4Normalization = !isNupMode
     if (isNupMode) {
-      console.log('%c🔲 [N-UP RAW PREVIEW] Page ' + pageNumber + ' - A4 Normalization: DISABLED', 'color: red; font-weight: bold; background: #ffeeee; padding: 2px 6px;')
+      
     }
     await this.documentLoader.renderPageToCanvas(pageNumber, canvas, scale, signal, applyA4Normalization)
 

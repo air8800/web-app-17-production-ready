@@ -215,6 +215,24 @@ const OrderPage = () => {
     }, 300)
   }
 
+  // Select paper size; if it's not in the front 4, promote it to the top
+  // so it's visible on the main UI next time. Persist the user's last
+  // choice in localStorage so it's remembered across sessions / shops.
+  const handleSelectPaperSize = (size) => {
+    setOrderData(prev => ({ ...prev, paperSize: size }))
+    try {
+      localStorage.setItem('printget_last_paper_size', size)
+    } catch (e) {
+      // localStorage may be unavailable (private mode, quota); ignore
+    }
+    setAvailablePaperSizes(prev => {
+      if (!prev.includes(size)) return prev
+      const front = prev.slice(0, 4)
+      if (front.includes(size)) return prev // already visible, keep order
+      return [size, ...prev.filter(s => s !== size)]
+    })
+  }
+
   // Convert readyPDFBlob to bytes for preview
   useEffect(() => {
     if (readyPDFBlob) {
@@ -437,10 +455,27 @@ const OrderPage = () => {
         // Extract available paper sizes from pricing
         const sizes = [...new Set(pricingResult.data.map(config => config.paper_size))]
         if (sizes.length > 0) {
-          setAvailablePaperSizes(sizes)
+          // Remember the user's last paper size choice across sessions.
+          // If it's available at this shop, promote it to the front of the
+          // list so it shows up on the main UI without needing "More".
+          let savedSize = null
+          try {
+            savedSize = localStorage.getItem('printget_last_paper_size')
+          } catch (e) {
+            // ignore
+          }
+
+          let orderedSizes = sizes
+          let defaultSize = sizes[0]
+          if (savedSize && sizes.includes(savedSize)) {
+            defaultSize = savedSize
+            orderedSizes = [savedSize, ...sizes.filter(s => s !== savedSize)]
+          }
+
+          setAvailablePaperSizes(orderedSizes)
           setOrderData(prev => ({
             ...prev,
-            paperSize: sizes[0] // Set first available size as default
+            paperSize: defaultSize
           }))
         }
       } else {
@@ -2256,7 +2291,7 @@ const OrderPage = () => {
                           key={size}
                           type="button"
                           onClick={() => {
-                            setOrderData(prev => ({ ...prev, paperSize: size }))
+                            handleSelectPaperSize(size)
                             setShowAllPaperSizes(false)
                           }}
                           className={`relative px-3 py-3 text-sm font-semibold rounded-lg transition-all border-2 ${isSelected
@@ -2305,7 +2340,7 @@ const OrderPage = () => {
                     {availablePaperSizes.slice(0, 4).map(size => (
                       <button
                         key={size}
-                        onClick={() => setOrderData(prev => ({ ...prev, paperSize: size }))}
+                        onClick={() => handleSelectPaperSize(size)}
                         className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${orderData.paperSize === size
                           ? 'bg-blue-600 text-white shadow-md'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'

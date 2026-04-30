@@ -1,5 +1,6 @@
 import sharp from 'sharp'
-import { readFileSync } from 'fs'
+import pngToIco from 'png-to-ico'
+import { readFileSync, writeFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -55,6 +56,14 @@ const ensure = async () => {
     await sharp(svgBuffer).resize(t.size, t.size).png().toFile(out)
     console.log('Generated', t.file)
   }
+
+  // Generate a multi-resolution favicon.ico (16, 32, 48) from PNG buffers
+  const ico16 = await sharp(svgBuffer).resize(16, 16).png().toBuffer()
+  const ico32 = await sharp(svgBuffer).resize(32, 32).png().toBuffer()
+  const ico48 = await sharp(svgBuffer).resize(48, 48).png().toBuffer()
+  const icoBuffer = await pngToIco([ico16, ico32, ico48])
+  writeFileSync(resolve(PUBLIC, 'favicon.ico'), icoBuffer)
+  console.log('Generated favicon.ico')
 }
 
 ensure().catch((err) => {

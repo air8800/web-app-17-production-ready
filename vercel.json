@@ -1,7 +1,7 @@
 {
     "rewrites": [
         {
-            "source": "/((?!api|assets|.*\\.css|.*\\.js|.*\\.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.woff|.*\\.woff2).*)",
+            "source": "/((?!api|assets|.*\\.css|.*\\.js|.*\\.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.webp|.*\\.woff|.*\\.woff2|.*\\.xml|.*\\.txt|.*\\.json).*)",
             "destination": "/index.html"
         }
     ],
@@ -12,6 +12,54 @@
                 {
                     "key": "Cache-Control",
                     "value": "no-cache, no-store, must-revalidate"
+                }
+            ]
+        },
+        {
+            "source": "/sitemap.xml",
+            "headers": [
+                {
+                    "key": "Content-Type",
+                    "value": "application/xml; charset=utf-8"
+                },
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=3600, must-revalidate"
+                }
+            ]
+        },
+        {
+            "source": "/robots.txt",
+            "headers": [
+                {
+                    "key": "Content-Type",
+                    "value": "text/plain; charset=utf-8"
+                },
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=3600, must-revalidate"
+                }
+            ]
+        },
+        {
+            "source": "/manifest.json",
+            "headers": [
+                {
+                    "key": "Content-Type",
+                    "value": "application/manifest+json; charset=utf-8"
+                },
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=86400"
+                }
+            ]
+        },
+        {
+            "source": "/(favicon.svg|favicon-16.png|favicon-32.png|favicon-48.png|apple-touch-icon.png|icon-192.png|icon-512.png|og-image.png)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=604800, immutable"
                 }
             ]
         },
@@ -36,7 +84,7 @@
                 },
                 {
                     "key": "Content-Security-Policy",
-                    "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none';"
+                    "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com https://va.vercel-scripts.com; frame-ancestors 'none';"
                 }
             ]
         }

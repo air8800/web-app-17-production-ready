@@ -4,7 +4,11 @@ import { Printer, ArrowLeft, Upload, Store, Zap, Shield, Globe, Users, MapPin } 
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const AboutPage = () => {
-    usePageTitle('About Us')
+    usePageTitle({
+        title: 'About PrintGet - Online Printing Marketplace for Local Print Shops',
+        description: 'Learn about PrintGet, the online printing marketplace connecting customers with local print shops in Bangalore. Our mission, story, and how we make printing simple.',
+        path: '/about'
+    })
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">

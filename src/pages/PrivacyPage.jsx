@@ -4,7 +4,11 @@ import { Printer, ArrowLeft, Mail } from 'lucide-react'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const PrivacyPage = () => {
-    usePageTitle('Privacy Policy')
+    usePageTitle({
+        title: 'Privacy Policy - How PrintGet Protects Your Data',
+        description: 'PrintGet Privacy Policy. Learn how we collect, use, and protect your personal information and uploaded documents on our online printing platform.',
+        path: '/privacy'
+    })
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">

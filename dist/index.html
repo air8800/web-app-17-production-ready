@@ -1,40 +1,231 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-IN">
 
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+  <!-- Favicons (multiple formats for maximum search engine support) -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="shortcut icon" href="/favicon.svg" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="msapplication-TileColor" content="#2563eb" />
+  <meta name="msapplication-TileImage" content="/icon-192.png" />
 
   <!-- Primary Meta Tags -->
-  <title>PrintGet</title>
-  <meta name="title" content="PrintGet" />
+  <title>PrintGet - Online Document Printing Service in Bangalore | Upload &amp; Print at Nearby Shops</title>
+  <meta name="title" content="PrintGet - Online Document Printing Service in Bangalore | Upload & Print at Nearby Shops" />
   <meta name="description"
-    content="Upload your documents and get them printed at your nearest print shop. Fast, easy, and affordable printing service." />
+    content="PrintGet lets you upload PDFs and documents online and print them at your nearest local print shop in Bangalore. Fast, easy, and affordable online printing service - black & white, color, single & double-sided. No queues, no USB drives." />
+  <meta name="keywords"
+    content="printget, print get, online printing Bangalore, document printing online, upload and print, PDF printing service, nearest print shop, online xerox, print shop near me, photocopy online, color printing Bangalore, black and white printing, print documents online India, online print order, printing service Bengaluru, cheapest online printing, instant printing service" />
+  <meta name="author" content="PrintGet" />
+  <meta name="publisher" content="PrintGet" />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large" />
+  <meta name="bingbot" content="index, follow" />
+  <meta name="rating" content="general" />
+  <meta name="distribution" content="global" />
+  <meta name="revisit-after" content="3 days" />
+  <meta name="language" content="English" />
+  <meta name="application-name" content="PrintGet" />
 
-  <!-- Open Graph / Facebook -->
+  <!-- Geo / Location targeting (helps local SEO for India / Bangalore) -->
+  <meta name="geo.region" content="IN-KA" />
+  <meta name="geo.placename" content="Bengaluru, Karnataka, India" />
+  <meta name="geo.position" content="12.9716;77.5946" />
+  <meta name="ICBM" content="12.9716, 77.5946" />
+
+  <!-- Canonical URL (avoids duplicate content issues) -->
+  <link rel="canonical" href="https://www.printget.in/" />
+
+  <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
   <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="PrintGet" />
   <meta property="og:url" content="https://www.printget.in/" />
-  <meta property="og:title" content="PrintGet" />
+  <meta property="og:title" content="PrintGet - Online Document Printing Service in Bangalore" />
   <meta property="og:description"
-    content="Upload your documents and get them printed at your nearest print shop. Fast, easy, and affordable printing service." />
+    content="Upload your documents and get them printed at your nearest print shop in Bangalore. Fast, easy, and affordable online printing service." />
+  <meta property="og:image" content="https://www.printget.in/og-image.png" />
+  <meta property="og:image:secure_url" content="https://www.printget.in/og-image.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="PrintGet - Online Printing Service" />
+  <meta property="og:locale" content="en_IN" />
 
   <!-- Twitter -->
-  <meta property="twitter:card" content="summary_large_image" />
-  <meta property="twitter:url" content="https://www.printget.in/" />
-  <meta property="twitter:title" content="PrintGet" />
-  <meta property="twitter:description"
-    content="Upload your documents and get them printed at your nearest print shop. Fast, easy, and affordable printing service." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://www.printget.in/" />
+  <meta name="twitter:title" content="PrintGet - Online Document Printing Service in Bangalore" />
+  <meta name="twitter:description"
+    content="Upload your documents and get them printed at your nearest print shop in Bangalore. Fast, easy, and affordable." />
+  <meta name="twitter:image" content="https://www.printget.in/og-image.png" />
+  <meta name="twitter:image:alt" content="PrintGet - Online Printing Service" />
 
-  <!-- Theme Color for mobile browsers -->
+  <!-- Theme & Mobile App -->
   <meta name="theme-color" content="#2563eb" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <script type="module" crossorigin src="/main-UDF1VkZd.js"></script>
-  <link rel="stylesheet" crossorigin href="/main-CQ6hQOQV.css">
+  <meta name="apple-mobile-web-app-title" content="PrintGet" />
+  <meta name="format-detection" content="telephone=yes" />
+
+  <!-- Preconnect / DNS prefetch for performance (helps SEO ranking) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+
+  <!-- Structured Data: Organization -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "PrintGet",
+    "alternateName": ["Print Get", "PrintGet.in"],
+    "url": "https://www.printget.in/",
+    "logo": "https://www.printget.in/icon-512.png",
+    "image": "https://www.printget.in/og-image.png",
+    "description": "PrintGet is an online printing marketplace that connects users with their nearest local print shop in Bangalore. Upload documents, choose options, pay online and pick up printed copies in minutes.",
+    "foundingDate": "2025",
+    "areaServed": {
+      "@type": "City",
+      "name": "Bengaluru",
+      "containedInPlace": {
+        "@type": "AdministrativeArea",
+        "name": "Karnataka, India"
+      }
+    },
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Bengaluru",
+      "addressRegion": "Karnataka",
+      "addressCountry": "IN"
+    },
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer support",
+      "url": "https://www.printget.in/contact",
+      "availableLanguage": ["en", "hi", "kn"]
+    },
+    "sameAs": [
+      "https://www.printget.in/"
+    ]
+  }
+  </script>
+
+  <!-- Structured Data: WebSite (enables Sitelinks Search Box in Google) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "PrintGet",
+    "alternateName": "Print Get",
+    "url": "https://www.printget.in/",
+    "inLanguage": "en-IN",
+    "description": "Online document printing service - upload and print at your nearest shop in Bangalore.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "PrintGet"
+    }
+  }
+  </script>
+
+  <!-- Structured Data: LocalBusiness / Service (helps Google show rich results) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "serviceType": "Online Document Printing",
+    "name": "PrintGet Online Printing Service",
+    "provider": {
+      "@type": "Organization",
+      "name": "PrintGet",
+      "url": "https://www.printget.in/"
+    },
+    "areaServed": {
+      "@type": "City",
+      "name": "Bengaluru, Karnataka, India"
+    },
+    "description": "Upload PDFs and documents from your phone or laptop. Choose color, paper size, single or double-sided. Pay online and pick up printed copies at your nearest partner print shop.",
+    "offers": {
+      "@type": "Offer",
+      "priceCurrency": "INR",
+      "availability": "https://schema.org/InStock",
+      "url": "https://www.printget.in/"
+    }
+  }
+  </script>
+
+  <!-- Structured Data: FAQ (helps with FAQ-rich snippets in search) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is PrintGet?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "PrintGet is an online printing service that lets you upload your documents and get them printed at your nearest local print shop in Bangalore."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does PrintGet work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Choose a print shop near you, upload your PDF or document, select print options like color or black & white, single or double-sided, pay online, and pick up your prints at the shop."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Where is PrintGet available?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "PrintGet currently operates in Bengaluru (Bangalore), Karnataka, India and is expanding to more cities soon."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is PrintGet safe to use?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Payments are handled by PhonePe Payment Gateway and your documents are stored securely and only shared with the print shop you select."
+        }
+      }
+    ]
+  }
+  </script>
+  <script type="module" crossorigin src="/main-CHsrklqW.js"></script>
+  <link rel="stylesheet" crossorigin href="/main-BtLh_8Oo.css">
 </head>
 
 <body>
   <div id="root"></div>
+  <noscript>
+    <h1>PrintGet - Online Document Printing Service in Bangalore</h1>
+    <p>
+      PrintGet lets you upload your PDFs and documents online and print them at your nearest local
+      print shop in Bangalore. Fast, easy, and affordable. JavaScript is required to use the full
+      application. Please enable JavaScript in your browser, or visit
+      <a href="https://www.printget.in/">https://www.printget.in/</a>.
+    </p>
+    <ul>
+      <li><a href="/about">About PrintGet</a></li>
+      <li><a href="/contact">Contact Us</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/terms">Terms &amp; Conditions</a></li>
+      <li><a href="/privacy">Privacy Policy</a></li>
+      <li><a href="/refund-policy">Refund Policy</a></li>
+    </ul>
+  </noscript>
 </body>
 
 </html>

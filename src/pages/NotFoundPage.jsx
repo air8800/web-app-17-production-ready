@@ -4,7 +4,10 @@ import { Printer, ArrowLeft, Home, Search } from 'lucide-react'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const NotFoundPage = () => {
-    usePageTitle('Page Not Found')
+    usePageTitle({
+        title: 'Page Not Found (404)',
+        description: 'The page you are looking for does not exist. Return to PrintGet home to find a print shop near you.'
+    })
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex flex-col">

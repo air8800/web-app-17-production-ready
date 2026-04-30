@@ -4,7 +4,11 @@ import { Printer, ArrowLeft, Mail } from 'lucide-react'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const CookiePolicyPage = () => {
-    usePageTitle('Cookie Policy')
+    usePageTitle({
+        title: 'Cookie Policy - PrintGet',
+        description: 'PrintGet Cookie Policy. Understand how we use cookies and similar technologies on our website to improve your experience.',
+        path: '/cookie-policy'
+    })
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">

@@ -4,7 +4,11 @@ import { Printer, ArrowLeft, Mail } from 'lucide-react'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const TermsPage = () => {
-    usePageTitle('Terms & Conditions')
+    usePageTitle({
+        title: 'Terms & Conditions - PrintGet Online Printing Service',
+        description: 'PrintGet Terms & Conditions. Read the user agreement covering use of our online printing platform, partner print shops, payments, and your rights.',
+        path: '/terms'
+    })
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">

@@ -4,7 +4,11 @@ import { Printer, ArrowLeft, Mail, Clock, MessageCircle, Phone, MapPin } from 'l
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const ContactPage = () => {
-    usePageTitle('Contact Us')
+    usePageTitle({
+        title: 'Contact PrintGet - Customer Support for Online Printing Service',
+        description: 'Get in touch with PrintGet customer support. Email us, message us on WhatsApp, or reach out for help with your online print orders in Bangalore.',
+        path: '/contact'
+    })
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">

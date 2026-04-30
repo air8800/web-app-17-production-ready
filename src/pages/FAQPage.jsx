@@ -91,7 +91,11 @@ const FAQItem = ({ faq }) => {
 }
 
 const FAQPage = () => {
-    usePageTitle('FAQ / Help')
+    usePageTitle({
+        title: 'FAQ & Help - How PrintGet Online Printing Works',
+        description: 'Frequently asked questions about PrintGet. Learn how to upload documents, choose print options, pay online, and pick up prints at your nearest partner print shop in Bangalore.',
+        path: '/faq'
+    })
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">

@@ -4,7 +4,11 @@ import { Printer, ArrowLeft, Mail, Clock, ShieldCheck, AlertCircle } from 'lucid
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const RefundPolicyPage = () => {
-    usePageTitle('Refund & Cancellation Policy')
+    usePageTitle({
+        title: 'Refund & Cancellation Policy - PrintGet',
+        description: 'PrintGet Refund & Cancellation Policy. Learn when and how refunds are processed for online print orders placed through our platform.',
+        path: '/refund-policy'
+    })
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">

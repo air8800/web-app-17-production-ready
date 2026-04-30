@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Printer, ArrowLeft, Mail, Clock, MessageCircle } from 'lucide-react'
+import { Printer, ArrowLeft, Mail, Clock, MessageCircle, Phone, MapPin } from 'lucide-react'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const ContactPage = () => {
@@ -53,6 +53,58 @@ const ContactPage = () => {
                                 >
                                     support@printget.in
                                 </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="border-t border-gray-100" />
+
+                    {/* Phone */}
+                    <div className="p-6 sm:p-8">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20">
+                                <Phone className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-semibold text-gray-900 mb-1">Call Us</h2>
+                                <p className="text-gray-500 text-sm mb-3">For urgent issues with an active order.</p>
+                                <a
+                                    href="tel:+918329232242"
+                                    className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-semibold text-lg transition-colors"
+                                >
+                                    +91 83292 32242
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="border-t border-gray-100" />
+
+                    {/* Location */}
+                    <div className="p-6 sm:p-8">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/20">
+                                <MapPin className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-1">Where We're Based</h2>
+                                <p className="text-gray-500 text-sm mb-4">PrintGet is operated as a sole proprietorship registered under the MSME / Udyam scheme.</p>
+
+                                <div className="space-y-3">
+                                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                        <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Registered Office</p>
+                                        <p className="text-gray-800 font-semibold">Ambajogai, Beed</p>
+                                        <p className="text-gray-600 text-sm">Maharashtra, India</p>
+                                    </div>
+                                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                        <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Operations Branch</p>
+                                        <p className="text-gray-800 font-semibold">Nashik</p>
+                                        <p className="text-gray-600 text-sm">Maharashtra, India</p>
+                                        <p className="text-gray-500 text-xs mt-1.5 italic">All currently listed partner print shops are located here.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

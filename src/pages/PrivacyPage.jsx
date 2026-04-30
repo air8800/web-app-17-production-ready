@@ -32,7 +32,7 @@ const PrivacyPage = () => {
                 {/* Title */}
                 <div className="mb-10">
                     <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
-                    <p className="text-gray-400 text-sm">Last updated: March 2, 2026</p>
+                    <p className="text-gray-400 text-sm">Last updated: April 30, 2026</p>
                 </div>
 
                 {/* Main Content Card */}
@@ -164,7 +164,7 @@ const PrivacyPage = () => {
                             </li>
                             <li className="flex gap-2.5">
                                 <span className="text-blue-400 font-bold mt-0.5 shrink-0">b.</span>
-                                <span><strong className="text-gray-700">Payment services</strong> — payments are made to PrintGet via UPI, and we settle with the print shop on your behalf. We do not store your UPI ID or banking details.</span>
+                                <span><strong className="text-gray-700">Payment services</strong> — when online payments are enabled, the payment is processed by our payment gateway provider directly; we do not store your card or banking details. Until then, payment is collected by the print shop at pickup.</span>
                             </li>
                             <li className="flex gap-2.5">
                                 <span className="text-blue-400 font-bold mt-0.5 shrink-0">c.</span>
@@ -300,7 +300,7 @@ const PrivacyPage = () => {
                         <div className="bg-gray-50 rounded-xl p-4">
                             <div className="space-y-2 text-sm text-gray-600">
                                 <p><strong className="text-gray-700">Cloud hosting & database</strong> — for website hosting and temporary file storage</p>
-                                <p><strong className="text-gray-700">UPI payment services</strong> — for payment collection (we do not store your banking details)</p>
+                                <p><strong className="text-gray-700">Payment gateway</strong> — for online payment collection once enabled (we do not store your card or banking details)</p>
                             </div>
                         </div>
                         <p className="text-gray-500 text-sm mt-3 italic">

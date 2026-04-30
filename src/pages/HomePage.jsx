@@ -750,6 +750,30 @@ const HomePage = () => {
               <p className="text-sm text-gray-400 mb-4 leading-relaxed">
                 Your trusted platform for convenient printing services. Connect with local print shops and get your documents printed quickly.
               </p>
+              <ul className="space-y-2.5 text-sm text-gray-400">
+                <li className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                  <span>
+                    <span className="block text-[11px] uppercase tracking-wider text-gray-500 mb-0.5">Registered Office</span>
+                    Ambajogai, Beed,<br className="hidden sm:inline" /> Maharashtra, India
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                  <span>
+                    <span className="block text-[11px] uppercase tracking-wider text-gray-500 mb-0.5">Operations Branch</span>
+                    Nashik, Maharashtra, India
+                  </span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-blue-400 shrink-0" />
+                  <a href="mailto:support@printget.in" className="hover:text-blue-400 transition-colors break-all">support@printget.in</a>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-blue-400 shrink-0" />
+                  <a href="tel:+918329232242" className="hover:text-blue-400 transition-colors">+91 83292 32242</a>
+                </li>
+              </ul>
             </div>
 
             {/* Quick Links */}

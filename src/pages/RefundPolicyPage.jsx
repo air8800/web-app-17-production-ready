@@ -1,128 +1,213 @@
-import React, { useEffect } from 'react';
-import { ShieldCheck, RefreshCw, AlertCircle, Clock } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { usePageTitle } from '../hooks/usePageTitle';
+import React from 'react'
+import { Link } from 'react-router-dom'
+import { Printer, ArrowLeft, Mail, Clock, ShieldCheck, AlertCircle } from 'lucide-react'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const RefundPolicyPage = () => {
-  usePageTitle('Refund & Cancellation Policy');
+    usePageTitle('Refund & Cancellation Policy')
 
-  return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
-          
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-10 text-white">
-            <h1 className="text-3xl font-black mb-2 flex items-center gap-3">
-              <RefreshCw className="w-8 h-8" />
-              Refund & Cancellation Policy
-            </h1>
-            <p className="text-blue-100 font-medium">Last updated: {new Date().toLocaleDateString()}</p>
-          </div>
-
-          {/* Content */}
-          <div className="p-8 prose prose-slate max-w-none">
-            <p className="text-lg text-slate-600 mb-8">
-              At PrintGet, we strive to ensure the highest quality of service. Because we deal with immediate, customized digital-to-physical printing, our policies are designed to be fair while respecting the physical resources consumed by our partner shops.
-            </p>
-
-            <div className="space-y-8">
-              {/* Section 1 */}
-              <section className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
-                <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 mb-4">
-                  <Clock className="w-6 h-6 text-blue-500" />
-                  1. Order Cancellations
-                </h2>
-                <ul className="space-y-3 text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                    <span><strong className="text-slate-900">Before Printing:</strong> Once an order is paid via UPI, the printing command is immediately sent to the selected print shop. If the shop has not yet started the physical printing process, you may contact support for a cancellation request.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                    <span><strong className="text-slate-900">After Printing:</strong> If the shop has already initiated or completed the print job, the order <strong>cannot be cancelled</strong> and no refund will be issued, as physical paper and ink have been consumed.</span>
-                  </li>
-                </ul>
-              </section>
-
-              {/* Section 2 */}
-              <section className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
-                <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 mb-4">
-                  <ShieldCheck className="w-6 h-6 text-green-500" />
-                  2. Refund Eligibility
-                </h2>
-                <p className="text-slate-700 mb-4">Refunds are strictly evaluated on a case-by-case basis. You are eligible for a refund ONLY under the following circumstances:</p>
-                <ul className="space-y-3 text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                    <span><strong>Shop Failure:</strong> The selected print shop machine is down, out of paper/ink, or the shop is closed and unable to fulfill the order.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                    <span><strong>Major Defect:</strong> Missing pages (due to system error, not user selection), completely illegible prints, or severe physical damage to the paper.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                    <span><strong>Payment Error:</strong> Double deduction or payment debited but order not registered in the system.</span>
-                  </li>
-                </ul>
-              </section>
-
-              {/* Section 3 */}
-              <section className="bg-slate-50 rounded-2xl p-6 border border-red-50">
-                <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 mb-4">
-                  <AlertCircle className="w-6 h-6 text-red-500" />
-                  3. Non-Refundable Cases
-                </h2>
-                <ul className="space-y-3 text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                    <span>You uploaded the wrong file or an unoptimized file.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                    <span>You selected the wrong print settings (e.g., selected B&W instead of Color, wrong paper size).</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                    <span>Minor color variations from your screen display.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                    <span>You failed to pick up the printed documents from the shop.</span>
-                  </li>
-                </ul>
-              </section>
-
-              {/* Section 4 */}
-              <section className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
-                <h2 className="text-xl font-bold text-slate-900 mb-4">4. Refund Processing</h2>
-                <p className="text-slate-700 mb-4">
-                  Because PrintGet currently facilitates direct payments to shops via UPI, automated refund APIs are not available. 
-                </p>
-                <ol className="list-decimal list-inside space-y-2 text-slate-700 ml-2">
-                  <li>To request a refund, contact us at <strong>support@printget.in</strong> within 1 hour of the transaction.</li>
-                  <li>Include your Order ID, Phone Number, and photographic proof of any defects.</li>
-                  <li>Validated refunds will be processed manually via UPI transfer to the source bank account.</li>
-                  <li>Please allow 5-7 business days for the amount to reflect in your account.</li>
-                </ol>
-              </section>
-            </div>
-            
-            {/* Footer Links */}
-            <div className="mt-8 flex flex-wrap justify-center gap-3 text-sm text-slate-400">
-              <Link to="/terms" className="hover:text-blue-600 transition-colors">Terms & Conditions</Link>
-              <span>·</span>
-              <Link to="/privacy" className="hover:text-blue-600 transition-colors">Privacy Policy</Link>
-              <span>·</span>
-              <Link to="/contact" className="hover:text-blue-600 transition-colors">Contact</Link>
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+            {/* Sticky Header */}
+            <div className="bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-10">
+                <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+                    <Link to="/" className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors">
+                        <ArrowLeft className="w-4 h-4" />
+                        <span className="text-sm font-medium hidden sm:inline">Home</span>
+                    </Link>
+                    <Link to="/" className="flex items-center gap-2">
+                        <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                            <Printer className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <span className="font-bold text-gray-900">
+                            Print<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500">Get</span>
+                        </span>
+                    </Link>
+                </div>
             </div>
 
-          </div>
+            {/* Content */}
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
+
+                {/* Title */}
+                <div className="mb-10">
+                    <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Refund &amp; Cancellation Policy</h1>
+                    <p className="text-gray-400 text-sm">Last updated: April 30, 2026</p>
+                </div>
+
+                {/* Main Content Card */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-100">
+
+                    {/* Intro */}
+                    <div className="p-6 sm:p-8">
+                        <p className="text-gray-600 leading-relaxed">
+                            At <strong className="text-gray-800">PrintGet</strong>, we deal with immediate, customised digital-to-physical
+                            printing — once paper and ink are consumed, the cost cannot be recovered. This policy explains exactly when
+                            cancellations and refunds are possible, and how to request one.
+                        </p>
+                    </div>
+
+                    {/* 1. Cancellations */}
+                    <div className="p-6 sm:p-8">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-blue-500" />
+                            1. Order Cancellations
+                        </h2>
+                        <ul className="space-y-2.5 text-gray-600 text-[15px]">
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">a.</span>
+                                <span><strong className="text-gray-800">Before printing starts:</strong> Once an order is confirmed, the print job is queued at the selected shop. If the shop has not yet started the physical printing process, you may contact support to cancel the order.</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">b.</span>
+                                <span><strong className="text-gray-800">After printing starts:</strong> If the shop has already started or completed the print job, the order cannot be cancelled and no refund will be issued, as physical paper and ink have been consumed.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* 2. Refund Eligibility */}
+                    <div className="p-6 sm:p-8">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <ShieldCheck className="w-5 h-5 text-green-500" />
+                            2. When You Are Eligible for a Refund
+                        </h2>
+                        <p className="text-gray-600 leading-relaxed mb-3">
+                            Refunds are evaluated on a case-by-case basis. You are eligible <strong className="text-gray-800">only</strong> in the
+                            following situations:
+                        </p>
+                        <div className="bg-green-50 border border-green-100 rounded-xl p-4 space-y-2.5 text-[15px]">
+                            <div className="flex gap-2.5">
+                                <span className="text-green-500 font-bold mt-0.5 shrink-0">•</span>
+                                <span className="text-gray-700"><strong className="text-gray-900">Shop failure:</strong> The selected print shop's machine is down, out of paper or ink, or the shop is closed and unable to fulfil the order.</span>
+                            </div>
+                            <div className="flex gap-2.5">
+                                <span className="text-green-500 font-bold mt-0.5 shrink-0">•</span>
+                                <span className="text-gray-700"><strong className="text-gray-900">Major print defect:</strong> Missing pages (due to a system error, not user selection), completely illegible prints, or severe physical damage to the paper.</span>
+                            </div>
+                            <div className="flex gap-2.5">
+                                <span className="text-green-500 font-bold mt-0.5 shrink-0">•</span>
+                                <span className="text-gray-700"><strong className="text-gray-900">Payment error:</strong> Double deduction, or payment debited but the order not registered in our system.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 3. Non-Refundable Cases */}
+                    <div className="p-6 sm:p-8">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <AlertCircle className="w-5 h-5 text-red-500" />
+                            3. Cases That Are Not Refundable
+                        </h2>
+                        <p className="text-gray-600 leading-relaxed mb-3">
+                            Because the print shop has already used physical resources to fulfil your order, the following situations
+                            are not eligible for refunds:
+                        </p>
+                        <ul className="space-y-2.5 text-gray-600 text-[15px]">
+                            <li className="flex gap-2.5">
+                                <span className="text-red-400 font-bold mt-0.5 shrink-0">•</span>
+                                <span>You uploaded the wrong file or an unoptimised file.</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-red-400 font-bold mt-0.5 shrink-0">•</span>
+                                <span>You selected the wrong print settings (e.g., B&amp;W instead of colour, wrong paper size, wrong number of copies).</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-red-400 font-bold mt-0.5 shrink-0">•</span>
+                                <span>Minor colour variation between your screen and the printed output.</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-red-400 font-bold mt-0.5 shrink-0">•</span>
+                                <span>You did not pick up the printed documents from the shop in time.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* 4. How to Request */}
+                    <div className="p-6 sm:p-8">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">4. How to Request a Refund</h2>
+                        <p className="text-gray-600 leading-relaxed mb-3">
+                            If your situation falls under section 2 above, please follow these steps:
+                        </p>
+                        <ol className="space-y-2.5 text-gray-600 text-[15px]">
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">1.</span>
+                                <span>Email us at{' '}
+                                    <a href="mailto:support@printget.in" className="text-blue-600 hover:underline font-medium">support@printget.in</a>{' '}
+                                    within <strong className="text-gray-800">1 hour</strong> of the transaction.
+                                </span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">2.</span>
+                                <span>Include your <strong className="text-gray-800">Order ID</strong>, registered <strong className="text-gray-800">phone number</strong>, and clear photographic proof of any defect.</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">3.</span>
+                                <span>Our team will review your claim and respond within 24–48 hours with a decision.</span>
+                            </li>
+                        </ol>
+                    </div>
+
+                    {/* 5. Processing Time */}
+                    <div className="p-6 sm:p-8">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">5. Refund Processing Time</h2>
+                        <p className="text-gray-600 leading-relaxed mb-3">
+                            Once a refund request is approved:
+                        </p>
+                        <ul className="space-y-2 text-gray-600 text-[15px]">
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">•</span>
+                                <span>For online payments, the refund is initiated to the original payment source within <strong className="text-gray-800">2 business days</strong>.</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">•</span>
+                                <span>The amount typically reflects in your bank account within <strong className="text-gray-800">5–7 business days</strong>, depending on your bank.</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">•</span>
+                                <span>Until our online payment gateway is fully active, eligible refunds are issued via direct bank transfer to the source account.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* 6. Contact */}
+                    <div className="p-6 sm:p-8">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">6. Need Help?</h2>
+                        <p className="text-gray-600 leading-relaxed mb-4">
+                            Our support team is here to help with any cancellation or refund questions.
+                        </p>
+                        <div className="bg-gradient-to-br from-gray-50 to-blue-50/50 border border-gray-200 rounded-xl p-5 space-y-2 text-sm">
+                            <p className="text-gray-700">
+                                <strong className="text-gray-900">Email:</strong>{' '}
+                                <a href="mailto:support@printget.in" className="text-blue-600 hover:underline">support@printget.in</a>
+                            </p>
+                            <p className="text-gray-700">
+                                <strong className="text-gray-900">Phone:</strong>{' '}
+                                <a href="tel:+918329232242" className="text-blue-600 hover:underline">+91 83292 32242</a>
+                            </p>
+                            <p className="text-gray-700"><strong className="text-gray-900">Registered Office:</strong> Ambajogai, Beed, Maharashtra, India</p>
+                            <p className="text-gray-700"><strong className="text-gray-900">Operations Branch:</strong> Nashik, Maharashtra, India</p>
+                            <a
+                                href="mailto:support@printget.in"
+                                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors mt-2"
+                            >
+                                <Mail className="w-4 h-4" />
+                                Contact Support
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+
+                {/* Footer Links */}
+                <div className="mt-8 flex flex-wrap justify-center gap-3 text-sm text-gray-400">
+                    <Link to="/terms" className="hover:text-blue-600 transition-colors">Terms &amp; Conditions</Link>
+                    <span>·</span>
+                    <Link to="/privacy" className="hover:text-blue-600 transition-colors">Privacy Policy</Link>
+                    <span>·</span>
+                    <Link to="/contact" className="hover:text-blue-600 transition-colors">Contact</Link>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
-};
+    )
+}
 
-export default RefundPolicyPage;
+export default RefundPolicyPage

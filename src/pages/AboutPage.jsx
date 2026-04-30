@@ -120,17 +120,65 @@ const AboutPage = () => {
                         </div>
                     </div>
 
+                    {/* How the business works */}
+                    <div className="p-6 sm:p-8">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">How PrintGet Works (Business Model)</h2>
+                        <p className="text-gray-600 leading-relaxed mb-4">
+                            PrintGet is an <strong className="text-gray-800">online marketplace</strong> — we don't own or operate
+                            any printers ourselves. Instead, we connect customers with independent local print shops and handle
+                            the digital part (file upload, queue, status, payment) so both sides have a smooth experience.
+                        </p>
+                        <div className="space-y-3">
+                            <div className="bg-gray-50 rounded-xl p-4 flex gap-3">
+                                <div className="w-7 h-7 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</div>
+                                <p className="text-sm text-gray-700"><strong className="text-gray-900">You upload your file</strong> on printget.in, choose paper size, colour mode, copies and any other settings, and pick a nearby shop from the list.</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-xl p-4 flex gap-3">
+                                <div className="w-7 h-7 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</div>
+                                <p className="text-sm text-gray-700"><strong className="text-gray-900">We show you the price</strong> calculated from the rates set by that shop. The amount you see at checkout is what you pay — no hidden charges.</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-xl p-4 flex gap-3">
+                                <div className="w-7 h-7 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</div>
+                                <p className="text-sm text-gray-700"><strong className="text-gray-900">Your file is securely sent</strong> to the shop's PrintGet app. The shop accepts the order and starts printing.</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-xl p-4 flex gap-3">
+                                <div className="w-7 h-7 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">4</div>
+                                <p className="text-sm text-gray-700"><strong className="text-gray-900">You get a live status link</strong> showing whether your job is queued, printing, or ready. We notify you (and email you, if you opt-in) the moment it's ready.</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-xl p-4 flex gap-3">
+                                <div className="w-7 h-7 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">5</div>
+                                <p className="text-sm text-gray-700"><strong className="text-gray-900">You pick it up &amp; pay at the shop.</strong> Currently all orders are settled at the shop counter ("Pay at Shop"). Online payment via our payment gateway is being enabled and will be available shortly.</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-xl p-4 flex gap-3">
+                                <div className="w-7 h-7 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">6</div>
+                                <p className="text-sm text-gray-700"><strong className="text-gray-900">Your file is auto-deleted</strong> from the shop's app within minutes of printing. We never keep a permanent copy.</p>
+                            </div>
+                        </div>
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mt-5">
+                            <p className="text-sm text-blue-900 leading-relaxed">
+                                <strong>How we make money:</strong> Once online payments are live, PrintGet retains a small platform
+                                fee per order; the rest is settled to the print shop. There are no hidden charges to the customer.
+                                Pricing shown at checkout is final.
+                            </p>
+                        </div>
+                    </div>
+
                     {/* Who We Are */}
                     <div className="p-6 sm:p-8">
                         <h2 className="text-lg font-semibold text-gray-900 mb-3">Who We Are</h2>
                         <p className="text-gray-600 leading-relaxed">
-                            We're a team based in India who noticed that printing documents — something so many people do every day —
-                            still didn't have a proper, dedicated solution. People were relying on messaging apps and informal
-                            methods to get their documents printed.
+                            PrintGet is an Indian-built marketplace, operated as a registered sole proprietorship under the
+                            <strong className="text-gray-800"> MSME / Udyam</strong> scheme of the Government of India. The
+                            business is registered in <strong className="text-gray-800">Ambajogai, Beed, Maharashtra</strong>,
+                            and our day-to-day operations and partner print shops are based out of our
+                            <strong className="text-gray-800"> Nashik branch</strong>. We're starting with Nashik and have
+                            plans to expand to more cities.
                         </p>
                         <p className="text-gray-600 leading-relaxed mt-3">
-                            So we built PrintGet — a single platform designed from the ground up for document printing.
-                            No app downloads, no accounts, no hassle. We're growing one step at a time, and we'd love your feedback.
+                            We started PrintGet because printing documents — something so many people do every day — still
+                            relied on messaging apps and informal methods. We built a single, dedicated platform for it: no app
+                            download, no account, no hassle. We're a small team, growing one step at a time, and we'd love your
+                            feedback.
                         </p>
                     </div>
 

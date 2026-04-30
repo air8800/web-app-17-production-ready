@@ -534,7 +534,7 @@ const StatusPage = () => {
                 <p className="text-xs text-gray-500 mt-0.5">
                   {(isThisJobUploading || isInterrupted || isUploadError)
                     ? 'Pending — upload in progress'
-                    : (job.payment_status === 'paid' ? 'Cash on Delivery (Pay at Shop)' : 'Pending Confirmation')}
+                    : (job.payment_status === 'paid' ? 'Pay at Shop (on pickup)' : 'Pending Confirmation')}
                 </p>
                 {job.payment_status === 'paid' && !isThisJobUploading && !isInterrupted && !isUploadError && (
                   <p className="text-[11px] text-gray-400 mt-1">{new Date(job.updated_at).toLocaleString()}</p>
@@ -709,7 +709,7 @@ const StatusPage = () => {
                   ? 'bg-green-100 text-green-700'
                   : 'bg-amber-100 text-amber-700'
               }`}>
-                {job.payment_status === 'paid' ? 'Cash on Delivery' : 'Pending'}
+                {job.payment_status === 'paid' ? 'Pay at Shop' : 'Pending'}
               </span>
             </div>
 

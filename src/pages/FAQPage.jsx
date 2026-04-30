@@ -9,7 +9,7 @@ const faqs = [
         questions: [
             {
                 q: "How do I use PrintGet?",
-                a: "It's simple: upload your document, select your print settings (color/B&W, pages, etc.), choose a nearby print shop, and pay via UPI. Once your order is ready, you'll see the status update and you can go pick it up."
+                a: "It's simple: upload your document, select your print settings (color/B&W, pages, etc.), choose a nearby print shop, and confirm your order. You then pay at the shop when you go to pick up your prints. Once the shop marks your order ready, you'll see the status update and you can go collect it."
             },
             {
                 q: "Do I need to create an account?",
@@ -43,15 +43,23 @@ const faqs = [
         questions: [
             {
                 q: "How do I pay?",
-                a: "We currently accept payments via UPI. It's fast, secure, and doesn't require us to store any of your banking details."
+                a: "Right now, payment is made directly at the print shop when you collect your order — what we call 'Pay at Shop'. Online payment via our payment gateway is being set up and will be available shortly. We never store any card or banking details."
             },
             {
-                q: "Can I cancel my order or get a refund?",
-                a: "No. Because files are sent directly to the print shop's queue and payments are processed via direct UPI transfer, all orders are final. We cannot offer cancellations or refunds once an order is placed. Please review your file and settings carefully before paying."
+                q: "Can I cancel my order?",
+                a: "Yes — if the shop hasn't started printing yet, you can request a cancellation by contacting us at support@printget.in. Once the shop has actually begun printing, paper and ink have already been consumed, so the order can no longer be cancelled."
+            },
+            {
+                q: "Can I get a refund?",
+                a: "Refunds are evaluated case-by-case. You're eligible for a refund if the shop fails to fulfill the order (machine down, shop closed, etc.), if there's a major print defect (missing pages, illegible prints), or if there's a payment error like a double deduction. Refunds are not given for incorrect files or wrong settings selected by you. See our Refund & Cancellation Policy for full details."
+            },
+            {
+                q: "How do I request a refund?",
+                a: "Email us at support@printget.in within 1 hour of the transaction with your Order ID, phone number, and photographic proof of any defect. Once we validate the claim, refunds are processed manually within 5–7 business days."
             },
             {
                 q: "What if there is a problem with the print quality?",
-                a: "If your document didn't print correctly due to a printer issue (e.g., low ink, paper jam), please speak directly with the print shop owner when you go to pick it up. PrintGet is a routing platform and does not handle physical printing."
+                a: "First, speak directly with the print shop when you collect your order — they can usually re-print on the spot. If the shop is unable to resolve it, email support@printget.in with photos within 1 hour of the transaction and we will look into a refund as per our refund policy."
             }
         ]
     }

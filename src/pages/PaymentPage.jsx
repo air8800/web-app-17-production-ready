@@ -47,7 +47,7 @@ const PaymentPage = () => {
     setProcessing(true)
     try {
       // We set status to 'paid' to trigger the existing webhook and queue flows,
-      // even though it's technically Cash on Delivery.
+      // even though the customer actually pays at the shop on pickup ("Pay at Shop").
       await updatePaymentStatus(jobId, 'paid')
       setPaymentConfirmed(true)
       // Save order ID for tracking
@@ -129,7 +129,7 @@ const PaymentPage = () => {
             <div className="bg-slate-50 rounded-2xl p-4 mb-6 border border-slate-100">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="font-bold text-slate-900">Order Summary</h2>
-                <span className="text-xs font-black bg-blue-100 text-blue-600 px-2 py-1 rounded-md">COD</span>
+                <span className="text-xs font-black bg-blue-100 text-blue-600 px-2 py-1 rounded-md">Pay at Shop</span>
               </div>
               <div className="space-y-2 text-sm text-slate-600">
                 <div className="flex justify-between">
@@ -153,9 +153,9 @@ const PaymentPage = () => {
               <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <HandCoins className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="text-lg font-black text-slate-900 mb-2">Cash on Delivery</h3>
+              <h3 className="text-lg font-black text-slate-900 mb-2">Pay at Shop</h3>
               <p className="text-sm text-slate-600">
-                Please pay the total amount of <span className="font-bold text-slate-900">₹{job?.total_cost?.toFixed(2)}</span> directly at the shop when you pick up your print.
+                Please pay the total amount of <span className="font-bold text-slate-900">₹{job?.total_cost?.toFixed(2)}</span> directly at the shop when you pick up your print. Online payment via our payment gateway is being enabled and will be available shortly.
               </p>
             </div>
 

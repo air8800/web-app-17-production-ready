@@ -187,7 +187,7 @@ function buildDetailsTable(filename, shopName, orderId, statusText, statusColor,
           </tr>
           <tr>
             <td style="padding: 6px 0;">
-              <table width="100%"><tr><td style="color: #64748b; font-size: 13px;">Payment Method</td><td align="right" style="color: #1e293b; font-size: 13px; font-weight: 600;">${paymentMethod || 'Cash on Delivery'}</td></tr></table>
+              <table width="100%"><tr><td style="color: #64748b; font-size: 13px;">Payment Method</td><td align="right" style="color: #1e293b; font-size: 13px; font-weight: 600;">${paymentMethod || 'Pay at Shop'}</td></tr></table>
             </td>
           </tr>
           <tr>
@@ -239,7 +239,7 @@ function buildPlainText({ heading, intro, customerName, filename, shopName, orde
     `Shop:           ${shopName || 'PrintGet Partner Shop'}`,
     `Order ID:       ${orderId ? orderId.slice(0, 8) : '—'}`,
     `Amount Paid:    Rs. ${amount || '0'}`,
-    `Payment:        ${paymentMethod || 'Cash on Delivery'}`,
+    `Payment:        ${paymentMethod || 'Pay at Shop'}`,
     `Status:         ${statusText}`,
     '',
     'Need help? Reply to this email or contact support@printget.in',
@@ -286,7 +286,7 @@ export default async function handler(req, res) {
     const filename = record.filename;
     const orderId = record.id;
     const amount = record.total_cost;
-    const paymentMethod = 'Cash on Delivery';
+    const paymentMethod = 'Pay at Shop';
 
     let subject = '';
     let emailHTML = '';

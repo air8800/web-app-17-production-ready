@@ -2726,7 +2726,7 @@ const OrderPage = () => {
                     </span>
                   </div>
                   <span className="text-[14px] font-bold text-blue-700 leading-tight truncate">
-                    Cash on Delivery
+                    Pay at Shop
                   </span>
                 </div>
 
@@ -2746,7 +2746,7 @@ const OrderPage = () => {
                     <p className="text-xs font-medium text-gray-700">Payment Method</p>
                     <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-100/50 p-2 rounded-lg border border-blue-100">
                       <HandCoins className="w-4 h-4" />
-                      <span>Cash on Delivery (Pay at Shop)</span>
+                      <span>Pay at Shop (on pickup)</span>
                     </div>
                     <p className="text-xs font-semibold text-gray-700">Total payable at shop: {formatCurrency(costInfo.cost)}</p>
                   </div>

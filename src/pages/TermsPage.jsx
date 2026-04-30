@@ -32,7 +32,7 @@ const TermsPage = () => {
                 {/* Title */}
                 <div className="mb-10">
                     <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Terms & Conditions</h1>
-                    <p className="text-gray-400 text-sm">Last updated: March 2, 2026</p>
+                    <p className="text-gray-400 text-sm">Last updated: April 30, 2026</p>
                 </div>
 
                 {/* Main Content Card */}
@@ -129,35 +129,111 @@ const TermsPage = () => {
 
                     {/* 5. Payments */}
                     <div className="p-6 sm:p-8">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-3">5. Payments</h2>
-                        <p className="text-gray-600 leading-relaxed">
-                            All prices are set by the respective print shops and displayed at the time of order. Payments are
-                            made to PrintGet via UPI or other supported methods, and we settle with the print shop on your behalf.
-                            You agree to pay the full amount shown at checkout. PrintGet is not liable for payment processing
-                            failures or issues arising from third-party payment services.
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">5. Payments &amp; Pricing</h2>
+                        <p className="text-gray-600 leading-relaxed mb-3">
+                            All prices are set by the respective print shops and are displayed clearly to you before you confirm
+                            your order. The amount shown at checkout is the final amount payable for that order.
+                        </p>
+                        <p className="text-gray-600 leading-relaxed mb-3">
+                            Until our online payment gateway is fully active, orders are settled directly at the print shop at the
+                            time of pickup ("<strong className="text-gray-800">Pay at Shop</strong>"). Once online payments are
+                            enabled, you will be able to pay through the supported payment methods displayed at checkout, and we
+                            will settle the amount with the print shop on your behalf.
+                        </p>
+                        <p className="text-gray-500 text-sm italic">
+                            GST is not applicable on PrintGet's services as our annual turnover is below the threshold prescribed
+                            under the GST Act. Print shops are independently responsible for any taxes that may apply to their own
+                            services.
                         </p>
                     </div>
 
-                    {/* 6. Payments are Final */}
+                    {/* 6. Cancellations & Refunds */}
                     <div className="p-6 sm:p-8">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-3">6. No Cancellations or Refunds</h2>
-                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-3">
-                            <p className="text-amber-800 text-sm font-medium">
-                                All payments made through PrintGet are final. We do not offer cancellations or refunds at this time.
-                            </p>
-                        </div>
-                        <p className="text-gray-600 leading-relaxed">
-                            Once a payment is made, it cannot be reversed or refunded. Please review your order details carefully —
-                            including file, print settings, and pricing — before submitting your order. If you experience any issues
-                            with your order, please contact the print shop directly or reach out to us at{' '}
-                            <a href="mailto:support@printget.in" className="text-blue-600 hover:underline">support@printget.in</a>{' '}
-                            and we will try our best to help resolve the matter.
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">6. Cancellations &amp; Refunds</h2>
+                        <p className="text-gray-600 leading-relaxed mb-3">
+                            Cancellations and refunds are governed by our{' '}
+                            <Link to="/refund-policy" className="text-blue-600 hover:underline font-medium">Refund &amp; Cancellation Policy</Link>,
+                            which forms part of these Terms. In summary:
+                        </p>
+                        <ul className="space-y-2.5 text-gray-600 text-[15px]">
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">a.</span>
+                                <span>An order may be cancelled if the print shop has not yet started the physical print job. Once printing has begun, paper and ink have been consumed and the order cannot be cancelled.</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">b.</span>
+                                <span>Refunds are evaluated case-by-case and are issued for shop-side failures, major print defects, or payment errors — not for incorrect files or settings selected by the user.</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">c.</span>
+                                <span>To raise a refund request, email{' '}
+                                    <a href="mailto:support@printget.in" className="text-blue-600 hover:underline">support@printget.in</a>{' '}
+                                    within 1 hour of the transaction with your Order ID and details of the issue.
+                                </span>
+                            </li>
+                        </ul>
+                        <p className="text-gray-500 text-sm italic mt-3">
+                            Please review your file, print settings and pricing carefully before submitting an order.
                         </p>
                     </div>
 
-                    {/* 7. Intellectual Property */}
+                    {/* 7. Service Delivery */}
                     <div className="p-6 sm:p-8">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-3">7. Intellectual Property</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">7. Service Delivery (Pickup)</h2>
+                        <p className="text-gray-600 leading-relaxed mb-3">
+                            PrintGet does not deliver printed documents. All orders are fulfilled through{' '}
+                            <strong className="text-gray-800">in-store pickup</strong> at the print shop you select. There is no
+                            shipping or courier component.
+                        </p>
+                        <ul className="space-y-2.5 text-gray-600 text-[15px]">
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">a.</span>
+                                <span>Once your order is marked "Ready for Pickup", you (or someone you authorize) may collect it from the shop during the shop's working hours.</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">b.</span>
+                                <span>Turnaround time is determined by each individual shop and the size of your job. PrintGet does not guarantee any specific turnaround time.</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">c.</span>
+                                <span>Orders not picked up by the customer within a reasonable time may be discarded by the shop. PrintGet is not responsible for uncollected orders.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* 8. Acceptable Use */}
+                    <div className="p-6 sm:p-8">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">8. Acceptable Use</h2>
+                        <p className="text-gray-600 leading-relaxed mb-3">
+                            You agree not to use PrintGet to upload, print, or distribute any content that:
+                        </p>
+                        <ul className="space-y-2 text-gray-600 text-[15px]">
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">•</span>
+                                <span>Is illegal under Indian law, including obscene, defamatory, hateful, or fraudulent material.</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">•</span>
+                                <span>Infringes any third-party copyright, trademark, or other intellectual-property right.</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">•</span>
+                                <span>Contains malware, exploits, or attempts to disrupt or reverse-engineer the platform.</span>
+                            </li>
+                            <li className="flex gap-2.5">
+                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">•</span>
+                                <span>Impersonates any other person, business, or government entity.</span>
+                            </li>
+                        </ul>
+                        <p className="text-gray-600 leading-relaxed mt-3">
+                            Print shops are entitled to refuse any order that, in their reasonable judgment, violates these rules
+                            or applicable law. We may also suspend or block users who violate this section.
+                        </p>
+                    </div>
+
+                    {/* 9. Intellectual Property */}
+                    <div className="p-6 sm:p-8">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">9. Intellectual Property</h2>
                         <p className="text-gray-600 leading-relaxed">
                             The PrintGet name, logo, design, and all platform content are our property and are protected under applicable
                             intellectual property laws. You may not copy, reproduce, modify, or create derivative works from any part
@@ -165,9 +241,9 @@ const TermsPage = () => {
                         </p>
                     </div>
 
-                    {/* 8. Limitation of Liability */}
+                    {/* 10. Limitation of Liability */}
                     <div className="p-6 sm:p-8">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-3">8. Limitation of Liability</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">10. Limitation of Liability</h2>
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 sm:p-5">
                             <p className="text-gray-700 leading-relaxed mb-3">
                                 PrintGet operates solely as an intermediary. To the maximum extent permitted by applicable law:
@@ -189,9 +265,19 @@ const TermsPage = () => {
                         </div>
                     </div>
 
-                    {/* 9. Privacy */}
+                    {/* 11. Force Majeure */}
                     <div className="p-6 sm:p-8">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-3">9. Privacy</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">11. Force Majeure</h2>
+                        <p className="text-gray-600 leading-relaxed">
+                            PrintGet shall not be liable for any failure or delay in performance caused by events beyond our
+                            reasonable control, including but not limited to power outages, internet or telecom failures, payment
+                            gateway downtime, government action, lockdowns, natural disasters, or shop-side equipment failure.
+                        </p>
+                    </div>
+
+                    {/* 12. Privacy */}
+                    <div className="p-6 sm:p-8">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">12. Privacy</h2>
                         <p className="text-gray-600 leading-relaxed">
                             Your use of PrintGet is also governed by our{' '}
                             <Link to="/privacy" className="text-blue-600 hover:underline font-medium">Privacy Policy</Link>,
@@ -200,9 +286,9 @@ const TermsPage = () => {
                         </p>
                     </div>
 
-                    {/* 10. Termination */}
+                    {/* 13. Termination */}
                     <div className="p-6 sm:p-8">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-3">10. Termination</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">13. Termination</h2>
                         <p className="text-gray-600 leading-relaxed">
                             We may suspend or restrict your access to PrintGet at any time, without prior notice, if we reasonably
                             believe you have violated these Terms or engaged in conduct that is harmful to other users, the platform,
@@ -210,9 +296,9 @@ const TermsPage = () => {
                         </p>
                     </div>
 
-                    {/* 11. Governing Law & Disputes */}
+                    {/* 14. Governing Law & Disputes */}
                     <div className="p-6 sm:p-8">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-3">11. Governing Law & Disputes</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">14. Governing Law &amp; Disputes</h2>
                         <p className="text-gray-600 leading-relaxed">
                             These Terms are governed by and construed in accordance with the laws of India. Any disputes arising
                             from or in connection with these Terms shall be subject to the exclusive jurisdiction of the courts in India.
@@ -222,27 +308,41 @@ const TermsPage = () => {
                         </p>
                     </div>
 
-                    {/* 12. Changes & Contact */}
+                    {/* 15. Changes to These Terms */}
                     <div className="p-6 sm:p-8">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-3">12. Changes to These Terms</h2>
-                        <p className="text-gray-600 leading-relaxed mb-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">15. Changes to These Terms</h2>
+                        <p className="text-gray-600 leading-relaxed">
                             We may revise these Terms at any time by updating this page. The "Last updated" date at the top reflects
                             the most recent revision. Your continued use of PrintGet after changes are posted constitutes your
                             acceptance of the revised Terms.
                         </p>
+                    </div>
 
-                        <div className="bg-gradient-to-br from-gray-50 to-blue-50/50 border border-gray-200 rounded-xl p-5">
-                            <h3 className="text-base font-semibold text-gray-900 mb-2">Questions?</h3>
-                            <p className="text-gray-600 text-sm mb-3">
-                                If you have any questions or concerns about these Terms, please contact us:
+                    {/* 16. Contact & Grievance Officer */}
+                    <div className="p-6 sm:p-8">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-3">16. Contact &amp; Grievance Officer</h2>
+                        <p className="text-gray-600 leading-relaxed mb-4">
+                            For any questions, concerns, or grievances about these Terms or our services, you can reach us using the
+                            details below. In accordance with the Information Technology (Intermediary Guidelines) Rules, 2021, the
+                            Grievance Officer for PrintGet is the proprietor of the business.
+                        </p>
+                        <div className="bg-gradient-to-br from-gray-50 to-blue-50/50 border border-gray-200 rounded-xl p-5 space-y-2 text-sm">
+                            <p className="text-gray-700"><strong className="text-gray-900">Business:</strong> PrintGet (Sole Proprietorship, MSME / Udyam registered)</p>
+                            <p className="text-gray-700"><strong className="text-gray-900">Grievance Officer:</strong> Proprietor, PrintGet</p>
+                            <p className="text-gray-700"><strong className="text-gray-900">Registered Office:</strong> Ambajogai, Beed, Maharashtra, India</p>
+                            <p className="text-gray-700"><strong className="text-gray-900">Operations Branch:</strong> Nashik, Maharashtra, India</p>
+                            <p className="text-gray-700">
+                                <strong className="text-gray-900">Email:</strong>{' '}
+                                <a href="mailto:support@printget.in" className="text-blue-600 hover:underline">support@printget.in</a>
                             </p>
-                            <a
-                                href="mailto:support@printget.in"
-                                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors"
-                            >
-                                <Mail className="w-4 h-4" />
-                                support@printget.in
-                            </a>
+                            <p className="text-gray-700">
+                                <strong className="text-gray-900">Phone:</strong>{' '}
+                                <a href="tel:+918329232242" className="text-blue-600 hover:underline">+91 83292 32242</a>
+                            </p>
+                            <p className="text-gray-500 text-xs pt-2 border-t border-gray-200 mt-2">
+                                Please include your Order ID and the word "Grievance" in the subject line for faster resolution.
+                                We aim to acknowledge complaints within 48 hours.
+                            </p>
                         </div>
                     </div>
 

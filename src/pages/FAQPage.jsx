@@ -93,7 +93,7 @@ const FAQItem = ({ faq }) => {
 const FAQPage = () => {
     usePageTitle({
         title: 'FAQ & Help - How PrintGet Online Printing Works',
-        description: 'Frequently asked questions about PrintGet. Learn how to upload documents, choose print options, pay online, and pick up prints at your nearest partner print shop in Bangalore.',
+        description: 'Frequently asked questions about PrintGet. Learn how to upload documents, choose print options, pay online, and pick up prints at your nearest partner print shop in Nashik or Pune, Maharashtra.',
         path: '/faq'
     })
 

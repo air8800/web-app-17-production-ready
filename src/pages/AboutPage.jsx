@@ -6,7 +6,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 const AboutPage = () => {
     usePageTitle({
         title: 'About PrintGet - Online Printing Marketplace for Local Print Shops',
-        description: 'Learn about PrintGet, the online printing marketplace connecting customers with local print shops in Bangalore. Our mission, story, and how we make printing simple.',
+        description: 'Learn about PrintGet, the online printing marketplace connecting customers with local print shops in Nashik & Pune, Maharashtra. Our mission, story, and how we make printing simple.',
         path: '/about'
     })
 

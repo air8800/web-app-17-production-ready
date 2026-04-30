@@ -113,8 +113,8 @@ const ShopCard = ({ shop, index, glow }) => {
 
 const HomePage = () => {
   usePageTitle({
-    title: 'Online Document Printing Service in Bangalore | Upload & Print at Nearby Shops',
-    description: 'PrintGet lets you upload PDFs and documents online and print them at your nearest local print shop in Bangalore. Fast, easy, and affordable - black & white, color, single & double-sided.',
+    title: 'Online Document Printing Service in Nashik & Pune | Upload & Print at Nearby Shops',
+    description: 'PrintGet lets you upload PDFs and documents online and print them at your nearest local print shop in Nashik & Pune, Maharashtra. Fast, easy, and affordable - black & white, color, single & double-sided.',
     path: '/'
   })
   const [shops, setShops] = useState([])

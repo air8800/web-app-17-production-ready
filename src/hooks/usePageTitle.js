@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 const SITE_NAME = 'PrintGet'
 const SITE_URL = 'https://www.printget.in'
 const DEFAULT_DESCRIPTION =
-    'Upload your documents and get them printed at your nearest local print shop in Bangalore. Fast, easy, and affordable online printing service.'
+    'Upload your documents and get them printed at your nearest local print shop in Nashik & Pune, Maharashtra. Fast, easy, and affordable online printing service.'
 
 const setMeta = (selector, attr, value) => {
     if (typeof document === 'undefined') return

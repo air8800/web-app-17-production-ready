@@ -6,7 +6,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 const ContactPage = () => {
     usePageTitle({
         title: 'Contact PrintGet - Customer Support for Online Printing Service',
-        description: 'Get in touch with PrintGet customer support. Email us, message us on WhatsApp, or reach out for help with your online print orders in Bangalore.',
+        description: 'Get in touch with PrintGet customer support. Email us, message us on WhatsApp, or reach out for help with your online print orders in Nashik & Pune, Maharashtra.',
         path: '/contact'
     })
 

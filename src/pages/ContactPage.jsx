@@ -102,12 +102,7 @@ const ContactPage = () => {
                                         <p className="text-gray-800 font-semibold">Ambajogai, Beed</p>
                                         <p className="text-gray-600 text-sm">Maharashtra, India</p>
                                     </div>
-                                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                                        <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Operations Branch</p>
-                                        <p className="text-gray-800 font-semibold">Nashik</p>
-                                        <p className="text-gray-600 text-sm">Maharashtra, India</p>
-                                        <p className="text-gray-500 text-xs mt-1.5 italic">All currently listed partner print shops are located here.</p>
-                                    </div>
+
                                 </div>
                             </div>
                         </div>

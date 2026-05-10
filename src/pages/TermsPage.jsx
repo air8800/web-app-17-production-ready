@@ -334,7 +334,6 @@ const TermsPage = () => {
                             <p className="text-gray-700"><strong className="text-gray-900">Business:</strong> PrintGet (Sole Proprietorship, MSME / Udyam registered)</p>
                             <p className="text-gray-700"><strong className="text-gray-900">Grievance Officer:</strong> Proprietor, PrintGet</p>
                             <p className="text-gray-700"><strong className="text-gray-900">Registered Office:</strong> Ambajogai, Beed, Maharashtra, India</p>
-                            <p className="text-gray-700"><strong className="text-gray-900">Operations Branch:</strong> Nashik, Maharashtra, India</p>
                             <p className="text-gray-700">
                                 <strong className="text-gray-900">Email:</strong>{' '}
                                 <a href="mailto:support@printget.in" className="text-blue-600 hover:underline">support@printget.in</a>

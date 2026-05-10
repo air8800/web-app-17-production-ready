@@ -188,7 +188,6 @@ const RefundPolicyPage = () => {
                                 <a href="tel:+918329232242" className="text-blue-600 hover:underline">+91 83292 32242</a>
                             </p>
                             <p className="text-gray-700"><strong className="text-gray-900">Registered Office:</strong> Ambajogai, Beed, Maharashtra, India</p>
-                            <p className="text-gray-700"><strong className="text-gray-900">Operations Branch:</strong> Nashik, Maharashtra, India</p>
                             <a
                                 href="mailto:support@printget.in"
                                 className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors mt-2"

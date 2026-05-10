@@ -762,13 +762,7 @@ const HomePage = () => {
                     Ambajogai, Beed,<br className="hidden sm:inline" /> Maharashtra, India
                   </span>
                 </li>
-                <li className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                  <span>
-                    <span className="block text-[11px] uppercase tracking-wider text-gray-500 mb-0.5">Operations Branch</span>
-                    Nashik, Maharashtra, India
-                  </span>
-                </li>
+
                 <li className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-blue-400 shrink-0" />
                   <a href="mailto:support@printget.in" className="hover:text-blue-400 transition-colors break-all">support@printget.in</a>

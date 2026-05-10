@@ -173,10 +173,8 @@ const AboutPage = () => {
                         <p className="text-gray-600 leading-relaxed">
                             PrintGet is an Indian-built marketplace, operated as a registered sole proprietorship under the
                             <strong className="text-gray-800"> MSME / Udyam</strong> scheme of the Government of India. The
-                            business is registered in <strong className="text-gray-800">Ambajogai, Beed, Maharashtra</strong>,
-                            and our day-to-day operations and partner print shops are based out of our
-                            <strong className="text-gray-800"> Nashik branch</strong>. We're starting with Nashik and have
-                            plans to expand to more cities.
+                            business is registered in <strong className="text-gray-800">Ambajogai, Beed, Maharashtra</strong>.
+                            We're starting with our first few cities and have plans to expand to more locations across India.
                         </p>
                         <p className="text-gray-600 leading-relaxed mt-3">
                             We started PrintGet because printing documents — something so many people do every day — still

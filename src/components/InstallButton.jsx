@@ -40,7 +40,7 @@ const InstallButton = ({ className = "" }) => {
             className={`flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-2xl text-sm font-bold hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-sm group ${className}`}
         >
             <Download className="w-4 h-4 text-blue-500 group-hover:text-white transition-colors" />
-            <span className="hidden sm:inline">Install App</span>
+            <span>Install App</span>
         </button>
     );
 };

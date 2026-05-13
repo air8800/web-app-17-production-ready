@@ -153,6 +153,15 @@ const RefundPolicyPage = () => {
                     {/* 5. Processing Time */}
                     <div className="p-6 sm:p-8">
                         <h2 className="text-lg font-semibold text-gray-900 mb-3">5. Refund Processing Time</h2>
+
+                        {/* Auto-refund highlight */}
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4 flex gap-3">
+                            <ShieldCheck className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                            <p className="text-green-800 text-[15px] leading-relaxed">
+                                If your refund is approved, you will be <strong>automatically refunded</strong> to your original payment method within <strong>5–10 business days</strong>. No separate action is required from your end.
+                            </p>
+                        </div>
+
                         <p className="text-gray-600 leading-relaxed mb-3">
                             Once a refund request is approved:
                         </p>
@@ -163,7 +172,7 @@ const RefundPolicyPage = () => {
                             </li>
                             <li className="flex gap-2.5">
                                 <span className="text-blue-400 font-bold mt-0.5 shrink-0">•</span>
-                                <span>The amount typically reflects in your bank account within <strong className="text-gray-800">5–7 business days</strong>, depending on your bank.</span>
+                                <span>The amount typically reflects in your bank account within <strong className="text-gray-800">5–10 business days</strong>, depending on your bank or payment method.</span>
                             </li>
                             <li className="flex gap-2.5">
                                 <span className="text-blue-400 font-bold mt-0.5 shrink-0">•</span>

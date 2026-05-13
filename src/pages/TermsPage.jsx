@@ -332,7 +332,8 @@ const TermsPage = () => {
                         </p>
                         <div className="bg-gradient-to-br from-gray-50 to-blue-50/50 border border-gray-200 rounded-xl p-5 space-y-2 text-sm">
                             <p className="text-gray-700"><strong className="text-gray-900">Business:</strong> PrintGet (Sole Proprietorship, MSME / Udyam registered)</p>
-                            <p className="text-gray-700"><strong className="text-gray-900">Grievance Officer:</strong> Proprietor, PrintGet</p>
+                            <p className="text-gray-700"><strong className="text-gray-900">Proprietor &amp; Owner:</strong> Shivam Nagesh Rengade</p>
+                            <p className="text-gray-700"><strong className="text-gray-900">Grievance Officer:</strong> Shivam Nagesh Rengade (Proprietor, PrintGet)</p>
                             <p className="text-gray-700"><strong className="text-gray-900">Registered Office:</strong> Ambajogai, Beed, Maharashtra, India</p>
                             <p className="text-gray-700">
                                 <strong className="text-gray-900">Email:</strong>{' '}

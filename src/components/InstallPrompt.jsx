@@ -18,17 +18,18 @@ const InstallPrompt = () => {
         const currentVisits = parseInt(localStorage.getItem('pg_appVisits') || '0', 10) + 1
         localStorage.setItem('pg_appVisits', currentVisits)
 
-        // Check if snoozed
-        const dismissVisit = parseInt(localStorage.getItem('pg_installDismissVisit') || '0', 10)
-        if (dismissVisit > 0 && currentVisits < dismissVisit + 5) {
-            return // Snoozed for 5 visits
-        }
-
         const handler = (e) => {
             e.preventDefault()
             window.deferredPrompt = e;
             setDeferredPrompt(e)
             
+            // Check if snoozed before showing the popup
+            const currentVisits = parseInt(localStorage.getItem('pg_appVisits') || '0', 10)
+            const dismissVisit = parseInt(localStorage.getItem('pg_installDismissVisit') || '0', 10)
+            if (dismissVisit > 0 && currentVisits < dismissVisit + 5) {
+                return // Snoozed, don't show popup
+            }
+
             // Delay showing the prompt by 7 seconds
             setTimeout(() => {
                 setShow(true)

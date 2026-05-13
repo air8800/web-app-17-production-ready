@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { getJobStatus, getShopInfo, subscribeToJobUpdates, startJobStatusPolling, formatCurrency, updatePrintJob, updatePaymentStatus } from '../utils/supabase'
-import { Mail, Upload, AlertCircle, RefreshCw, X, CheckCircle2, Store, Printer, Package, CreditCard, Clock, ArrowLeft, FileText, Hash, Palette, Copy as CopyIcon, User, Wifi, WifiOff, PartyPopper, HandCoins } from 'lucide-react'
+import { Mail, Upload, AlertCircle, RefreshCw, X, CheckCircle2, Store, Printer, Package, CreditCard, Clock, ArrowLeft, FileText, Hash, Palette, Copy as CopyIcon, User, Wifi, WifiOff, PartyPopper, HandCoins, Home } from 'lucide-react'
 import useUploadStore from '../stores/uploadStore'
 
 import { usePageTitle } from '../hooks/usePageTitle'
+import InstallButton from '../components/InstallButton'
 
 const StatusPage = () => {
   const { jobId } = useParams()
@@ -309,6 +310,18 @@ const StatusPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/60 via-white to-indigo-50/40">
       <div className="max-w-2xl mx-auto px-4 py-4 sm:py-8">
+
+        {/* Top Actions */}
+        <div className="mb-4 flex items-center justify-between">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-blue-600 font-medium transition-colors"
+          >
+            <Home className="w-4 h-4" />
+            <span>Home</span>
+          </Link>
+          <InstallButton />
+        </div>
 
         {/* Top Summary Card */}
         <div className="bg-white rounded-3xl p-5 sm:p-6 mb-5 shadow-sm border border-gray-100">

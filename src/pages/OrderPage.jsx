@@ -18,6 +18,7 @@ import PDFEditorPopup from '../components/PDFEditorPopup'
 import PDFEditorSheetPopup from '../components/PDFEditorSheetPopup'
 import { useTour } from '../hooks/useTour'
 import { usePageTitle } from '../hooks/usePageTitle'
+import InstallButton from '../components/InstallButton'
 
 const OrderPage = () => {
   const { shopId } = useParams()
@@ -1804,12 +1805,20 @@ const OrderPage = () => {
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Shop</h1>
           <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={loadShopData}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Try Again
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
+            <button
+              onClick={() => navigate('/')}
+              className="bg-gray-100 text-gray-700 font-semibold px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors"
+            >
+              Go to Home
+            </button>
+            <button
+              onClick={loadShopData}
+              className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -1885,7 +1894,7 @@ const OrderPage = () => {
     <div id="tour-welcome" className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Breadcrumb Navigation */}
-        <div className="mb-4 sm:mb-6">
+        <div className="mb-4 sm:mb-6 flex items-center justify-between">
           <nav className="flex items-center gap-2 text-sm text-gray-600">
             <button
               onClick={() => navigate('/')}
@@ -1897,6 +1906,7 @@ const OrderPage = () => {
             <ChevronRight className="w-4 h-4" />
             <span className="text-gray-400">Place Order</span>
           </nav>
+          <InstallButton />
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">

@@ -14,24 +14,31 @@ const InstallPrompt = () => {
 
         if (isStandalone) return
 
+        // Track visits
+        const currentVisits = parseInt(localStorage.getItem('pg_appVisits') || '0', 10) + 1
+        localStorage.setItem('pg_appVisits', currentVisits)
+
+        // Check if snoozed
+        const dismissVisit = parseInt(localStorage.getItem('pg_installDismissVisit') || '0', 10)
+        if (dismissVisit > 0 && currentVisits < dismissVisit + 5) {
+            return // Snoozed for 5 visits
+        }
+
         const handler = (e) => {
             e.preventDefault()
+            window.deferredPrompt = e;
             setDeferredPrompt(e)
-            setShow(true)
+            
+            // Delay showing the prompt by 7 seconds
+            setTimeout(() => {
+                setShow(true)
+            }, 7000)
         }
 
         window.addEventListener('beforeinstallprompt', handler)
 
-        // If the event already fired before this component mounted, re-show after short delay
-        const timer = setTimeout(() => {
-            if (!deferredPrompt) {
-                // Try to re-trigger visibility if event was already captured globally
-            }
-        }, 1500)
-
         return () => {
             window.removeEventListener('beforeinstallprompt', handler)
-            clearTimeout(timer)
         }
     }, [])
 
@@ -52,17 +59,15 @@ const InstallPrompt = () => {
 
     const handleDismiss = () => {
         setShow(false)
+        const currentVisits = parseInt(localStorage.getItem('pg_appVisits') || '0', 10)
+        localStorage.setItem('pg_installDismissVisit', currentVisits)
     }
 
     if (!show) return null
 
     return (
         <>
-            {/* Backdrop blur on mobile */}
-            <div
-                className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[1px] sm:hidden"
-                onClick={handleDismiss}
-            />
+
 
             {/* Banner */}
             <div
@@ -117,56 +122,54 @@ const InstallPrompt = () => {
                                 <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12.5, lineHeight: 1.4 }}>
                                     Print from your home screen — no browser needed
                                 </p>
-                            </div>
+                        </div>
 
-                            {/* Dismiss */}
+                        {/* Buttons */}
+                        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
                             <button
                                 onClick={handleDismiss}
                                 style={{
+                                    flex: 1,
                                     background: 'rgba(255,255,255,0.1)',
-                                    border: 'none',
-                                    borderRadius: 8,
-                                    padding: 6,
+                                    color: '#fff',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    borderRadius: 12,
+                                    padding: '10px 16px',
+                                    fontWeight: 600,
+                                    fontSize: 14,
                                     cursor: 'pointer',
-                                    color: 'rgba(255,255,255,0.6)',
-                                    flexShrink: 0,
+                                    transition: 'all 0.2s ease',
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleInstall}
+                                disabled={installing}
+                                style={{
+                                    flex: 1.5,
+                                    background: installing
+                                        ? 'rgba(255,255,255,0.2)'
+                                        : 'rgba(255,255,255,0.95)',
+                                    color: installing ? 'rgba(255,255,255,0.7)' : '#1e3a8a',
+                                    border: 'none',
+                                    borderRadius: 12,
+                                    padding: '10px 16px',
+                                    fontWeight: 700,
+                                    fontSize: 14,
+                                    cursor: installing ? 'not-allowed' : 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
+                                    gap: 8,
+                                    transition: 'all 0.2s ease',
+                                    letterSpacing: 0.2,
                                 }}
                             >
-                                <X size={15} />
+                                <Download size={16} />
+                                {installing ? 'Installing…' : 'Install'}
                             </button>
                         </div>
-
-                        {/* Install Button */}
-                        <button
-                            onClick={handleInstall}
-                            disabled={installing}
-                            style={{
-                                marginTop: 12,
-                                width: '100%',
-                                background: installing
-                                    ? 'rgba(255,255,255,0.2)'
-                                    : 'rgba(255,255,255,0.95)',
-                                color: installing ? 'rgba(255,255,255,0.7)' : '#1e3a8a',
-                                border: 'none',
-                                borderRadius: 12,
-                                padding: '10px 16px',
-                                fontWeight: 700,
-                                fontSize: 14,
-                                cursor: installing ? 'not-allowed' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 8,
-                                transition: 'all 0.2s ease',
-                                letterSpacing: 0.2,
-                            }}
-                        >
-                            <Download size={16} />
-                            {installing ? 'Installing…' : 'Add to Home Screen'}
-                        </button>
                     </div>
                 </div>
             </div>

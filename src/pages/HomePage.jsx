@@ -29,6 +29,7 @@ const isShopOpen = (shop) => {
 }
 
 import { usePageTitle } from '../hooks/usePageTitle'
+import InstallButton from '../components/InstallButton'
 
 // Individual shop card with scroll-triggered animation
 const ShopCard = ({ shop, index, glow }) => {
@@ -265,14 +266,16 @@ const HomePage = () => {
               Print<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Get</span>
             </h3>
           </Link>
-          
-          <Link 
-            to="/history" 
-            className="flex items-center gap-2 px-3 py-1.5 sm:px-5 sm:py-2.5 bg-white/80 border border-blue-100 rounded-2xl text-sm font-bold text-gray-800 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all active:scale-95 shadow-sm shadow-blue-100/20 group"
-          >
-            <Clock className="w-4 h-4 text-blue-500 group-hover:text-white transition-colors" />
-            <span>My Orders</span>
-          </Link>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <InstallButton />
+            <Link 
+              to="/history" 
+              className="flex items-center gap-2 px-3 py-1.5 sm:px-5 sm:py-2.5 bg-white/80 border border-blue-100 rounded-2xl text-sm font-bold text-gray-800 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all active:scale-95 shadow-sm shadow-blue-100/20 group"
+            >
+              <Clock className="w-4 h-4 text-blue-500 group-hover:text-white transition-colors" />
+              <span className="hidden sm:inline">My Orders</span>
+            </Link>
+          </div>
         </div>
       </nav>
 

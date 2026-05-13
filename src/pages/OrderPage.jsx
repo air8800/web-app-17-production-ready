@@ -1906,7 +1906,7 @@ const OrderPage = () => {
             <ChevronRight className="w-4 h-4" />
             <span className="text-gray-400">Place Order</span>
           </nav>
-          <InstallButton />
+          <InstallButton fullOnMobile />
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">

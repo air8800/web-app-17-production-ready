@@ -320,7 +320,7 @@ const StatusPage = () => {
             <Home className="w-4 h-4" />
             <span>Home</span>
           </Link>
-          <InstallButton />
+          <InstallButton fullOnMobile />
         </div>
 
         {/* Top Summary Card */}

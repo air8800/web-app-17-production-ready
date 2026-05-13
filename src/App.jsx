@@ -29,6 +29,7 @@ import CookiePolicyPage from './pages/CookiePolicyPage'
 import FAQPage from './pages/FAQPage'
 import NotFoundPage from './pages/NotFoundPage'
 import RefundPolicyPage from './pages/RefundPolicyPage'
+import InstallPrompt from './components/InstallPrompt'
 
 function App() {
   useEffect(() => {
@@ -68,6 +69,7 @@ function App() {
       </Router>
       <Analytics debug={false} />
       <SpeedInsights debug={false} />
+      <InstallPrompt />
     </>
   )
 }

@@ -168,10 +168,6 @@ const RefundPolicyPage = () => {
                         <ul className="space-y-2 text-gray-600 text-[15px]">
                             <li className="flex gap-2.5">
                                 <span className="text-blue-400 font-bold mt-0.5 shrink-0">•</span>
-                                <span>For online payments, the refund is initiated to the original payment source within <strong className="text-gray-800">2 business days</strong>.</span>
-                            </li>
-                            <li className="flex gap-2.5">
-                                <span className="text-blue-400 font-bold mt-0.5 shrink-0">•</span>
                                 <span>The amount typically reflects in your bank account within <strong className="text-gray-800">5–10 business days</strong>, depending on your bank or payment method.</span>
                             </li>
                             <li className="flex gap-2.5">

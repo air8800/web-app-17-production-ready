@@ -122,6 +122,7 @@ const InstallPrompt = () => {
                                 <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12.5, lineHeight: 1.4 }}>
                                     Print from your home screen — no browser needed
                                 </p>
+                            </div>
                         </div>
 
                         {/* Buttons */}

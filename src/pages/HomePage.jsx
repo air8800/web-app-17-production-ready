@@ -131,6 +131,12 @@ const HomePage = () => {
   const cityRef = useRef(null)
   const [cityVisible, setCityVisible] = useState(false)
   const [shouldGlow, setShouldGlow] = useState(false)
+  const [visibleShopsCount, setVisibleShopsCount] = useState(5)
+
+  useEffect(() => {
+    setVisibleShopsCount(5)
+  }, [selectedCity, searchTerm])
+
   const [recentOrder, setRecentOrder] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('printget_recent_order') || 'null')
@@ -557,10 +563,20 @@ const HomePage = () => {
                   </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {filteredShops.map((shop, index) => (
+                  {filteredShops.slice(0, visibleShopsCount).map((shop, index) => (
                     <ShopCard key={shop.id} shop={shop} index={index} glow={shouldGlow} />
                   ))}
                 </div>
+                {filteredShops.length > visibleShopsCount && (
+                  <div className="mt-8 text-center relative z-10">
+                    <button 
+                      onClick={() => setVisibleShopsCount(prev => prev + 6)}
+                      className="px-8 py-3 bg-white border-2 border-blue-100 text-blue-600 font-bold rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm active:scale-95"
+                    >
+                      Show More Shops
+                    </button>
+                  </div>
+                )}
                 </>
 
               ) : (

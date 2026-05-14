@@ -485,7 +485,8 @@ export const submitPrintJob = async (jobData) => {
       customer_email: jobData.customer_email,
       customer_phone: jobData.customer_phone,
       total_cost: jobData.total_cost,
-      payment_status: 'paid',
+      payment_status: jobData.payment_status || 'pending',
+      payment_method: jobData.payment_method || 'Pay at Shop',
       job_status: 'pending',
       // Recipe metadata for desktop app (cpdf)
       recipe: jobData.recipe || null,
@@ -539,7 +540,8 @@ export const submitPrintJobImmediate = async (jobData) => {
       customer_email: jobData.customer_email || null,
       customer_phone: jobData.customer_phone || null,
       total_cost: jobData.total_cost,
-      payment_status: 'paid',
+      payment_status: jobData.payment_status || 'pending',
+      payment_method: jobData.payment_method || 'Pay at Shop',
       job_status: 'pending',    // Reverted from 'uploading' because of DB constraint. We will filter on the desktop app instead.
       recipe: jobData.recipe || null,
       total_pages: jobData.total_pages || null,

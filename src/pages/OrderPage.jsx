@@ -43,7 +43,8 @@ const OrderPage = () => {
     pagesPerSheet: 1,
     customerName: '',
     customerEmail: '',
-    customerPhone: ''
+    customerPhone: '',
+    paymentMethod: 'ONLINE'
   })
   const [costInfo, setCostInfo] = useState({ cost: 0 })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -1137,7 +1138,6 @@ const OrderPage = () => {
       if (pendingJobId) {
         try {
           await updatePrintJob(pendingJobId, { file_url: publicUrl, job_status: 'pending' })
-          await updatePaymentStatus(pendingJobId, 'paid')
         } catch (e) {
           // Silent fail — the shop operator can still see the order
         }
@@ -1464,13 +1464,14 @@ const OrderPage = () => {
           total_pages: pdfPageCount,
           recipe: recipe ? JSON.stringify(recipe) : null,
           has_edits: hasEdits,
+          payment_method: orderData.paymentMethod === 'ONLINE' ? 'PhonePe' : 'Pay at Shop',
+          payment_status: 'pending'
         })
         if (jobResult.error) throw new Error(jobResult.error.message)
         const jobId = jobResult.data.id
 
         // Update the DB record to use the real URL (overwrite placeholder)
         await updatePrintJob(jobId, { file_url: preUploadedFileUrl, job_status: 'pending' })
-        await updatePaymentStatus(jobId, 'paid')
 
         // Save to localStorage
         localStorage.setItem('printget_recent_order', JSON.stringify({ jobId, shopId, timestamp: Date.now() }))
@@ -1482,7 +1483,12 @@ const OrderPage = () => {
         // Show upload as done instantly
         startUpload(jobId)
         finishUpload()
-        navigate(`/status/${jobId}`)
+        
+        if (orderData.paymentMethod === 'ONLINE') {
+          navigate(`/payment/${jobId}`)
+        } else {
+          navigate(`/status/${jobId}`)
+        }
         return
       }
 
@@ -1525,6 +1531,8 @@ const OrderPage = () => {
         total_pages: pdfPageCount,
         recipe: recipe ? JSON.stringify(recipe) : null,
         has_edits: hasEdits,
+        payment_method: orderData.paymentMethod === 'ONLINE' ? 'PhonePe' : 'Pay at Shop',
+        payment_status: 'pending'
       })
       if (jobResult.error) throw new Error(jobResult.error.message)
       const jobId = jobResult.data.id
@@ -1554,8 +1562,11 @@ const OrderPage = () => {
         if (!history.includes(jobId)) { history.push(jobId); localStorage.setItem('printget_order_history', JSON.stringify(history)) }
       } catch (_) { }
 
-      // Navigate immediately — uploadInBackground handles the rest
-      navigate(`/status/${jobId}`)
+      if (orderData.paymentMethod === 'ONLINE') {
+        navigate(`/payment/${jobId}`)
+      } else {
+        navigate(`/status/${jobId}`)
+      }
 
     } catch (error) {
       alert('Failed to submit order: ' + error.message)
@@ -1776,8 +1787,8 @@ const OrderPage = () => {
           })()
       }
 
-      // Mark payment as paid (fast, no blocking)
-      await updatePaymentStatus(jobId, 'paid')
+      // Navigate immediately to Payment Page
+      navigate(`/payment/${jobId}`)
 
     } catch (error) {
       console.error('❌ Error submitting order:', error)
@@ -2736,7 +2747,7 @@ const OrderPage = () => {
                     </span>
                   </div>
                   <span className="text-[14px] font-bold text-blue-700 leading-tight truncate">
-                    Pay at Shop
+                    {orderData.paymentMethod === 'ONLINE' ? 'Pay Online' : 'Pay at Shop'}
                   </span>
                 </div>
 
@@ -2752,13 +2763,39 @@ const OrderPage = () => {
               {/* Expandable Details - with ID for tour */}
               <div id="pricing-info" className={`payment-grid-container ${isCostBreakupExpanded ? 'is-expanded' : ''}`}>
                 <div className="payment-grid-content">
-                  <div className="border-t border-blue-100 px-3 pb-3 pt-3 space-y-2">
-                    <p className="text-xs font-medium text-gray-700">Payment Method</p>
-                    <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-100/50 p-2 rounded-lg border border-blue-100">
-                      <HandCoins className="w-4 h-4" />
-                      <span>Pay at Shop (on pickup)</span>
+                  <div className="border-t border-blue-100 px-3 pb-3 pt-3 space-y-3">
+                    <p className="text-xs font-medium text-gray-700">Select Payment Method</p>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setOrderData(prev => ({ ...prev, paymentMethod: 'ONLINE' }))}
+                        className={`flex items-center justify-center gap-2 text-xs p-2.5 rounded-lg border transition-all ${
+                          orderData.paymentMethod === 'ONLINE'
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                        }`}
+                      >
+                        <Zap className="w-4 h-4" />
+                        <span className="font-semibold">Pay Online</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => setOrderData(prev => ({ ...prev, paymentMethod: 'SHOP' }))}
+                        className={`flex items-center justify-center gap-2 text-xs p-2.5 rounded-lg border transition-all ${
+                          orderData.paymentMethod === 'SHOP'
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                        }`}
+                      >
+                        <HandCoins className="w-4 h-4" />
+                        <span className="font-semibold">Pay at Shop</span>
+                      </button>
                     </div>
-                    <p className="text-xs font-semibold text-gray-700">Total payable at shop: {formatCurrency(costInfo.cost)}</p>
+
+                    <div className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded-lg border border-gray-100 mt-2">
+                      <span className="text-gray-600">{orderData.paymentMethod === 'ONLINE' ? 'Total payable online:' : 'Total payable at shop:'}</span>
+                      <span className="font-bold text-gray-900">{formatCurrency(costInfo.cost)}</span>
+                    </div>
                   </div>
                 </div>
               </div>

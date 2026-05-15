@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Build marker — bump this string in every code change so you can verify which
+// deployment Vercel is serving. Echoed in every response from this handler.
+const BUILD_VERSION = 'phonepe-v2-oauth-fix-2026-05-16';
+
 // ── PhonePe OAuth Token Cache ───────────────────────────────────────────────
 let cachedToken = null;
 let tokenExpiresAt = 0;
@@ -281,6 +285,7 @@ export default async function handler(req, res) {
       console.error('❌ PhonePe OAuth failed in handler:', oauthErr);
       return res.status(502).json({
         error: 'PhonePe authentication failed',
+        buildVersion: BUILD_VERSION,
         details: oauthErr.message,
         phonepeStatus: oauthErr.status,
         phonepeBody: oauthErr.body,
@@ -357,6 +362,10 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('❌ PhonePe initiate error:', error);
-    return res.status(500).json({ error: 'Internal server error', details: error.message });
+    return res.status(500).json({
+      error: 'Internal server error',
+      buildVersion: BUILD_VERSION,
+      details: error.message,
+    });
   }
 }

@@ -96,33 +96,79 @@ export default async function handler(req, res) {
     }
 
     // ── Security Layer 2: Amount ALWAYS from Supabase — client cannot manipulate price ──
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    // Extract project ref (e.g. "abcd1234" from https://abcd1234.supabase.co) for diagnostics.
+    // Safe to expose: it's already visible in the frontend's network tab via VITE_SUPABASE_URL.
+    const serverProjectRef =
+      (SUPABASE_URL || '').match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] || 'unset';
+
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('❌ Supabase server env missing', {
+        hasUrl: !!SUPABASE_URL,
+        hasServiceKey: !!SUPABASE_SERVICE_ROLE_KEY,
+      });
+      return res.status(500).json({
+        error: 'Server Supabase env not configured',
+        hint: 'Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel and redeploy.',
+      });
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const { data: job, error: jobError } = await supabase
       .from('print_jobs')
-      .select('id, total_cost, payment_status, job_status, customer_name, customer_email')
+      .select('*')
       .eq('id', jobId)
-      .single();
+      .maybeSingle();
 
-    if (jobError || !job) {
-      return res.status(404).json({ error: 'Order not found' });
+    if (jobError) {
+      console.error('❌ Supabase job lookup error:', jobId, jobError, 'on project:', serverProjectRef);
+      return res.status(500).json({
+        error: 'Failed to load order',
+        details: jobError.message,
+        serverProjectRef,
+      });
+    }
+
+    if (!job) {
+      console.warn(
+        '⚠️ Order not found in Supabase:',
+        jobId,
+        'on project:',
+        serverProjectRef,
+        '— check that this matches VITE_SUPABASE_URL.'
+      );
+      return res.status(404).json({
+        error: 'Order not found',
+        jobId,
+        serverProjectRef,
+        hint:
+          'The server queried this Supabase project and got 0 rows. ' +
+          'Confirm SUPABASE_URL (server) and VITE_SUPABASE_URL (client) point to the SAME project, ' +
+          'and that SUPABASE_SERVICE_ROLE_KEY is the service_role key from that same project. ' +
+          'Then redeploy.',
+      });
     }
 
     // ── Security Layer 3: Validate job state — prevent duplicate/invalid payments ──
     if (job.payment_status === 'paid') {
       return res.status(400).json({ error: 'This order has already been paid' });
     }
-    if (job.job_status === 'cancelled') {
+    const jobStatus = job.job_status ?? job.status;
+    if (jobStatus === 'cancelled') {
       return res.status(400).json({ error: 'This order has been cancelled' });
+    }
+
+    if (job.total_cost == null || Number.isNaN(Number(job.total_cost))) {
+      return res.status(400).json({ error: 'Order has no valid amount' });
     }
 
     // Use DB values — client has zero control over amount or customer info
     const amount        = job.total_cost;
     const customerName  = job.customer_name;
-    const customerEmail = job.customer_email;
+    const customerEmail = job.customer_email ?? null;
 
     const baseURL = IS_PROD
       ? 'https://api.phonepe.com/apis/pg'

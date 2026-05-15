@@ -31,10 +31,22 @@ export const initiatePhonePePayment = async ({
     body: JSON.stringify({ jobId, amount, customerName, customerEmail, customerMobile }),
   });
 
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
 
   if (!response.ok || !data.success) {
-    throw new Error(data.message || data.error || 'PhonePe payment initiation failed');
+    // Surface server diagnostics in the console so misconfigured envs are immediately visible.
+    if (data && (data.serverProjectRef || data.hint || data.details)) {
+      console.error('❌ phonepe-initiate failed:', {
+        status: response.status,
+        error: data.error,
+        hint: data.hint,
+        details: data.details,
+        serverProjectRef: data.serverProjectRef,
+      });
+    }
+    const baseMsg = data.message || data.error || 'PhonePe payment initiation failed';
+    const hintMsg = data.hint ? ` (${data.hint})` : '';
+    throw new Error(baseMsg + hintMsg);
   }
 
   return {

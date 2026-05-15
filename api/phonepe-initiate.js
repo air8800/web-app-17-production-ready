@@ -29,6 +29,36 @@ async function getPhonePeToken(clientId, clientSecret, baseURL) {
   return cachedToken;
 }
 
+function normalizeHost(urlString) {
+  const host = new URL(urlString).hostname.toLowerCase();
+  return host.startsWith('www.') ? host.slice(4) : host;
+}
+
+function isLocalOrigin(urlString) {
+  try {
+    const host = new URL(urlString).hostname.toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1';
+  } catch {
+    return false;
+  }
+}
+
+function isAllowedRequestOrigin(originHeader) {
+  if (!originHeader) return true;
+
+  const allowedHosts = new Set(['printget.in']);
+  if (process.env.VERCEL_URL) {
+    allowedHosts.add(process.env.VERCEL_URL.toLowerCase());
+  }
+
+  try {
+    const host = normalizeHost(originHeader);
+    return allowedHosts.has(host);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * POST /api/phonepe-initiate
  * Creates a PhonePe Standard Checkout payment session.
@@ -40,13 +70,11 @@ export default async function handler(req, res) {
   }
 
   // ── Security Layer 1: Block requests not from your domain ─────────────────
-  // Even if someone has the API URL, they can't call it from outside printget.in
-  const APP_URL = process.env.APP_URL || 'https://printget.in';
+  // Accepts printget.in, www.printget.in, localhost, and Vercel preview URLs.
+  const APP_URL = (process.env.APP_URL || 'https://www.printget.in').replace(/\/$/, '');
   const origin  = req.headers['origin'] || req.headers['referer'] || '';
-  const isLocal = origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1');
-  const isOwn   = origin.startsWith(APP_URL);
 
-  if (origin && !isOwn && !isLocal) {
+  if (origin && !isLocalOrigin(origin) && !isAllowedRequestOrigin(origin)) {
     console.warn('🚫 Blocked unauthorized origin:', origin);
     return res.status(403).json({ error: 'Forbidden' });
   }

@@ -1,52 +1,111 @@
 /**
  * PhonePe Standard Checkout v2 — client service.
  *
- * Flow (matches the official PhonePe guide):
- *   1. Client POSTs jobId to /api/phonepe-initiate.
- *   2. Server reads amount + customer info from Supabase (client cannot tamper),
- *      calls PhonePe /checkout/v2/pay, returns a `redirectUrl`.
- *   3. Client redirects the user to that URL. PhonePe's hosted page then
- *      presents the full responsive payment UI (UPI apps + Card + Net Banking)
- *      across desktop, tablet, and mobile.
- *   4. After the user pays, PhonePe redirects back to
- *      /payment/:jobId?orderId=<merchantOrderId>.
- *   5. Client calls /api/phonepe-status to server-verify the result.
+ * Mobile: platform=mobile → server enables UPI INTENT (+ COLLECT), opens PayPage
+ * via official checkout.js in IFRAME mode.
+ * Desktop: full hosted checkout (redirect).
  */
 
+function checkoutScriptUrlForRedirect(redirectUrl) {
+  const url = redirectUrl || '';
+  if (
+    url.includes('mercury-uat') ||
+    url.includes('mercury-stg') ||
+    url.includes('preprod') ||
+    url.includes('pg-sandbox')
+  ) {
+    return 'https://mercury-stg.phonepe.com/web/bundle/checkout.js';
+  }
+  return 'https://mercury.phonepe.com/web/bundle/checkout.js';
+}
+
+function loadPhonePeCheckoutScript(redirectUrl) {
+  const src = checkoutScriptUrlForRedirect(redirectUrl);
+
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') {
+      reject(new Error('PhonePe checkout is only available in the browser'));
+      return;
+    }
+
+    if (window.PhonePeCheckout?.transact) {
+      resolve();
+      return;
+    }
+
+    const existing = document.querySelector('script[data-phonepe-checkout]');
+    if (existing) {
+      const onLoad = () => {
+        existing.removeEventListener('load', onLoad);
+        existing.removeEventListener('error', onError);
+        resolve();
+      };
+      const onError = () => {
+        existing.removeEventListener('load', onLoad);
+        existing.removeEventListener('error', onError);
+        reject(new Error('Failed to load PhonePe checkout'));
+      };
+      existing.addEventListener('load', onLoad);
+      existing.addEventListener('error', onError);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = src;
+    script.defer = true;
+    script.dataset.phonepeCheckout = 'true';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load PhonePe checkout'));
+    document.head.appendChild(script);
+  });
+}
+
 /**
- * Initiate a PhonePe checkout for a job.
- * @param {{ jobId: string }} params
- * @returns {Promise<{ redirectUrl: string, merchantOrderId: string }>}
+ * Open PhonePe PayPage. On mobile uses IFRAME (recommended); desktop uses redirect.
+ * @returns {Promise<'CONCLUDED'|'USER_CANCEL'|null>} null when full-page redirect (desktop)
  */
-export const initiatePhonePePayment = async ({ jobId }) => {
+export async function openPhonePeCheckout({ redirectUrl, useIframe }) {
+  if (useIframe) {
+    await loadPhonePeCheckoutScript(redirectUrl);
+    if (!window.PhonePeCheckout?.transact) {
+      throw new Error('PhonePe checkout is not available');
+    }
+
+    return new Promise((resolve) => {
+      window.PhonePeCheckout.transact({
+        tokenUrl: redirectUrl,
+        type: 'IFRAME',
+        callback: (response) => resolve(response),
+      });
+    });
+  }
+
+  window.location.href = redirectUrl;
+  return null;
+}
+
+/**
+ * @param {{ jobId: string, platform?: 'mobile'|'desktop' }} params
+ */
+export const initiatePhonePePayment = async ({ jobId, platform }) => {
   const response = await fetch('/api/phonepe-initiate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jobId }),
+    body: JSON.stringify({ jobId, platform }),
   });
 
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok || !data.success) {
-    // Surface server diagnostics in the console so misconfigured envs are immediately visible.
     if (data && (data.serverProjectRef || data.hint || data.details || data.likelyCauses || data.phonepeBody)) {
-      console.error('❌ phonepe-initiate failed:', {
+      console.error('phonepe-initiate failed:', {
         status: response.status,
         buildVersion: data.buildVersion,
         error: data.error,
         hint: data.hint,
         details: data.details,
-        code: data.code,
-        name: data.name,
-        serverProjectRef: data.serverProjectRef,
-        keyProjectRef: data.keyProjectRef,
-        role: data.role,
-        projectsMatch: data.projectsMatch,
-        roleIsServiceRole: data.roleIsServiceRole,
-        likelyCauses: data.likelyCauses,
         phonepeStatus: data.phonepeStatus,
         phonepeBody: data.phonepeBody,
-        authURL: data.authURL,
       });
     }
     const baseMsg = data.message || data.error || 'PhonePe payment initiation failed';
@@ -59,16 +118,10 @@ export const initiatePhonePePayment = async ({ jobId }) => {
   return {
     redirectUrl: data.redirectUrl,
     merchantOrderId: data.merchantOrderId,
+    checkoutMode: data.checkoutMode,
   };
 };
 
-/**
- * Server-verify a PhonePe order status after the user returns from checkout.
- * Always call this before marking an order paid — never trust redirect URL params alone.
- *
- * @param {string} merchantOrderId - The orderId returned from initiatePhonePePayment.
- * @returns {Promise<{ success: boolean, state: 'COMPLETED'|'FAILED'|'PENDING', amount: number, paymentMethod: string|null }>}
- */
 export const verifyPhonePePayment = async (merchantOrderId) => {
   const response = await fetch(
     `/api/phonepe-status?orderId=${encodeURIComponent(merchantOrderId)}`,

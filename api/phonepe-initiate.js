@@ -2,7 +2,32 @@ import { createClient } from '@supabase/supabase-js';
 
 // Build marker — bump this string in every code change so you can verify which
 // deployment Vercel is serving. Echoed in every response from this handler.
-const BUILD_VERSION = 'phonepe-v2-full-checkout-2026-05-16';
+const BUILD_VERSION = 'phonepe-v2-mobile-checkout-2026-05-16';
+
+function isMobileUserAgent(ua = '') {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
+}
+
+/** Mobile website: UPI app intents (not QR). Desktop: full PhonePe responsive UI. */
+function buildPaymentModeConfig(isMobile) {
+  if (!isMobile) return undefined;
+
+  return {
+    version: 'V2',
+    enabledPaymentModes: [
+      { type: 'UPI', flows: ['INTENT', 'COLLECT'] },
+      { type: 'CARD' },
+      { type: 'NET_BANKING' },
+    ],
+  };
+}
+
+function resolveIsMobile(req) {
+  const platform = req.body?.platform;
+  if (platform === 'mobile') return true;
+  if (platform === 'desktop') return false;
+  return isMobileUserAgent(req.headers['user-agent'] || '');
+}
 
 // ── PhonePe OAuth Token Cache ───────────────────────────────────────────────
 let cachedToken = null;
@@ -137,6 +162,8 @@ export default async function handler(req, res) {
     if (!jobId) {
       return res.status(400).json({ error: 'Missing required field: jobId' });
     }
+
+    const isMobileCheckout = resolveIsMobile(req);
 
     const CLIENT_ID      = process.env.PHONEPE_CLIENT_ID;
     const CLIENT_SECRET  = process.env.PHONEPE_CLIENT_SECRET;
@@ -315,20 +342,8 @@ export default async function handler(req, res) {
     // PhonePe expects amount in paise (₹1 = 100 paise)
     const amountPaise = Math.round(parseFloat(amount) * 100);
 
-    // ── Initiate payment ────────────────────────────────────────────────────
-    //
-    // We deliberately omit `paymentModeConfig` so PhonePe's hosted page shows
-    // its full responsive UI: UPI apps (PhonePe / Google Pay / Paytm / Apps &
-    // UPI QR), Debit/Credit Card, and Net Banking. PhonePe's page adapts itself
-    // to desktop, tablet, and mobile — we don't need to pre-select a method.
-    //
-    // If we ever need to restrict modes again (e.g. UPI-only for low-ticket
-    // orders), add:
-    //   paymentModeConfig: {
-    //     version: 'V2',
-    //     enabledPaymentModes: [{ type: 'UPI' }, { type: 'CARD' }, { type: 'NET_BANKING' }],
-    //   }
-    // See: https://developer.phonepe.com/payment-gateway/website-integration/standard-checkout/api-integration/api-reference/create-payment/configure-payment-modes
+    const mobilePaymentModeConfig = buildPaymentModeConfig(isMobileCheckout);
+
     const payload = {
       merchantOrderId,
       amount: amountPaise,
@@ -337,11 +352,11 @@ export default async function handler(req, res) {
         type: 'PG_CHECKOUT',
         message: 'PrintGet Print Order',
         merchantUrls: {
-          // Route must match an actual React Router path in src/App.jsx.
-          // PaymentPage detects the `orderId` query param and calls
-          // /api/phonepe-status to server-verify the result.
           redirectUrl: `${APP_URL}/payment/${jobId}?orderId=${merchantOrderId}`,
         },
+        ...(mobilePaymentModeConfig
+          ? { paymentModeConfig: mobilePaymentModeConfig }
+          : {}),
       },
       // Skip the PhonePe login screen when we have the customer's phone on file.
       // Schema column is `customer_phone` (NOT customer_mobile).
@@ -401,6 +416,7 @@ export default async function handler(req, res) {
       success: true,
       redirectUrl,
       merchantOrderId,
+      checkoutMode: isMobileCheckout ? 'mobile' : 'desktop',
     });
 
   } catch (error) {

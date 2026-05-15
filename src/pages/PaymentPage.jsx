@@ -2,7 +2,12 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { getJobStatus, updatePaymentStatus, getShopInfo } from '../utils/supabase'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { initiatePhonePePayment, verifyPhonePePayment } from '../services/paymentService'
+import {
+  initiatePhonePePayment,
+  verifyPhonePePayment,
+  openPhonePeCheckout,
+} from '../services/paymentService'
+import { getCheckoutPlatform } from '../utils/devicePlatform'
 import { CheckCircle2, AlertCircle, Loader2, ShieldCheck, CreditCard } from 'lucide-react'
 
 const PaymentPage = () => {
@@ -88,6 +93,7 @@ const PaymentPage = () => {
       await loadJobDetails()
     } finally {
       setVerifying(false)
+      setProcessing(false)
     }
   }
 
@@ -110,10 +116,39 @@ const PaymentPage = () => {
   const handlePayOnline = async () => {
     setProcessing(true)
     setError(null)
+    const platform = getCheckoutPlatform()
+    const useIframe = platform === 'mobile'
+
     try {
-      const { redirectUrl, merchantOrderId } = await initiatePhonePePayment({ jobId })
+      const { redirectUrl, merchantOrderId } = await initiatePhonePePayment({
+        jobId,
+        platform,
+      })
       localStorage.setItem(`pp_txn_${jobId}`, merchantOrderId)
-      window.location.href = redirectUrl
+
+      let checkoutResult
+      try {
+        checkoutResult = await openPhonePeCheckout({ redirectUrl, useIframe })
+      } catch (checkoutErr) {
+        if (useIframe) {
+          console.warn('PhonePe iframe checkout failed, falling back to redirect:', checkoutErr)
+          window.location.href = redirectUrl
+          return
+        }
+        throw checkoutErr
+      }
+
+      if (checkoutResult === 'CONCLUDED') {
+        await handleReturnFromPhonePe(merchantOrderId)
+        return
+      }
+
+      if (checkoutResult === 'USER_CANCEL') {
+        setProcessing(false)
+        return
+      }
+
+      // Desktop: full-page redirect — page unloads, no callback here.
     } catch (err) {
       console.error('PhonePe initiation error:', err)
       setError(err.message || 'Failed to start payment. Please try again.')

@@ -4,28 +4,68 @@ import { createClient } from '@supabase/supabase-js';
 let cachedToken = null;
 let tokenExpiresAt = 0;
 
-async function getPhonePeToken(clientId, clientSecret, baseURL) {
+/**
+ * PhonePe Standard Checkout v2 OAuth token.
+ *
+ * IMPORTANT: PhonePe puts OAuth on a SEPARATE base path from the /checkout/v2/* APIs:
+ *   - Production:  https://api.phonepe.com/apis/identity-manager/v1/oauth/token
+ *   - UAT/Sandbox: https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token
+ *
+ * The request is form-encoded with client_id / client_version / client_secret / grant_type
+ * (NOT HTTP Basic auth). The response includes `expires_at` as an absolute epoch (seconds).
+ *
+ * Override the URL with PHONEPE_AUTH_URL env var if PhonePe rotates endpoints.
+ */
+async function getPhonePeToken({ clientId, clientSecret, clientVersion, authURL }) {
   const now = Date.now();
   if (cachedToken && now < tokenExpiresAt) return cachedToken;
 
-  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-  const res = await fetch(`${baseURL}/v1/oauth/token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Basic ${credentials}`,
-    },
-    body: new URLSearchParams({ grant_type: 'client_credentials', scope: 'openid' }),
+  const body = new URLSearchParams({
+    client_id: clientId,
+    client_version: String(clientVersion),
+    client_secret: clientSecret,
+    grant_type: 'client_credentials',
   });
 
-  const data = await res.json();
+  const res = await fetch(authURL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+
+  const rawText = await res.text();
+  let data = {};
+  try { data = JSON.parse(rawText); } catch { /* non-JSON body */ }
+
   if (!res.ok || !data.access_token) {
-    console.error('❌ PhonePe token error:', data);
-    throw new Error(data.error_description || 'Failed to get PhonePe OAuth token');
+    console.error('❌ PhonePe OAuth token error:', {
+      authURL,
+      status: res.status,
+      statusText: res.statusText,
+      body: data && Object.keys(data).length ? data : rawText?.slice(0, 500),
+    });
+    const err = new Error(
+      data.error_description ||
+      data.message ||
+      data.error ||
+      `PhonePe OAuth token request failed (HTTP ${res.status})`
+    );
+    err.status = res.status;
+    err.body = data;
+    err.authURL = authURL;
+    throw err;
   }
 
   cachedToken = data.access_token;
-  tokenExpiresAt = now + (data.expires_in - 60) * 1000;
+  // PhonePe v2 returns `expires_at` as absolute epoch seconds.
+  // Fall back to `expires_in` (seconds-from-now) if present, else 25 min.
+  if (typeof data.expires_at === 'number') {
+    tokenExpiresAt = data.expires_at * 1000 - 60_000;
+  } else if (typeof data.expires_in === 'number') {
+    tokenExpiresAt = now + (data.expires_in - 60) * 1000;
+  } else {
+    tokenExpiresAt = now + 25 * 60 * 1000;
+  }
   return cachedToken;
 }
 
@@ -222,8 +262,39 @@ export default async function handler(req, res) {
       ? 'https://api.phonepe.com/apis/pg'
       : 'https://api-preprod.phonepe.com/apis/pg-sandbox';
 
+    // OAuth token endpoint lives on a DIFFERENT base path than /checkout/v2/*.
+    // See PhonePe Standard Checkout v2 docs → Authorization.
+    const AUTH_URL = process.env.PHONEPE_AUTH_URL || (IS_PROD
+      ? 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token'
+      : 'https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token');
+
     // ── Get OAuth token ─────────────────────────────────────────────────────
-    const token = await getPhonePeToken(CLIENT_ID, CLIENT_SECRET, baseURL);
+    let token;
+    try {
+      token = await getPhonePeToken({
+        clientId: CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        clientVersion: CLIENT_VERSION,
+        authURL: AUTH_URL,
+      });
+    } catch (oauthErr) {
+      console.error('❌ PhonePe OAuth failed in handler:', oauthErr);
+      return res.status(502).json({
+        error: 'PhonePe authentication failed',
+        details: oauthErr.message,
+        phonepeStatus: oauthErr.status,
+        phonepeBody: oauthErr.body,
+        authURL: oauthErr.authURL,
+        env: IS_PROD ? 'production' : 'sandbox',
+        clientVersionUsed: CLIENT_VERSION,
+        hint:
+          'Common causes: (1) PHONEPE_CLIENT_ID / PHONEPE_CLIENT_SECRET / PHONEPE_CLIENT_VERSION ' +
+          'do not match what PhonePe issued, (2) PHONEPE_ENV=production but the credentials are ' +
+          'for UAT (or vice-versa), (3) credentials not yet activated by PhonePe. ' +
+          'Check Vercel env vars for stray whitespace and confirm the exact values in PhonePe ' +
+          'Business Dashboard → Developer Settings → API Keys.',
+      });
+    }
 
     // ── Create unique merchant order ID ─────────────────────────────────────
     const merchantOrderId = `PG-${jobId.replace(/-/g, '').slice(0, 20)}-${Date.now().toString().slice(-8)}`;

@@ -3,7 +3,16 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { getJobStatus, updatePaymentStatus, getShopInfo } from '../utils/supabase'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { initiatePhonePePayment, verifyPhonePePayment } from '../services/paymentService'
-import { CheckCircle2, AlertCircle, Loader2, ShieldCheck, CreditCard } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, ShieldCheck, ChevronRight } from 'lucide-react'
+
+// Keep in sync with VPA_REGEX in api/phonepe-initiate.js.
+const VPA_REGEX = /^[\w.\-]{2,}@[a-z]{2,}$/i
+
+const UPI_APPS = [
+  { id: 'phonepe', label: 'PhonePe',    icon: '/upi/phonepe.svg' },
+  { id: 'gpay',    label: 'Google Pay', icon: '/upi/gpay.svg' },
+  { id: 'paytm',   label: 'Paytm',      icon: '/upi/paytm.svg' },
+]
 
 const PaymentPage = () => {
   const { jobId } = useParams()
@@ -17,6 +26,11 @@ const PaymentPage = () => {
   const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState(null)
   const [processing, setProcessing] = useState(false)
+  // Which tile is currently loading: 'phonepe' | 'gpay' | 'paytm' | 'vpa' | 'shop' | null
+  const [activeTile, setActiveTile] = useState(null)
+  const [showVpaInput, setShowVpaInput] = useState(false)
+  const [upiVpa, setUpiVpa] = useState('')
+  const [vpaError, setVpaError] = useState(null)
 
   usePageTitle('Checkout')
 
@@ -59,12 +73,23 @@ const PaymentPage = () => {
   }
 
   // ── Called after PhonePe redirects user back to /payment/status/:jobId ───
+  // Polls the server while PhonePe reports PENDING (typical for the UPI Collect
+  // flow, where the user approves the request on their UPI app a few seconds
+  // after the redirect).
   const handleReturnFromPhonePe = async (txnId) => {
     setVerifying(true)
-    try {
-      const result = await verifyPhonePePayment(txnId)
+    const POLL_INTERVAL_MS = 3000
+    const MAX_ATTEMPTS = 20 // ~60s total
+    let lastResult = null
 
-      if (result.success && result.state === 'COMPLETED') {
+    try {
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        lastResult = await verifyPhonePePayment(txnId)
+        if (lastResult.state !== 'PENDING') break
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+      }
+
+      if (lastResult?.success && lastResult.state === 'COMPLETED') {
         // The webhook already updated Supabase, but we double-mark here as a safety net
         await updatePaymentStatus(jobId, 'paid')
         saveToLocalHistory(jobId)
@@ -72,8 +97,8 @@ const PaymentPage = () => {
         setTimeout(() => navigate(`/status/${jobId}`), 2500)
       } else {
         setError(
-          result.state === 'PENDING'
-            ? 'Payment is still processing. Please wait a moment and check your order status.'
+          lastResult?.state === 'PENDING'
+            ? 'Payment is still processing. Open your UPI app to approve, then check your order status.'
             : 'Payment was not successful. Please try again or choose Pay at Shop.'
         )
         await loadJobDetails()
@@ -103,35 +128,42 @@ const PaymentPage = () => {
     }
   }
 
-  // ── Pay online via PhonePe ────────────────────────────────────────────────
-  const handlePhonePePayment = async () => {
+  // ── Pay via UPI (Intent for a named app, or Collect for a typed VPA) ─────
+  const handleUpiPayment = async ({ tileId, upiApp, upiVpa: vpa }) => {
     setProcessing(true)
+    setActiveTile(tileId)
     setError(null)
     try {
       const { redirectUrl, merchantOrderId } = await initiatePhonePePayment({
         jobId,
-        amount: job.total_cost,
-        customerName: job.customer_name,
-        customerEmail: job.customer_email,
-        customerMobile: job.customer_mobile,
+        upiApp,
+        upiVpa: vpa,
       })
 
-      // Save orderId to localStorage so we can verify on return
       localStorage.setItem(`pp_txn_${jobId}`, merchantOrderId)
-
-      // Redirect user to PhonePe payment page
       window.location.href = redirectUrl
-
     } catch (err) {
       console.error('❌ PhonePe initiation error:', err)
       setError(err.message || 'Failed to start payment. Please try again.')
       setProcessing(false)
+      setActiveTile(null)
     }
+  }
+
+  const handleVpaSubmit = () => {
+    const trimmed = upiVpa.trim()
+    if (!VPA_REGEX.test(trimmed)) {
+      setVpaError('Enter a valid UPI ID like name@bank or 9999999999@upi')
+      return
+    }
+    setVpaError(null)
+    handleUpiPayment({ tileId: 'vpa', upiVpa: trimmed })
   }
 
   // ── Pay at Shop (original flow) ───────────────────────────────────────────
   const handlePayAtShop = async () => {
     setProcessing(true)
+    setActiveTile('shop')
     try {
       await updatePaymentStatus(jobId, 'paid')
       saveToLocalHistory(jobId)
@@ -141,6 +173,7 @@ const PaymentPage = () => {
       console.error('Error confirming order:', err)
       setError('Failed to confirm order. Please try again.')
       setProcessing(false)
+      setActiveTile(null)
     }
   }
 
@@ -232,31 +265,109 @@ const PaymentPage = () => {
 
             {/* Payment Options */}
             <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pay via UPI</h3>
+                <span className="text-[10px] text-slate-400">Choose your app</span>
+              </div>
 
-              {/* PhonePe Online Payment */}
-              <button
-                onClick={handlePhonePePayment}
-                disabled={processing}
-                className="w-full bg-gradient-to-r from-[#5f259f] to-[#7c35c7] text-white font-bold text-base py-4 px-5 rounded-2xl shadow-lg hover:opacity-90 active:scale-95 transition-all flex items-center justify-between gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
-                    <CreditCard className="w-5 h-5" />
+              {/* UPI app picker — 2x2 grid on mobile, large thumb-friendly tiles */}
+              <div className="grid grid-cols-2 gap-3">
+                {UPI_APPS.map((app) => {
+                  const isLoading = processing && activeTile === app.id
+                  return (
+                    <button
+                      key={app.id}
+                      onClick={() => handleUpiPayment({ tileId: app.id, upiApp: app.id })}
+                      disabled={processing}
+                      className="group relative aspect-[5/4] bg-white border-2 border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-blue-400 hover:shadow-md active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:border-slate-200 disabled:hover:shadow-none"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-7 h-7 text-blue-600 animate-spin" />
+                      ) : (
+                        <img src={app.icon} alt={app.label} className="w-12 h-12" loading="lazy" />
+                      )}
+                      <span className="text-xs font-bold text-slate-700">{app.label}</span>
+                    </button>
+                  )
+                })}
+
+                {/* Pay with UPI ID tile (Collect flow) */}
+                <button
+                  onClick={() => {
+                    setShowVpaInput((s) => !s)
+                    setVpaError(null)
+                  }}
+                  disabled={processing}
+                  className={`group relative aspect-[5/4] border-2 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+                    showVpaInput
+                      ? 'bg-blue-50 border-blue-500'
+                      : 'bg-white border-slate-200 hover:border-blue-400 hover:shadow-md'
+                  }`}
+                >
+                  <img src="/upi/upi.svg" alt="UPI" className="w-12 h-12" loading="lazy" />
+                  <span className="text-xs font-bold text-slate-700">Pay with UPI ID</span>
+                </button>
+              </div>
+
+              {/* Inline VPA input — revealed when "Pay with UPI ID" tile is tapped */}
+              {showVpaInput && (
+                <div className="mt-1 p-3 bg-blue-50 border border-blue-200 rounded-2xl space-y-2">
+                  <label htmlFor="upi-vpa" className="text-xs font-semibold text-slate-700 block">
+                    Enter your UPI ID
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="upi-vpa"
+                      type="text"
+                      inputMode="email"
+                      autoComplete="off"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      placeholder="name@bank"
+                      value={upiVpa}
+                      onChange={(e) => {
+                        setUpiVpa(e.target.value)
+                        if (vpaError) setVpaError(null)
+                      }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleVpaSubmit()}
+                      disabled={processing}
+                      className={`flex-1 px-3 py-2.5 bg-white rounded-xl border text-sm focus:outline-none focus:ring-2 transition ${
+                        vpaError
+                          ? 'border-red-400 focus:ring-red-200'
+                          : 'border-slate-300 focus:ring-blue-200 focus:border-blue-400'
+                      }`}
+                    />
+                    <button
+                      onClick={handleVpaSubmit}
+                      disabled={processing || !upiVpa.trim()}
+                      className="px-4 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                    >
+                      {processing && activeTile === 'vpa' ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          Pay
+                          <ChevronRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
                   </div>
-                  <div className="text-left">
-                    <div className="text-sm font-black">Pay Online</div>
-                    <div className="text-xs text-purple-200">UPI · Cards · Net Banking</div>
-                  </div>
+                  {vpaError ? (
+                    <p className="text-xs text-red-600 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      {vpaError}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-slate-500">
+                      You'll get a payment request on your UPI app to approve.
+                    </p>
+                  )}
                 </div>
-                {processing ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <span className="text-lg font-black">₹{job?.total_cost?.toFixed(2)}</span>
-                )}
-              </button>
+              )}
 
               {/* Powered by PhonePe badge */}
-              <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 pt-1">
                 <ShieldCheck className="w-3 h-3" />
                 <span>Secured & powered by <strong className="text-[#5f259f]">PhonePe</strong></span>
               </div>

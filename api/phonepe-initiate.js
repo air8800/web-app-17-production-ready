@@ -2,7 +2,16 @@ import { createClient } from '@supabase/supabase-js';
 
 // Build marker — bump this string in every code change so you can verify which
 // deployment Vercel is serving. Echoed in every response from this handler.
-const BUILD_VERSION = 'phonepe-v2-oauth-fix-2026-05-16';
+const BUILD_VERSION = 'phonepe-v2-upi-picker-2026-05-16';
+
+// UPI apps we expose as direct-tap tiles in the checkout UI. PhonePe's
+// `paymentModeConfig` `apps` field is case-sensitive lowercase.
+const VALID_UPI_APPS = new Set(['phonepe', 'gpay', 'paytm']);
+
+// Match a typical UPI VPA, e.g. "name@bank", "9999999999@upi", "name.surname-1@okhdfcbank".
+// Intentionally loose on the local-part (UPI handles allow word chars, dot, dash);
+// strict on the handle being [a-z]{2,}. Used identically on the client.
+const VPA_REGEX = /^[\w.\-]{2,}@[a-z]{2,}$/i;
 
 // ── PhonePe OAuth Token Cache ───────────────────────────────────────────────
 let cachedToken = null;
@@ -124,11 +133,29 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { jobId, customerMobile } = req.body;
+    const { jobId, upiApp, upiVpa } = req.body || {};
 
     if (!jobId) {
       return res.status(400).json({ error: 'Missing required field: jobId' });
     }
+
+    // ── Validate optional UPI hints from the client ───────────────────────────
+    // Both fields are optional. If neither is supplied, the PhonePe page will
+    // show all UPI flows (Intent + Collect + QR) with all supported apps.
+    if (upiApp != null && !VALID_UPI_APPS.has(String(upiApp).toLowerCase())) {
+      return res.status(400).json({
+        error: 'Invalid upiApp',
+        hint: `Allowed values: ${[...VALID_UPI_APPS].join(', ')}`,
+      });
+    }
+    if (upiVpa != null && !VPA_REGEX.test(String(upiVpa).trim())) {
+      return res.status(400).json({
+        error: 'Invalid UPI ID',
+        hint: 'Expected format like name@bank (e.g. 9999999999@upi)',
+      });
+    }
+    const normalizedUpiApp = upiApp ? String(upiApp).toLowerCase() : null;
+    const normalizedUpiVpa = upiVpa ? String(upiVpa).trim() : null;
 
     const CLIENT_ID      = process.env.PHONEPE_CLIENT_ID;
     const CLIENT_SECRET  = process.env.PHONEPE_CLIENT_SECRET;
@@ -307,6 +334,21 @@ export default async function handler(req, res) {
     // PhonePe expects amount in paise (₹1 = 100 paise)
     const amountPaise = Math.round(parseFloat(amount) * 100);
 
+    // ── Build payment-mode constraint ───────────────────────────────────────
+    // 1. Named UPI app (PhonePe / GPay / Paytm) → restrict to Intent for that
+    //    one app, so PhonePe's hosted page auto-launches it on mobile.
+    // 2. UPI ID (VPA) → restrict to Collect flow; PhonePe will prompt the user
+    //    to confirm the VPA on its page and push a collect request to it.
+    // 3. Neither → fall back to all UPI flows (Intent + Collect + QR).
+    let upiConstraint;
+    if (normalizedUpiApp) {
+      upiConstraint = { type: 'UPI', flows: ['INTENT'], apps: [normalizedUpiApp] };
+    } else if (normalizedUpiVpa) {
+      upiConstraint = { type: 'UPI', flows: ['COLLECT'] };
+    } else {
+      upiConstraint = { type: 'UPI', flows: ['INTENT', 'COLLECT', 'QR'] };
+    }
+
     // ── Initiate payment ────────────────────────────────────────────────────
     const payload = {
       merchantOrderId,
@@ -318,7 +360,18 @@ export default async function handler(req, res) {
         merchantUrls: {
           redirectUrl: `${APP_URL}/payment/status/${jobId}?orderId=${merchantOrderId}`,
         },
+        paymentModeConfig: {
+          version: 'V2',
+          enabledPaymentModes: [upiConstraint],
+        },
       },
+      // Skip the PhonePe login screen when we have the customer's mobile number on file.
+      ...(job.customer_mobile
+        ? { prefillUserLoginDetails: { phoneNumber: String(job.customer_mobile) } }
+        : {}),
+      // Stash the entered VPA in metaInfo for traceability (PhonePe v2 web has no
+      // documented way to pre-fill it on the Collect page).
+      ...(normalizedUpiVpa ? { metaInfo: { udf1: `vpa:${normalizedUpiVpa}` } } : {}),
     };
 
     const pgRes = await fetch(`${baseURL}/checkout/v2/pay`, {

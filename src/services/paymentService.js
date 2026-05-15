@@ -10,25 +10,21 @@
  * Initiates a PhonePe payment for a given job.
  * Returns a redirect URL → send the user there to complete payment on PhonePe's hosted page.
  *
+ * Amount / customer fields are read server-side from Supabase — the client never
+ * controls them. Only the chosen UPI app (or VPA) is forwarded as a hint so the
+ * server can restrict PhonePe's hosted page to that single flow.
+ *
  * @param {Object} params
- * @param {string} params.jobId             - Your Supabase print_job ID
- * @param {number} params.amount            - Amount in ₹ (e.g. 49.50)
- * @param {string} params.customerName      - Customer's name
- * @param {string} params.customerEmail     - Customer's email
- * @param {string} [params.customerMobile]  - Customer's mobile (optional, defaults to placeholder)
- * @returns {Promise<{ redirectUrl: string, merchantTransactionId: string }>}
+ * @param {string} params.jobId   - Your Supabase print_job ID
+ * @param {'phonepe'|'gpay'|'paytm'} [params.upiApp] - Named UPI app for Intent flow
+ * @param {string} [params.upiVpa] - UPI ID (VPA) for Collect flow, e.g. "name@bank"
+ * @returns {Promise<{ redirectUrl: string, merchantOrderId: string }>}
  */
-export const initiatePhonePePayment = async ({
-  jobId,
-  amount,
-  customerName,
-  customerEmail,
-  customerMobile,
-}) => {
+export const initiatePhonePePayment = async ({ jobId, upiApp, upiVpa }) => {
   const response = await fetch('/api/phonepe-initiate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jobId, amount, customerName, customerEmail, customerMobile }),
+    body: JSON.stringify({ jobId, upiApp, upiVpa }),
   });
 
   const data = await response.json().catch(() => ({}));

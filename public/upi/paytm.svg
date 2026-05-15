@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Paytm">
+  <rect width="64" height="64" rx="14" fill="#fff" stroke="#dadce0" stroke-width="1"/>
+  <rect x="14" y="22" width="36" height="20" rx="4" fill="#00baf2"/>
+  <rect x="14" y="22" width="36" height="10" rx="4" fill="#002970"/>
+  <text x="32" y="38" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="11" fill="#fff" text-anchor="middle">Paytm</text>
+</svg>

@@ -3,7 +3,7 @@
 Log of PhonePe payment integration work on PrintGet (`printget.in`): failures, fixes, env setup, Supabase expectations, and open issues.
 
 **Last updated:** May 16, 2026
-**Status:** ✅ Working end-to-end — origin allowlist, credentials, Supabase project alignment, and PhonePe v2 OAuth all green.
+**Status:** ✅ Working end-to-end — full payment-method UI (UPI apps + Card + Net Banking), responsive desktop/tablet/mobile, origin allowlist, credentials, Supabase project alignment, and PhonePe v2 OAuth all green.
 
 ---
 
@@ -246,7 +246,63 @@ The OAuth call in `api/phonepe-initiate.js` (and `api/phonepe-status.js`, and de
 
 ---
 
-### 6. Diagnostics: build-version probe — ADDED
+### 6. Restricted to UPI only / desktop UX / `/payment/status` 404 — FIXED (code)
+
+**Symptoms**
+
+- PhonePe's hosted checkout was only showing UPI tiles — no Debit/Credit Card, no Net Banking. Compare to PhonePe's reference [Configure Payment Modes](https://developer.phonepe.com/payment-gateway/website-integration/standard-checkout/api-integration/api-reference/create-payment/configure-payment-modes) docs which show UPI + Card + Net Banking by default.
+- Desktop checkout was a narrow `max-w-md` mobile-style card centered on a huge screen.
+- After paying, PhonePe redirected back to `/payment/status/{jobId}?orderId=...` which **was not a real route** in `src/App.jsx` (only `/payment/:jobId` existed) → user landed on `NotFoundPage` and the status check never ran.
+- `prefillUserLoginDetails.phoneNumber` was reading `job.customer_mobile` but the schema column is `customer_phone` → phone prefill never worked.
+
+**Root cause**
+
+`api/phonepe-initiate.js` was sending:
+
+```js
+paymentModeConfig: {
+  version: 'V2',
+  enabledPaymentModes: [upiConstraint],  // ← UPI ONLY
+}
+```
+
+Per the [Configure Payment Modes docs](https://developer.phonepe.com/payment-gateway/website-integration/standard-checkout/api-integration/api-reference/create-payment/configure-payment-modes):
+
+> `enabledPaymentModes`: Only the methods and instruments matching your constraints will be shown to customers. All other payment options are suppressed.
+
+So Card / Net Banking were being explicitly suppressed.
+
+**Fix (deployed)**
+
+1. **Server (`api/phonepe-initiate.js`)**
+   - Removed `paymentModeConfig` from the payload entirely. PhonePe's hosted page now shows its full responsive UI (UPI apps + Card + Net Banking) — same as the reference screenshot in the PhonePe guide.
+   - Removed `upiApp` / `upiVpa` request body params and the related VPA regex validation — there's no longer any client-side payment-method preselection.
+   - Fixed `job.customer_mobile` → `job.customer_phone` so phone prefill actually works (skips the PhonePe login screen for returning customers).
+   - Changed `redirectUrl` to `${APP_URL}/payment/${jobId}?orderId=${merchantOrderId}` so it matches the real `/payment/:jobId` route in `src/App.jsx`. `PaymentPage` already detects `?orderId=` and runs `verifyPhonePePayment` automatically.
+   - Wrapped the `/checkout/v2/pay` response in a `try/catch` JSON parse + structured 502 with `phonepeStatus` / `phonepeBody` (same diagnostic shape as the OAuth error path).
+   - Added `metaInfo.udf1 = "jobId:<uuid>"` for traceability in PhonePe status / webhook payloads.
+   - Bumped `BUILD_VERSION` to `phonepe-v2-full-checkout-2026-05-16`.
+
+2. **Client service (`src/services/paymentService.js`)**
+   - `initiatePhonePePayment` simplified to `{ jobId }` only.
+   - Console error block now also surfaces `phonepeStatus` / `phonepeBody` / `authURL` / `buildVersion`.
+
+3. **Checkout page (`src/pages/PaymentPage.jsx`)**
+   - Replaced the custom UPI tile picker + inline VPA input with a clean **handoff card** that mirrors PhonePe's hosted page layout: "UPI Payment" preview tiles (PhonePe / Google Pay / Paytm / Apps & QR) + "Other Methods" rows (Debit/Credit Card, Net Banking) + a single **Continue to Pay ₹X.XX** button → redirects to PhonePe.
+   - Responsive layout:
+     - Mobile: stacked, full-width card.
+     - Desktop (`lg+`): two-column grid inside `max-w-4xl` — order summary on the left, payment action on the right.
+   - Kept the "Pay at Shop" alternative.
+   - Updated comment header `/payment/status/:jobId` → `/payment/:jobId` to match the actual route.
+
+4. **Webhook (`api/phonepe-webhook.js`)**
+   - Deleted dead OAuth code that still used the old broken `…/v1/oauth/token` + HTTP Basic auth. The webhook is push-only — it never calls back into PhonePe — so no token is needed.
+
+**Status:** ✅ Resolved. Live checkout now matches the PhonePe reference UI on both desktop and mobile.
+
+---
+
+### 7. Diagnostics: build-version probe — ADDED
 
 Two changes make it possible to *prove* which deployment is serving traffic:
 

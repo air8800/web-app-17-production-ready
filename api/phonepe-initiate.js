@@ -2,16 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // Build marker — bump this string in every code change so you can verify which
 // deployment Vercel is serving. Echoed in every response from this handler.
-const BUILD_VERSION = 'phonepe-v2-upi-picker-2026-05-16';
-
-// UPI apps we expose as direct-tap tiles in the checkout UI. PhonePe's
-// `paymentModeConfig` `apps` field is case-sensitive lowercase.
-const VALID_UPI_APPS = new Set(['phonepe', 'gpay', 'paytm']);
-
-// Match a typical UPI VPA, e.g. "name@bank", "9999999999@upi", "name.surname-1@okhdfcbank".
-// Intentionally loose on the local-part (UPI handles allow word chars, dot, dash);
-// strict on the handle being [a-z]{2,}. Used identically on the client.
-const VPA_REGEX = /^[\w.\-]{2,}@[a-z]{2,}$/i;
+const BUILD_VERSION = 'phonepe-v2-full-checkout-2026-05-16';
 
 // ── PhonePe OAuth Token Cache ───────────────────────────────────────────────
 let cachedToken = null;
@@ -114,8 +105,16 @@ function isAllowedRequestOrigin(originHeader) {
 
 /**
  * POST /api/phonepe-initiate
- * Creates a PhonePe Standard Checkout payment session.
- * Security hardened: amount always read from DB, origin verified, job state validated.
+ *
+ * Creates a PhonePe Standard Checkout v2 payment session and returns the
+ * redirectUrl. The client redirects the user there; PhonePe's hosted page
+ * presents the full payment method UI (UPI apps + Card + Net Banking), which
+ * is responsive across desktop, tablet, and mobile.
+ *
+ * Security hardened:
+ *  - Amount + customer info are ALWAYS read from Supabase, never from the body.
+ *  - Origin is verified against an allowlist.
+ *  - Job state is validated (no double-pay, no cancelled-order pay).
  */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -133,29 +132,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { jobId, upiApp, upiVpa } = req.body || {};
+    const { jobId } = req.body || {};
 
     if (!jobId) {
       return res.status(400).json({ error: 'Missing required field: jobId' });
     }
-
-    // ── Validate optional UPI hints from the client ───────────────────────────
-    // Both fields are optional. If neither is supplied, the PhonePe page will
-    // show all UPI flows (Intent + Collect + QR) with all supported apps.
-    if (upiApp != null && !VALID_UPI_APPS.has(String(upiApp).toLowerCase())) {
-      return res.status(400).json({
-        error: 'Invalid upiApp',
-        hint: `Allowed values: ${[...VALID_UPI_APPS].join(', ')}`,
-      });
-    }
-    if (upiVpa != null && !VPA_REGEX.test(String(upiVpa).trim())) {
-      return res.status(400).json({
-        error: 'Invalid UPI ID',
-        hint: 'Expected format like name@bank (e.g. 9999999999@upi)',
-      });
-    }
-    const normalizedUpiApp = upiApp ? String(upiApp).toLowerCase() : null;
-    const normalizedUpiVpa = upiVpa ? String(upiVpa).trim() : null;
 
     const CLIENT_ID      = process.env.PHONEPE_CLIENT_ID;
     const CLIENT_SECRET  = process.env.PHONEPE_CLIENT_SECRET;
@@ -193,7 +174,6 @@ export default async function handler(req, res) {
     let serviceKeyDiagnostics = { keyProjectRef: 'unknown', role: 'unknown' };
     try {
       const payloadB64 = (SUPABASE_SERVICE_ROLE_KEY || '').split('.')[1] || '';
-      // base64url → base64
       const padded = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
       const json = Buffer.from(padded, 'base64').toString('utf8');
       const payload = JSON.parse(json);
@@ -238,6 +218,7 @@ export default async function handler(req, res) {
 
       return res.status(500).json({
         error: 'Failed to load order',
+        buildVersion: BUILD_VERSION,
         details: jobError.message || jobError.hint || jobError.code || JSON.stringify(jobError),
         code: jobError.code,
         hint: jobError.hint,
@@ -261,6 +242,7 @@ export default async function handler(req, res) {
       );
       return res.status(404).json({
         error: 'Order not found',
+        buildVersion: BUILD_VERSION,
         jobId,
         serverProjectRef,
         hint:
@@ -284,10 +266,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Order has no valid amount' });
     }
 
-    // Use DB values — client has zero control over amount or customer info
-    const amount        = job.total_cost;
-    const customerName  = job.customer_name;
-    const customerEmail = job.customer_email ?? null;
+    // Use DB values — client has zero control over amount.
+    const amount = job.total_cost;
 
     const baseURL = IS_PROD
       ? 'https://api.phonepe.com/apis/pg'
@@ -329,27 +309,26 @@ export default async function handler(req, res) {
     }
 
     // ── Create unique merchant order ID ─────────────────────────────────────
+    // PhonePe constraint: max 63 chars, only [a-zA-Z0-9_-].
     const merchantOrderId = `PG-${jobId.replace(/-/g, '').slice(0, 20)}-${Date.now().toString().slice(-8)}`;
 
     // PhonePe expects amount in paise (₹1 = 100 paise)
     const amountPaise = Math.round(parseFloat(amount) * 100);
 
-    // ── Build payment-mode constraint ───────────────────────────────────────
-    // 1. Named UPI app (PhonePe / GPay / Paytm) → restrict to Intent for that
-    //    one app, so PhonePe's hosted page auto-launches it on mobile.
-    // 2. UPI ID (VPA) → restrict to Collect flow; PhonePe will prompt the user
-    //    to confirm the VPA on its page and push a collect request to it.
-    // 3. Neither → fall back to all UPI flows (Intent + Collect + QR).
-    let upiConstraint;
-    if (normalizedUpiApp) {
-      upiConstraint = { type: 'UPI', flows: ['INTENT'], apps: [normalizedUpiApp] };
-    } else if (normalizedUpiVpa) {
-      upiConstraint = { type: 'UPI', flows: ['COLLECT'] };
-    } else {
-      upiConstraint = { type: 'UPI', flows: ['INTENT', 'COLLECT', 'QR'] };
-    }
-
     // ── Initiate payment ────────────────────────────────────────────────────
+    //
+    // We deliberately omit `paymentModeConfig` so PhonePe's hosted page shows
+    // its full responsive UI: UPI apps (PhonePe / Google Pay / Paytm / Apps &
+    // UPI QR), Debit/Credit Card, and Net Banking. PhonePe's page adapts itself
+    // to desktop, tablet, and mobile — we don't need to pre-select a method.
+    //
+    // If we ever need to restrict modes again (e.g. UPI-only for low-ticket
+    // orders), add:
+    //   paymentModeConfig: {
+    //     version: 'V2',
+    //     enabledPaymentModes: [{ type: 'UPI' }, { type: 'CARD' }, { type: 'NET_BANKING' }],
+    //   }
+    // See: https://developer.phonepe.com/payment-gateway/website-integration/standard-checkout/api-integration/api-reference/create-payment/configure-payment-modes
     const payload = {
       merchantOrderId,
       amount: amountPaise,
@@ -358,20 +337,19 @@ export default async function handler(req, res) {
         type: 'PG_CHECKOUT',
         message: 'PrintGet Print Order',
         merchantUrls: {
-          redirectUrl: `${APP_URL}/payment/status/${jobId}?orderId=${merchantOrderId}`,
-        },
-        paymentModeConfig: {
-          version: 'V2',
-          enabledPaymentModes: [upiConstraint],
+          // Route must match an actual React Router path in src/App.jsx.
+          // PaymentPage detects the `orderId` query param and calls
+          // /api/phonepe-status to server-verify the result.
+          redirectUrl: `${APP_URL}/payment/${jobId}?orderId=${merchantOrderId}`,
         },
       },
-      // Skip the PhonePe login screen when we have the customer's mobile number on file.
-      ...(job.customer_mobile
-        ? { prefillUserLoginDetails: { phoneNumber: String(job.customer_mobile) } }
+      // Skip the PhonePe login screen when we have the customer's phone on file.
+      // Schema column is `customer_phone` (NOT customer_mobile).
+      ...(job.customer_phone
+        ? { prefillUserLoginDetails: { phoneNumber: String(job.customer_phone) } }
         : {}),
-      // Stash the entered VPA in metaInfo for traceability (PhonePe v2 web has no
-      // documented way to pre-fill it on the Collect page).
-      ...(normalizedUpiVpa ? { metaInfo: { udf1: `vpa:${normalizedUpiVpa}` } } : {}),
+      // Stash the internal jobId for traceability via PhonePe's status/webhook payloads.
+      metaInfo: { udf1: `jobId:${jobId}` },
     };
 
     const pgRes = await fetch(`${baseURL}/checkout/v2/pay`, {
@@ -383,14 +361,22 @@ export default async function handler(req, res) {
       body: JSON.stringify(payload),
     });
 
-    const pgData = await pgRes.json();
+    const pgRawText = await pgRes.text();
+    let pgData = {};
+    try { pgData = JSON.parse(pgRawText); } catch { /* non-JSON */ }
 
     if (!pgRes.ok || pgData.state === 'FAILED') {
-      console.error('❌ PhonePe initiation failed:', pgData);
+      console.error('❌ PhonePe initiation failed:', {
+        status: pgRes.status,
+        body: pgData && Object.keys(pgData).length ? pgData : pgRawText?.slice(0, 500),
+      });
       return res.status(502).json({
         error: 'PhonePe payment initiation failed',
+        buildVersion: BUILD_VERSION,
         code: pgData.code,
         message: pgData.message,
+        phonepeStatus: pgRes.status,
+        phonepeBody: pgData,
       });
     }
 
@@ -398,7 +384,11 @@ export default async function handler(req, res) {
 
     if (!redirectUrl) {
       console.error('❌ No redirectUrl in PhonePe response:', pgData);
-      return res.status(502).json({ error: 'No redirect URL returned from PhonePe' });
+      return res.status(502).json({
+        error: 'No redirect URL returned from PhonePe',
+        buildVersion: BUILD_VERSION,
+        phonepeBody: pgData,
+      });
     }
 
     // ── Save merchantOrderId to Supabase for webhook lookup ─────────────────

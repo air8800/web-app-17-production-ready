@@ -1,39 +1,38 @@
 /**
- * PhonePe Payment Gateway Service
- * Replaces the previous UPIGateway integration.
+ * PhonePe Standard Checkout v2 — client service.
  *
- * All sensitive operations (checksum generation, API calls to PhonePe)
- * are done server-side via Vercel API routes to protect your Salt Key.
+ * Flow (matches the official PhonePe guide):
+ *   1. Client POSTs jobId to /api/phonepe-initiate.
+ *   2. Server reads amount + customer info from Supabase (client cannot tamper),
+ *      calls PhonePe /checkout/v2/pay, returns a `redirectUrl`.
+ *   3. Client redirects the user to that URL. PhonePe's hosted page then
+ *      presents the full responsive payment UI (UPI apps + Card + Net Banking)
+ *      across desktop, tablet, and mobile.
+ *   4. After the user pays, PhonePe redirects back to
+ *      /payment/:jobId?orderId=<merchantOrderId>.
+ *   5. Client calls /api/phonepe-status to server-verify the result.
  */
 
 /**
- * Initiates a PhonePe payment for a given job.
- * Returns a redirect URL → send the user there to complete payment on PhonePe's hosted page.
- *
- * Amount / customer fields are read server-side from Supabase — the client never
- * controls them. Only the chosen UPI app (or VPA) is forwarded as a hint so the
- * server can restrict PhonePe's hosted page to that single flow.
- *
- * @param {Object} params
- * @param {string} params.jobId   - Your Supabase print_job ID
- * @param {'phonepe'|'gpay'|'paytm'} [params.upiApp] - Named UPI app for Intent flow
- * @param {string} [params.upiVpa] - UPI ID (VPA) for Collect flow, e.g. "name@bank"
+ * Initiate a PhonePe checkout for a job.
+ * @param {{ jobId: string }} params
  * @returns {Promise<{ redirectUrl: string, merchantOrderId: string }>}
  */
-export const initiatePhonePePayment = async ({ jobId, upiApp, upiVpa }) => {
+export const initiatePhonePePayment = async ({ jobId }) => {
   const response = await fetch('/api/phonepe-initiate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jobId, upiApp, upiVpa }),
+    body: JSON.stringify({ jobId }),
   });
 
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok || !data.success) {
     // Surface server diagnostics in the console so misconfigured envs are immediately visible.
-    if (data && (data.serverProjectRef || data.hint || data.details || data.likelyCauses)) {
+    if (data && (data.serverProjectRef || data.hint || data.details || data.likelyCauses || data.phonepeBody)) {
       console.error('❌ phonepe-initiate failed:', {
         status: response.status,
+        buildVersion: data.buildVersion,
         error: data.error,
         hint: data.hint,
         details: data.details,
@@ -45,6 +44,9 @@ export const initiatePhonePePayment = async ({ jobId, upiApp, upiVpa }) => {
         projectsMatch: data.projectsMatch,
         roleIsServiceRole: data.roleIsServiceRole,
         likelyCauses: data.likelyCauses,
+        phonepeStatus: data.phonepeStatus,
+        phonepeBody: data.phonepeBody,
+        authURL: data.authURL,
       });
     }
     const baseMsg = data.message || data.error || 'PhonePe payment initiation failed';
@@ -61,11 +63,11 @@ export const initiatePhonePePayment = async ({ jobId, upiApp, upiVpa }) => {
 };
 
 /**
- * Verifies the payment status server-side after PhonePe redirects the user back.
- * Always call this before marking an order as paid — never trust the redirect URL params alone.
+ * Server-verify a PhonePe order status after the user returns from checkout.
+ * Always call this before marking an order paid — never trust redirect URL params alone.
  *
- * @param {string} merchantOrderId - The orderId returned from initiatePhonePePayment
- * @returns {Promise<{ success: boolean, state: string, amount: number, ... }>}
+ * @param {string} merchantOrderId - The orderId returned from initiatePhonePePayment.
+ * @returns {Promise<{ success: boolean, state: 'COMPLETED'|'FAILED'|'PENDING', amount: number, paymentMethod: string|null }>}
  */
 export const verifyPhonePePayment = async (merchantOrderId) => {
   const response = await fetch(

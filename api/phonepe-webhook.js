@@ -1,37 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-// ── OAuth Token Cache ───────────────────────────────────────────────────────
-let cachedToken = null;
-let tokenExpiresAt = 0;
-
-async function getPhonePeToken(clientId, clientSecret, baseURL) {
-  const now = Date.now();
-  if (cachedToken && now < tokenExpiresAt) return cachedToken;
-
-  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-  const res = await fetch(`${baseURL}/v1/oauth/token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Basic ${credentials}`,
-    },
-    body: new URLSearchParams({ grant_type: 'client_credentials', scope: 'openid' }),
-  });
-
-  const data = await res.json();
-  if (!res.ok || !data.access_token) throw new Error('Failed to get PhonePe token');
-  cachedToken = data.access_token;
-  tokenExpiresAt = now + (data.expires_in - 60) * 1000;
-  return cachedToken;
-}
-
 /**
  * POST /api/phonepe-webhook
- * Receives real-time payment status updates from PhonePe.
+ *
+ * Receives real-time payment status updates from PhonePe Standard Checkout v2.
  *
  * PhonePe sends:
  *   Authorization: Basic base64(webhookUsername:webhookPassword)
  *   Body: { type, payload: { ... } }
+ *
+ * Verification is done entirely against the configured Basic-auth credentials —
+ * no PhonePe OAuth token is needed inside the webhook itself (the webhook is
+ * push-only; we don't call back into PhonePe from here).
  */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

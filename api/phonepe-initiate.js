@@ -117,6 +117,26 @@ export default async function handler(req, res) {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // Decode a couple of public fields from the service role JWT so we can tell, in production logs,
+    // whether the env var is the right key for this project. We never log the signature.
+    let serviceKeyDiagnostics = { keyProjectRef: 'unknown', role: 'unknown' };
+    try {
+      const payloadB64 = (SUPABASE_SERVICE_ROLE_KEY || '').split('.')[1] || '';
+      // base64url → base64
+      const padded = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
+      const json = Buffer.from(padded, 'base64').toString('utf8');
+      const payload = JSON.parse(json);
+      serviceKeyDiagnostics = {
+        keyProjectRef: payload.ref || 'unknown',
+        role: payload.role || 'unknown',
+      };
+    } catch {
+      // Not a JWT at all — likely an invalid value pasted into the env var.
+    }
+
+    const projectsMatch = serviceKeyDiagnostics.keyProjectRef === serverProjectRef;
+    const roleIsServiceRole = serviceKeyDiagnostics.role === 'service_role';
+
     const { data: job, error: jobError } = await supabase
       .from('print_jobs')
       .select('*')
@@ -124,11 +144,39 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     if (jobError) {
-      console.error('❌ Supabase job lookup error:', jobId, jobError, 'on project:', serverProjectRef);
+      console.error('❌ Supabase job lookup error:', {
+        jobId,
+        serverProjectRef,
+        serviceKeyDiagnostics,
+        projectsMatch,
+        roleIsServiceRole,
+        error: jobError,
+      });
+
+      const reasons = [];
+      if (!projectsMatch) {
+        reasons.push(
+          `SUPABASE_SERVICE_ROLE_KEY belongs to project "${serviceKeyDiagnostics.keyProjectRef}" but SUPABASE_URL points to "${serverProjectRef}". They must match.`
+        );
+      }
+      if (!roleIsServiceRole) {
+        reasons.push(
+          `The JWT role is "${serviceKeyDiagnostics.role}" — it must be "service_role" (not "anon").`
+        );
+      }
+
       return res.status(500).json({
         error: 'Failed to load order',
-        details: jobError.message,
+        details: jobError.message || jobError.hint || jobError.code || JSON.stringify(jobError),
+        code: jobError.code,
+        hint: jobError.hint,
+        name: jobError.name,
         serverProjectRef,
+        keyProjectRef: serviceKeyDiagnostics.keyProjectRef,
+        role: serviceKeyDiagnostics.role,
+        projectsMatch,
+        roleIsServiceRole,
+        likelyCauses: reasons.length ? reasons : undefined,
       });
     }
 

@@ -35,18 +35,27 @@ export const initiatePhonePePayment = async ({
 
   if (!response.ok || !data.success) {
     // Surface server diagnostics in the console so misconfigured envs are immediately visible.
-    if (data && (data.serverProjectRef || data.hint || data.details)) {
+    if (data && (data.serverProjectRef || data.hint || data.details || data.likelyCauses)) {
       console.error('❌ phonepe-initiate failed:', {
         status: response.status,
         error: data.error,
         hint: data.hint,
         details: data.details,
+        code: data.code,
+        name: data.name,
         serverProjectRef: data.serverProjectRef,
+        keyProjectRef: data.keyProjectRef,
+        role: data.role,
+        projectsMatch: data.projectsMatch,
+        roleIsServiceRole: data.roleIsServiceRole,
+        likelyCauses: data.likelyCauses,
       });
     }
     const baseMsg = data.message || data.error || 'PhonePe payment initiation failed';
-    const hintMsg = data.hint ? ` (${data.hint})` : '';
-    throw new Error(baseMsg + hintMsg);
+    const causeMsg = Array.isArray(data.likelyCauses) && data.likelyCauses.length
+      ? ` — ${data.likelyCauses.join(' ')}`
+      : (data.hint ? ` (${data.hint})` : '');
+    throw new Error(baseMsg + causeMsg);
   }
 
   return {

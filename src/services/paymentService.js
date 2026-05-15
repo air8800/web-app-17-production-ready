@@ -1,3 +1,12 @@
+export function isOnlinePaymentMethod(job) {
+  const method = (job?.payment_method || '').toLowerCase();
+  return (
+    method.includes('phonepe') ||
+    method === 'online' ||
+    method.includes('pay online')
+  );
+}
+
 /**
  * PhonePe Standard Checkout v2 — client service.
  *

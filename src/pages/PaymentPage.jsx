@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { getJobStatus, updatePaymentStatus, getShopInfo } from '../utils/supabase'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -6,6 +6,7 @@ import {
   initiatePhonePePayment,
   verifyPhonePePayment,
   openPhonePeCheckout,
+  isOnlinePaymentMethod,
 } from '../services/paymentService'
 import { getCheckoutPlatform } from '../utils/devicePlatform'
 import { CheckCircle2, AlertCircle, Loader2, ShieldCheck, CreditCard } from 'lucide-react'
@@ -14,27 +15,57 @@ const PaymentPage = () => {
   const { jobId } = useParams()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const autoPayAttempted = useRef(false)
 
   const [job, setJob] = useState(null)
   const [shop, setShop] = useState(null)
   const [paymentConfirmed, setPaymentConfirmed] = useState(false)
   const [loading, setLoading] = useState(true)
   const [verifying, setVerifying] = useState(false)
+  const [redirectingToPhonePe, setRedirectingToPhonePe] = useState(false)
   const [error, setError] = useState(null)
   const [processing, setProcessing] = useState(false)
 
   usePageTitle('Checkout')
 
-  useEffect(() => {
-    const orderId = searchParams.get('orderId')
-    if (orderId) {
-      handleReturnFromPhonePe(orderId)
-    } else {
-      loadJobDetails()
+  const saveToLocalHistory = (id) => {
+    try {
+      localStorage.setItem('printget_recent_order', JSON.stringify({
+        jobId: id,
+        timestamp: Date.now(),
+      }))
+      const history = JSON.parse(localStorage.getItem('printget_order_history') || '[]')
+      if (!history.includes(id)) {
+        history.push(id)
+        localStorage.setItem('printget_order_history', JSON.stringify(history))
+      }
+    } catch (e) {
+      console.error('Failed to save order history', e)
+    }
+  }
+
+  const startPhonePeCheckout = useCallback(async () => {
+    setProcessing(true)
+    setError(null)
+    setRedirectingToPhonePe(true)
+    const platform = getCheckoutPlatform()
+
+    try {
+      const { redirectUrl, merchantOrderId } = await initiatePhonePePayment({
+        jobId,
+        platform,
+      })
+      localStorage.setItem(`pp_txn_${jobId}`, merchantOrderId)
+      await openPhonePeCheckout({ redirectUrl })
+    } catch (err) {
+      console.error('PhonePe initiation error:', err)
+      setError(err.message || 'Failed to start payment. Please try again.')
+      setRedirectingToPhonePe(false)
+      setProcessing(false)
     }
   }, [jobId])
 
-  const loadJobDetails = async () => {
+  const loadJobDetails = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -53,15 +84,22 @@ const PaymentPage = () => {
       const { data: shopData } = await getShopInfo(jobData.shop_id)
       if (shopData) setShop(shopData)
 
+      // User already chose Pay Online on the order page — go straight to PhonePe.
+      if (isOnlinePaymentMethod(jobData) && !autoPayAttempted.current) {
+        autoPayAttempted.current = true
+        setLoading(false)
+        await startPhonePeCheckout()
+        return
+      }
     } catch (err) {
       console.error('Error loading job details:', err)
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }
+  }, [jobId, navigate, startPhonePeCheckout])
 
-  const handleReturnFromPhonePe = async (txnId) => {
+  const handleReturnFromPhonePe = useCallback(async (txnId) => {
     setVerifying(true)
     const POLL_INTERVAL_MS = 3000
     const MAX_ATTEMPTS = 20
@@ -85,53 +123,32 @@ const PaymentPage = () => {
             ? 'Payment is still processing. Please check your order status.'
             : 'Payment was not successful. Please try again or choose Pay at Shop.'
         )
-        await loadJobDetails()
+        const { data: jobData } = await getJobStatus(jobId)
+        if (jobData) setJob(jobData)
       }
     } catch (err) {
       console.error('Payment verification error:', err)
       setError('Could not verify payment. Please check your order status.')
-      await loadJobDetails()
+      const { data: jobData } = await getJobStatus(jobId)
+      if (jobData) setJob(jobData)
     } finally {
       setVerifying(false)
       setProcessing(false)
+      setRedirectingToPhonePe(false)
     }
-  }
+  }, [jobId, navigate])
 
-  const saveToLocalHistory = (id) => {
-    try {
-      localStorage.setItem('printget_recent_order', JSON.stringify({
-        jobId: id,
-        timestamp: Date.now()
-      }))
-      const history = JSON.parse(localStorage.getItem('printget_order_history') || '[]')
-      if (!history.includes(id)) {
-        history.push(id)
-        localStorage.setItem('printget_order_history', JSON.stringify(history))
-      }
-    } catch (e) {
-      console.error('Failed to save order history', e)
+  const orderIdParam = searchParams.get('orderId')
+
+  useEffect(() => {
+    if (orderIdParam) {
+      handleReturnFromPhonePe(orderIdParam)
+    } else {
+      loadJobDetails()
     }
-  }
+  }, [jobId, orderIdParam])
 
-  const handlePayOnline = async () => {
-    setProcessing(true)
-    setError(null)
-    const platform = getCheckoutPlatform()
-
-    try {
-      const { redirectUrl, merchantOrderId } = await initiatePhonePePayment({
-        jobId,
-        platform,
-      })
-      localStorage.setItem(`pp_txn_${jobId}`, merchantOrderId)
-      await openPhonePeCheckout({ redirectUrl })
-      // Full-page navigation to PhonePe — return flow uses ?orderId= on this route.
-    } catch (err) {
-      console.error('PhonePe initiation error:', err)
-      setError(err.message || 'Failed to start payment. Please try again.')
-      setProcessing(false)
-    }
-  }
+  const handlePayOnline = () => startPhonePeCheckout()
 
   const handlePayAtShop = async () => {
     setProcessing(true)
@@ -147,13 +164,17 @@ const PaymentPage = () => {
     }
   }
 
-  if (loading || verifying) {
+  if (loading || verifying || redirectingToPhonePe) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <Loader2 className="animate-spin w-12 h-12 text-blue-600 mx-auto mb-4" />
           <p className="text-gray-600 font-medium">
-            {verifying ? 'Verifying your payment...' : 'Loading checkout...'}
+            {verifying
+              ? 'Verifying your payment...'
+              : redirectingToPhonePe
+                ? 'Opening secure payment...'
+                : 'Loading...'}
           </p>
         </div>
       </div>
@@ -167,7 +188,12 @@ const PaymentPage = () => {
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-black text-gray-900 mb-2">Something went wrong</h1>
           <p className="text-gray-600 mb-6">{error}</p>
-          <button onClick={() => window.location.reload()} className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl font-bold">Try Again</button>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl font-bold"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     )
@@ -192,16 +218,12 @@ const PaymentPage = () => {
     <div className="min-h-screen bg-slate-50 py-10 px-4">
       <div className="max-w-md mx-auto">
         <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
-
-          {/* Header */}
           <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-6 text-white">
             <h1 className="text-xl font-black uppercase tracking-tight">Checkout</h1>
             <p className="text-blue-100 text-sm opacity-80">Order #{jobId?.slice(0, 8)}</p>
           </div>
 
           <div className="p-6">
-
-            {/* Error banner */}
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
@@ -209,11 +231,8 @@ const PaymentPage = () => {
               </div>
             )}
 
-            {/* Order Summary */}
             <div className="bg-slate-50 rounded-2xl p-4 mb-6 border border-slate-100">
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="font-bold text-slate-900">Order Summary</h2>
-              </div>
+              <h2 className="font-bold text-slate-900 mb-3">Order Summary</h2>
               <div className="space-y-2 text-sm text-slate-600">
                 <div className="flex justify-between">
                   <span>File</span>
@@ -232,9 +251,7 @@ const PaymentPage = () => {
               </div>
             </div>
 
-            {/* Payment Options */}
             <div className="space-y-3">
-
               <button
                 onClick={handlePayOnline}
                 disabled={processing}

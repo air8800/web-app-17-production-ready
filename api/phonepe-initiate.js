@@ -2,23 +2,23 @@ import { createClient } from '@supabase/supabase-js';
 
 // Build marker — bump this string in every code change so you can verify which
 // deployment Vercel is serving. Echoed in every response from this handler.
-const BUILD_VERSION = 'phonepe-v2-mobile-checkout-2026-05-16';
+const BUILD_VERSION = 'phonepe-v2-mobile-redirect-2026-05-16';
 
 function isMobileUserAgent(ua = '') {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
 }
 
-/** Mobile website: UPI app intents (not QR). Desktop: full PhonePe responsive UI. */
+/**
+ * Mobile: block desktop-style UPI QR only — keep INTENT/COLLECT and all apps.
+ * Do NOT use enabledPaymentModes on mobile; that allowlist hides UPI entirely
+ * when INTENT is not enabled on the merchant account.
+ */
 function buildPaymentModeConfig(isMobile) {
   if (!isMobile) return undefined;
 
   return {
     version: 'V2',
-    enabledPaymentModes: [
-      { type: 'UPI', flows: ['INTENT', 'COLLECT'] },
-      { type: 'CARD' },
-      { type: 'NET_BANKING' },
-    ],
+    disabledPaymentModes: [{ type: 'UPI', flows: ['QR'] }],
   };
 }
 

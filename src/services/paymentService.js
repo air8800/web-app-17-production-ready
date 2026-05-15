@@ -1,20 +1,21 @@
 /**
  * PhonePe Standard Checkout v2 — client service.
  *
- * Mobile: platform=mobile → server enables UPI INTENT (+ COLLECT), opens PayPage
- * via official checkout.js in IFRAME mode.
- * Desktop: full hosted checkout (redirect).
+ * Mobile: full-page redirect to PhonePe (their page detects device + shows app UI).
+ * IFRAME is avoided on mobile — it often renders the desktop layout in a small frame.
  */
 
 function checkoutScriptUrlForRedirect(redirectUrl) {
-  const url = redirectUrl || '';
-  if (
-    url.includes('mercury-uat') ||
-    url.includes('mercury-stg') ||
-    url.includes('preprod') ||
-    url.includes('pg-sandbox')
-  ) {
-    return 'https://mercury-stg.phonepe.com/web/bundle/checkout.js';
+  try {
+    const { hostname } = new URL(redirectUrl);
+    if (hostname === 'mercury.phonepe.com') {
+      return 'https://mercury.phonepe.com/web/bundle/checkout.js';
+    }
+    if (hostname === 'mercury-stg.phonepe.com' || hostname === 'mercury-uat.phonepe.com') {
+      return 'https://mercury-stg.phonepe.com/web/bundle/checkout.js';
+    }
+  } catch {
+    /* use production default */
   }
   return 'https://mercury.phonepe.com/web/bundle/checkout.js';
 }
@@ -61,27 +62,21 @@ function loadPhonePeCheckoutScript(redirectUrl) {
 }
 
 /**
- * Open PhonePe PayPage. On mobile uses IFRAME (recommended); desktop uses redirect.
- * @returns {Promise<'CONCLUDED'|'USER_CANCEL'|null>} null when full-page redirect (desktop)
+ * Open PhonePe PayPage with a full-page redirect (recommended for mobile).
+ * Uses PhonePe's transact() when the script loads; falls back to location.href.
  */
-export async function openPhonePeCheckout({ redirectUrl, useIframe }) {
-  if (useIframe) {
+export async function openPhonePeCheckout({ redirectUrl }) {
+  try {
     await loadPhonePeCheckoutScript(redirectUrl);
-    if (!window.PhonePeCheckout?.transact) {
-      throw new Error('PhonePe checkout is not available');
+    if (window.PhonePeCheckout?.transact) {
+      window.PhonePeCheckout.transact({ tokenUrl: redirectUrl });
+      return;
     }
-
-    return new Promise((resolve) => {
-      window.PhonePeCheckout.transact({
-        tokenUrl: redirectUrl,
-        type: 'IFRAME',
-        callback: (response) => resolve(response),
-      });
-    });
+  } catch (err) {
+    console.warn('PhonePe checkout.js unavailable, using direct redirect:', err);
   }
 
   window.location.href = redirectUrl;
-  return null;
 }
 
 /**

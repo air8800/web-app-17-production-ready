@@ -117,7 +117,6 @@ const PaymentPage = () => {
     setProcessing(true)
     setError(null)
     const platform = getCheckoutPlatform()
-    const useIframe = platform === 'mobile'
 
     try {
       const { redirectUrl, merchantOrderId } = await initiatePhonePePayment({
@@ -125,30 +124,8 @@ const PaymentPage = () => {
         platform,
       })
       localStorage.setItem(`pp_txn_${jobId}`, merchantOrderId)
-
-      let checkoutResult
-      try {
-        checkoutResult = await openPhonePeCheckout({ redirectUrl, useIframe })
-      } catch (checkoutErr) {
-        if (useIframe) {
-          console.warn('PhonePe iframe checkout failed, falling back to redirect:', checkoutErr)
-          window.location.href = redirectUrl
-          return
-        }
-        throw checkoutErr
-      }
-
-      if (checkoutResult === 'CONCLUDED') {
-        await handleReturnFromPhonePe(merchantOrderId)
-        return
-      }
-
-      if (checkoutResult === 'USER_CANCEL') {
-        setProcessing(false)
-        return
-      }
-
-      // Desktop: full-page redirect — page unloads, no callback here.
+      await openPhonePeCheckout({ redirectUrl })
+      // Full-page navigation to PhonePe — return flow uses ?orderId= on this route.
     } catch (err) {
       console.error('PhonePe initiation error:', err)
       setError(err.message || 'Failed to start payment. Please try again.')

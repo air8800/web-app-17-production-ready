@@ -96,7 +96,7 @@ const InstallPrompt = () => {
                         <div className="flex items-center gap-3">
                             {/* Icon */}
                             <img
-                                src="/pg-maskable-192.png"
+                                src="/icon-192.png"
                                 alt="PrintGet"
                                 style={{ width: 48, height: 48, borderRadius: 12, flexShrink: 0 }}
                             />

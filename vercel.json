@@ -55,11 +55,11 @@
             ]
         },
         {
-            "source": "/(favicon.ico|favicon.svg|.*\\.png|icon-maskable.svg)",
+            "source": "/(favicon.ico|favicon.svg|favicon-.*\\.png|icon-.*\\.png|apple-touch-icon\\.png|og-image\\.png)",
             "headers": [
                 {
                     "key": "Cache-Control",
-                    "value": "public, max-age=3600, must-revalidate"
+                    "value": "public, max-age=86400, must-revalidate"
                 }
             ]
         },

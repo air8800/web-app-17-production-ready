@@ -37,7 +37,7 @@ const PrintGetLogo = ({
         aria-hidden
       >
         <img
-          src="/favicon.svg?v=3"
+          src="/pg-favicon-48.png"
           alt=""
           className="h-full w-full object-cover"
           draggable={false}

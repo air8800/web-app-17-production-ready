@@ -95,25 +95,11 @@ const InstallPrompt = () => {
                     >
                         <div className="flex items-center gap-3">
                             {/* Icon */}
-                            <div
-                                style={{
-                                    width: 52,
-                                    height: 52,
-                                    borderRadius: 14,
-                                    background: 'rgba(255,255,255,0.15)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexShrink: 0,
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                }}
-                            >
-                                <img
-                                    src="/icon-maskable-192.png"
-                                    alt="PrintGet"
-                                    style={{ width: 36, height: 36, borderRadius: 8 }}
-                                />
-                            </div>
+                            <img
+                                src="/pg-maskable-192.png"
+                                alt="PrintGet"
+                                style={{ width: 48, height: 48, borderRadius: 12, flexShrink: 0 }}
+                            />
 
                             {/* Text */}
                             <div className="flex-1 min-w-0">

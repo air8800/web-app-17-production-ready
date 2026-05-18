@@ -109,7 +109,7 @@ const InstallPrompt = () => {
                                 }}
                             >
                                 <img
-                                    src="/icon-192.png"
+                                    src="/icon-maskable-192.png"
                                     alt="PrintGet"
                                     style={{ width: 36, height: 36, borderRadius: 8 }}
                                 />

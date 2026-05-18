@@ -8,66 +8,61 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(__dirname, '..')
 const PUBLIC = resolve(ROOT, 'public')
 
-const svgBuffer = readFileSync(resolve(PUBLIC, 'favicon.svg'))
+const BRAND_BLUE = '#2563eb'
+const flatten = { background: BRAND_BLUE }
+
+const faviconSvg = readFileSync(resolve(PUBLIC, 'favicon.svg'))
+const maskableSvg = readFileSync(resolve(PUBLIC, 'icon-maskable.svg'))
+
+async function pngFromSvg(svgBuffer, size) {
+  return sharp(svgBuffer).resize(size, size).flatten(flatten).png().toBuffer()
+}
 
 const targets = [
-  { size: 16, file: 'favicon-16.png' },
-  { size: 32, file: 'favicon-32.png' },
-  { size: 48, file: 'favicon-48.png' },
-  { size: 180, file: 'apple-touch-icon.png' },
-  { size: 192, file: 'icon-192.png' },
-  { size: 512, file: 'icon-512.png' },
-  // Open Graph / social share image (square w/ padding)
-  { size: 1200, file: 'og-image.png', og: true },
+  { size: 16, file: 'favicon-16.png', svg: faviconSvg },
+  { size: 32, file: 'favicon-32.png', svg: faviconSvg },
+  { size: 48, file: 'favicon-48.png', svg: faviconSvg },
+  { size: 96, file: 'favicon-96.png', svg: faviconSvg },
+  { size: 180, file: 'apple-touch-icon.png', svg: faviconSvg },
+  { size: 192, file: 'icon-192.png', svg: faviconSvg },
+  { size: 512, file: 'icon-512.png', svg: faviconSvg },
+  { size: 192, file: 'icon-maskable-192.png', svg: maskableSvg },
+  { size: 512, file: 'icon-maskable-512.png', svg: maskableSvg },
 ]
 
 const ensure = async () => {
   for (const t of targets) {
     const out = resolve(PUBLIC, t.file)
-    if (t.og) {
-      // 1200 x 630 with the icon centered on a brand background gradient
-      const bg = Buffer.from(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
-          <defs>
-            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#2563eb"/>
-              <stop offset="100%" stop-color="#4f46e5"/>
-            </linearGradient>
-          </defs>
-          <rect width="1200" height="630" fill="url(#g)"/>
-          <text x="600" y="540" font-family="Inter, Segoe UI, Arial, sans-serif"
-                font-size="64" font-weight="800" fill="#ffffff" text-anchor="middle">
-            PrintGet
-          </text>
-          <text x="600" y="590" font-family="Inter, Segoe UI, Arial, sans-serif"
-                font-size="28" font-weight="500" fill="#dbeafe" text-anchor="middle">
-            Online printing at your nearest shop
-          </text>
-        </svg>`
-      )
-      const iconPng = await sharp(svgBuffer).resize(360, 360).flatten({ background: '#2563eb' }).png().toBuffer()
-      await sharp(bg)
-        .composite([{ input: iconPng, top: 90, left: 420 }])
-        .png()
-        .toFile(out)
-      console.log('Generated', t.file)
-      continue
-    }
-    await sharp(svgBuffer)
-      .resize(t.size, t.size)
-      .flatten({ background: '#2563eb' })
-      .png()
-      .toFile(out)
+    await sharp(t.svg).resize(t.size, t.size).flatten(flatten).png().toFile(out)
     console.log('Generated', t.file)
   }
 
-  // Generate a multi-resolution favicon.ico (16, 32, 48) from PNG buffers
-  const flatten = { background: '#2563eb' }
-  const ico16 = await sharp(svgBuffer).resize(16, 16).flatten(flatten).png().toBuffer()
-  const ico32 = await sharp(svgBuffer).resize(32, 32).flatten(flatten).png().toBuffer()
-  const ico48 = await sharp(svgBuffer).resize(48, 48).flatten(flatten).png().toBuffer()
-  const icoBuffer = await pngToIco([ico16, ico32, ico48])
-  writeFileSync(resolve(PUBLIC, 'favicon.ico'), icoBuffer)
+  // OG share image
+  const ogBg = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#2563eb"/>
+          <stop offset="100%" stop-color="#4f46e5"/>
+        </linearGradient>
+      </defs>
+      <rect width="1200" height="630" fill="url(#g)"/>
+      <text x="600" y="540" font-family="Inter, Segoe UI, Arial, sans-serif"
+            font-size="64" font-weight="800" fill="#ffffff" text-anchor="middle">PrintGet</text>
+      <text x="600" y="590" font-family="Inter, Segoe UI, Arial, sans-serif"
+            font-size="28" font-weight="500" fill="#dbeafe" text-anchor="middle">
+        Online printing at your nearest shop
+      </text>
+    </svg>`
+  )
+  const iconPng = await pngFromSvg(faviconSvg, 360)
+  await sharp(ogBg).composite([{ input: iconPng, top: 90, left: 420 }]).png().toFile(resolve(PUBLIC, 'og-image.png'))
+  console.log('Generated og-image.png')
+
+  const ico16 = await pngFromSvg(faviconSvg, 16)
+  const ico32 = await pngFromSvg(faviconSvg, 32)
+  const ico48 = await pngFromSvg(faviconSvg, 48)
+  writeFileSync(resolve(PUBLIC, 'favicon.ico'), await pngToIco([ico16, ico32, ico48]))
   console.log('Generated favicon.ico')
 }
 

@@ -5,12 +5,8 @@
       <stop offset="100%" stop-color="#4f46e5" />
     </linearGradient>
   </defs>
-
-  <!-- Entire canvas = brand blue (fills circle masks in mobile browser / Google) -->
   <rect width="512" height="512" fill="url(#bg)" />
-
-  <!-- Printer centered, ~68% size — stays inside circular safe zone -->
-  <g transform="translate(256 256) scale(0.68) translate(-256 -256)">
+  <g transform="translate(256 256) scale(0.58) translate(-256 -256)">
     <path d="M352 96H160c-17.7 0-32 14.3-32 32v96h256v-96c0-17.7-14.3-32-32-32z" fill="#ffffff" fill-opacity="0.95"/>
     <path d="M384 192H128c-35.3 0-64 28.7-64 64v128c0 35.3 28.7 64 64 64h32v-64h192v64h32c35.3 0 64-28.7 64-64V256c0-35.3-28.7-64-64-64zm-64 80c-13.3 0-24-10.7-24-24s10.7-24 24-24 24 10.7 24 24-10.7 24-24 24z" fill="#ffffff"/>
     <path d="M160 352h192v96H160z" fill="#e0e7ff"/>

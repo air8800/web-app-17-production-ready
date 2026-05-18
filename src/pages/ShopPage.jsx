@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getShopInfo, testConnection } from '../utils/supabase'
+import { getGoogleMapsDirectionsUrl } from '../utils/location'
 
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -110,6 +111,16 @@ const ShopPage = () => {
         <div className="max-w-4xl mx-auto px-4 py-4 sm:py-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{shop.name}</h1>
           <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">{shop.address}</p>
+          {getGoogleMapsDirectionsUrl(shop) && (
+            <a
+              href={getGoogleMapsDirectionsUrl(shop)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-sm font-semibold text-blue-600 hover:underline mt-3"
+            >
+              Get directions
+            </a>
+          )}
           <p className="text-sm sm:text-base text-blue-600 mt-1">{shop.phone}</p>
           {shop.email && <p className="text-sm sm:text-base text-gray-600">{shop.email}</p>}
         </div>

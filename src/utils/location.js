@@ -1,3 +1,5 @@
+import { SHOP_COORDINATE_FALLBACKS } from '../data/shopCoordinates'
+
 const EARTH_RADIUS_KM = 6371
 
 export const USER_LOCATION_STORAGE_KEY = 'printget_user_location'
@@ -8,6 +10,15 @@ export function getShopCoords(shop) {
   const lng = parseFloat(shop?.longitude)
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
   return { lat, lng }
+}
+
+/** Merge DB coords or known fallbacks so distance/maps work before SQL seed runs. */
+export function enrichShopWithCoordinates(shop) {
+  if (!shop) return shop
+  if (getShopCoords(shop)) return shop
+  const fallback = SHOP_COORDINATE_FALLBACKS[shop.id]
+  if (!fallback) return shop
+  return { ...shop, latitude: fallback.latitude, longitude: fallback.longitude }
 }
 
 /** @returns {number | null} distance in km */
@@ -40,7 +51,8 @@ export function formatDistance(km) {
 }
 
 export function getDistanceLabel(userLocation, shop) {
-  const coords = getShopCoords(shop)
+  const enriched = enrichShopWithCoordinates(shop)
+  const coords = getShopCoords(enriched)
   if (!userLocation || !coords) return null
   const km = distanceKm(userLocation.lat, userLocation.lng, coords.lat, coords.lng)
   return formatDistance(km)
@@ -48,20 +60,20 @@ export function getDistanceLabel(userLocation, shop) {
 
 /** @returns {number | null} */
 export function getDistanceKm(userLocation, shop) {
-  const coords = getShopCoords(shop)
+  const enriched = enrichShopWithCoordinates(shop)
+  const coords = getShopCoords(enriched)
   if (!userLocation || !coords) return null
   return distanceKm(userLocation.lat, userLocation.lng, coords.lat, coords.lng)
 }
 
+/**
+ * Turn-by-turn to exact lat/lng (never address text — avoids wrong pins like "Near SBI").
+ */
 export function getGoogleMapsDirectionsUrl(shop) {
-  const coords = getShopCoords(shop)
-  if (coords) {
-    return `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}`
-  }
-  if (shop?.address) {
-    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(shop.address)}`
-  }
-  return null
+  const enriched = enrichShopWithCoordinates(shop)
+  const coords = getShopCoords(enriched)
+  if (!coords) return null
+  return `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}`
 }
 
 /** @returns {{ lat: number, lng: number } | null} */
@@ -86,7 +98,7 @@ export function storeUserLocation(location) {
 export function sortShopsByDistance(shops, userLocation) {
   if (!userLocation) return [...shops]
 
-  return [...shops].sort((a, b) => {
+  return [...shops].map(enrichShopWithCoordinates).sort((a, b) => {
     const aKm = getDistanceKm(userLocation, a)
     const bKm = getDistanceKm(userLocation, b)
     const aHas = aKm != null
@@ -96,4 +108,13 @@ export function sortShopsByDistance(shops, userLocation) {
     if (bHas) return 1
     return 0
   })
+}
+
+export function isGeolocationSupported() {
+  return typeof navigator !== 'undefined' && !!navigator.geolocation
+}
+
+export function isSecureContextForGeolocation() {
+  if (typeof window === 'undefined') return true
+  return window.isSecureContext === true
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import * as tus from 'tus-js-client'
+import { enrichShopWithCoordinates } from './location'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -158,7 +159,7 @@ export const getShopInfo = async (shopId) => {
       return { data: null, error: { message: 'Shop not found or inactive' } }
     }
 
-    return { data, error: null }
+    return { data: enrichShopWithCoordinates(data), error: null }
 
   } catch (error) {
     console.error('❌ Shop fetch error:', error)
@@ -179,7 +180,7 @@ export const getAllActiveShops = async () => {
       throw new Error(`Failed to fetch shops: ${error.message}`)
     }
 
-    return { data: data || [], error: null }
+    return { data: (data || []).map(enrichShopWithCoordinates), error: null }
 
   } catch (error) {
     console.error('❌ Shops fetch error:', error)

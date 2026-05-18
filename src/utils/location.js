@@ -116,5 +116,20 @@ export function isGeolocationSupported() {
 
 export function isSecureContextForGeolocation() {
   if (typeof window === 'undefined') return true
-  return window.isSecureContext === true
+  if (window.isSecureContext) return true
+  const host = window.location?.hostname || ''
+  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]'
+}
+
+/** @returns {Promise<'granted' | 'denied' | 'prompt' | 'unknown'>} */
+export async function queryGeolocationPermission() {
+  if (typeof navigator === 'undefined' || !navigator.permissions?.query) {
+    return 'unknown'
+  }
+  try {
+    const result = await navigator.permissions.query({ name: 'geolocation' })
+    return result.state
+  } catch {
+    return 'unknown'
+  }
 }

@@ -176,7 +176,6 @@ const HomePage = () => {
     loadStoredUserLocation() ? 'ready' : 'idle'
   )
   const [locationError, setLocationError] = useState(null)
-  const locationAutoRequestedRef = useRef(false)
 
   useEffect(() => {
     setVisibleShopsCount(5)
@@ -307,50 +306,61 @@ const HomePage = () => {
     if (!isSecureContextForGeolocation()) {
       setLocationStatus('error')
       setLocationError(
-        'Location permission requires a secure connection. Use https://www.printget.in or open the site on localhost.'
+        'Location needs HTTPS. Open https://www.printget.in or use localhost — not a local IP like 192.168.x.x.'
       )
       return
     }
+
     setLocationStatus('loading')
     setLocationError(null)
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const loc = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        }
-        setUserLocation(loc)
-        storeUserLocation(loc)
-        setLocationStatus('ready')
-      },
-      (err) => {
-        setLocationStatus('error')
+
+    const onSuccess = (position) => {
+      const loc = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      }
+      setUserLocation(loc)
+      storeUserLocation(loc)
+      setLocationStatus('ready')
+    }
+
+    const onError = (err) => {
+      setLocationStatus('error')
+      if (err.code === 1) {
         setLocationError(
-          err.code === 1
-            ? 'Location permission denied. You can still browse shops by city.'
-            : 'Could not detect your location. Try again or pick a city.'
+          'Location blocked. Tap the lock icon in your browser address bar → Site settings → Allow location, then try again.'
         )
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
-    )
+      } else if (err.code === 3) {
+        setLocationError('Location timed out. Try again or move near a window.')
+      } else {
+        setLocationError('Could not detect your location. Tap the button to try again.')
+      }
+    }
+
+    const options = { enableHighAccuracy: false, timeout: 20000, maximumAge: 300000 }
+
+    navigator.geolocation.getCurrentPosition(onSuccess, onError, options)
   }, [])
 
   const clearUserLocation = useCallback(() => {
     setUserLocation(null)
     setLocationStatus('idle')
     setLocationError(null)
-    locationAutoRequestedRef.current = false
     localStorage.removeItem(USER_LOCATION_STORAGE_KEY)
   }, [])
 
-  // Ask for location when a city is selected (browser permission prompt)
-  useEffect(() => {
-    if (!selectedCity || loading) return
-    if (locationStatus === 'ready' || locationStatus === 'loading') return
-    if (locationAutoRequestedRef.current) return
-    locationAutoRequestedRef.current = true
-    requestUserLocation()
-  }, [selectedCity, loading, locationStatus, requestUserLocation])
+  const handleCitySelect = useCallback(
+    (city) => {
+      const value = city === 'All Cities' ? 'All Cities' : city
+      setSelectedCity(value)
+      setSearchTerm('')
+      setIsDropdownOpen(false)
+      if (value && value !== 'All Cities' && !userLocation) {
+        requestUserLocation()
+      }
+    },
+    [requestUserLocation, userLocation]
+  )
 
   const features = [
     {
@@ -634,11 +644,8 @@ const HomePage = () => {
                               {['All Cities', 'Nashik', 'Pune'].map((city) => (
                                 <button
                                   key={city}
-                                  onClick={() => {
-                                    setSelectedCity(city === 'All Cities' ? 'All Cities' : city);
-                                    setSearchTerm('');
-                                    setIsDropdownOpen(false);
-                                  }}
+                                  type="button"
+                                  onClick={() => handleCitySelect(city)}
                                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left font-medium ${selectedCity === city
                                     ? 'bg-blue-50 text-blue-600'
                                     : 'hover:bg-gray-50 text-gray-700'
@@ -678,7 +685,7 @@ const HomePage = () => {
                           ) : (
                             <LocateFixed className="w-4 h-4" />
                           )}
-                          {locationStatus === 'ready' ? 'Update my location' : 'Use my location'}
+                          {locationStatus === 'ready' ? 'Update my location' : 'Detect my location'}
                         </button>
                         {userLocation && (
                           <button

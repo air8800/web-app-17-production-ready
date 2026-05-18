@@ -406,10 +406,6 @@ const StatusPage = () => {
                 <p className="mt-2 text-xs text-gray-500">
                   Last updated: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
-                {shop?.address && (
-                  <p className="mt-1 text-xs text-gray-600 leading-snug line-clamp-2">{shop.address}</p>
-                )}
-                {shop && <ShopLocationBar shop={shop} variant="inline" className="mt-2" />}
               </div>
             </div>
 
@@ -420,6 +416,11 @@ const StatusPage = () => {
               <RefreshCw className="w-4 h-4 mx-auto" />
             </button>
           </div>
+
+          {shop?.address && (
+            <p className="mt-3 w-full text-sm text-gray-600 leading-relaxed">{shop.address}</p>
+          )}
+          {shop && <ShopLocationBar shop={shop} variant="inline" className="mt-2.5 w-full" />}
 
           <button
             onClick={handleDismissTracking}

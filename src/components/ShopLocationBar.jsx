@@ -46,7 +46,7 @@ const ShopLocationBar = ({ shop, variant = 'card', className = '' }) => {
 
   if (variant === 'inline') {
     return (
-      <div className={`flex flex-wrap items-center gap-2 ${className}`.trim()}>
+      <div className={`flex flex-wrap items-center gap-x-2 gap-y-1.5 w-full ${className}`.trim()}>
         {distanceLabel && (
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
             <MapPin className="w-3 h-3 flex-shrink-0" />

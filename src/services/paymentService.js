@@ -51,7 +51,7 @@ export const verifyPhonePePayment = async (merchantOrderId) => {
 
 /** Immediate redirect — fastest path to PhonePe PayPage. */
 export function openPhonePeCheckout({ redirectUrl }) {
-  window.location.assign(redirectUrl);
+  window.location.replace(redirectUrl);
 }
 
 export async function startPhonePeCheckoutForJob(jobId) {

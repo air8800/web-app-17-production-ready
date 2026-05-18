@@ -153,6 +153,12 @@ const OrderPage = () => {
   const MAX_IMAGES = 30
   const [sizeWarning, setSizeWarning] = useState({ show: false, type: null }) // type: 'size' or 'count'
 
+  // Warm PhonePe OAuth while user is on order page with online payment selected
+  useEffect(() => {
+    if (orderData.paymentMethod !== 'ONLINE') return
+    fetch('/api/phonepe-warm', { method: 'POST' }).catch(() => {})
+  }, [orderData.paymentMethod])
+
   // Persist background submission setting
   useEffect(() => {
     localStorage.setItem('printflow_background_submission', backgroundSubmission)
@@ -1472,21 +1478,19 @@ const OrderPage = () => {
         if (jobResult.error) throw new Error(jobResult.error.message)
         const jobId = jobResult.data.id
 
-        // Update the DB record to use the real URL (overwrite placeholder)
-        await updatePrintJob(jobId, { file_url: preUploadedFileUrl, job_status: 'pending' })
-
-        // Save to localStorage
         localStorage.setItem('printget_recent_order', JSON.stringify({ jobId, shopId, timestamp: Date.now() }))
         try {
           const history = JSON.parse(localStorage.getItem('printget_order_history') || '[]')
           if (!history.includes(jobId)) { history.push(jobId); localStorage.setItem('printget_order_history', JSON.stringify(history)) }
         } catch (_) { }
 
-        // Show upload as done instantly
         startUpload(jobId)
         finishUpload()
-        
+
         if (orderData.paymentMethod === 'ONLINE') {
+          updatePrintJob(jobId, { file_url: preUploadedFileUrl, job_status: 'pending' }).catch((e) =>
+            console.error('Post-submit file_url update failed:', e)
+          )
           try {
             await startPhonePeCheckoutForJob(jobId)
           } catch (payErr) {
@@ -1494,6 +1498,7 @@ const OrderPage = () => {
             navigate(`/payment/${jobId}`)
           }
         } else {
+          await updatePrintJob(jobId, { file_url: preUploadedFileUrl, job_status: 'pending' })
           navigate(`/status/${jobId}`)
         }
         return
@@ -1544,7 +1549,6 @@ const OrderPage = () => {
       if (jobResult.error) throw new Error(jobResult.error.message)
       const jobId = jobResult.data.id
 
-      // Move temporary upload filename to job-specific storage for resumption
       const activeFileName = localStorage.getItem('printget_active_upload_name')
       if (activeFileName) {
         localStorage.setItem(`printget_upload_name_${jobId}`, activeFileName)
@@ -1552,17 +1556,12 @@ const OrderPage = () => {
         if (activeProgress) {
           localStorage.setItem(`printget_upload_progress_${jobId}`, activeProgress)
         }
-        // Don't remove 'active' keys yet, as uploadInBackground might still be running 
-        // and using them for the current session. They'll be cleaned up in finishUpload.
       }
 
-      // Tell the upload store: "when the current upload finishes, update THIS job"
       uploadContextRef.current.pendingJobId = jobId
       setPendingJobId(jobId)
-      // Also mark the store as uploading for this job so StatusPage shows progress
       startUpload(jobId)
 
-      // Save to localStorage
       localStorage.setItem('printget_recent_order', JSON.stringify({ jobId, shopId, timestamp: Date.now() }))
       try {
         const history = JSON.parse(localStorage.getItem('printget_order_history') || '[]')
@@ -1933,15 +1932,9 @@ const OrderPage = () => {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0 pr-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight">{shop.name}</h1>
-              {shop.address && (
-                <p className="mt-1.5 text-sm text-gray-600 leading-snug">{shop.address}</p>
-              )}
-              <ShopLocationBar shop={shop} variant="inline" className="mt-2.5" />
-            </div>
-            <div className="flex gap-2 items-center">
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight min-w-0 flex-1">{shop.name}</h1>
+            <div className="flex gap-2 items-center flex-shrink-0">
               {/* Guide Toggle */}
               <button
                 onClick={handleToggleGuide}
@@ -1969,6 +1962,11 @@ const OrderPage = () => {
               </button>
             </div>
           </div>
+
+          {shop.address && (
+            <p className="mt-3 w-full text-sm text-gray-600 leading-relaxed">{shop.address}</p>
+          )}
+          <ShopLocationBar shop={shop} variant="inline" className="mt-2.5 w-full" />
 
           {/* Today's Hours and Status */}
           {shop.operating_hours && (
@@ -2881,25 +2879,23 @@ const OrderPage = () => {
               (orderData.file?.type === 'application/pdf' && orderData.selectedPages.length === 0) ||
               (orderData.files?.length > 0 && orderData.selectedImages.length === 0)
             }
-            className={`w-full group relative overflow-hidden py-2.5 sm:py-3 px-4 sm:px-5 rounded-xl font-bold text-[17px] sm:text-base transition-all duration-300 shadow-lg active:scale-[0.98] ${isSubmitting || !agreedToTerms || costInfo.cost <= 0
+            className={`w-full flex items-center justify-center gap-2 min-h-[48px] py-3 px-4 rounded-xl font-bold text-base transition-colors shadow-lg active:scale-[0.98] ${isSubmitting || !agreedToTerms || costInfo.cost <= 0
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
-                : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 bg-[length:200%_auto] hover:bg-right text-white shadow-blue-200'
+                : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-200 hover:from-blue-700 hover:to-indigo-700'
               }`}
           >
             {isSubmitting ? (
               <>
-                <Loader className="w-4 h-4 animate-spin" />
-                <span>Submitting...</span>
+                <Loader className="w-4 h-4 animate-spin shrink-0" />
+                <span>{orderData.paymentMethod === 'ONLINE' ? 'Opening PhonePe…' : 'Submitting…'}</span>
               </>
             ) : (orderData.file?.type === 'application/pdf' && pdfPageCount === 0) ? (
               <>
-                <Loader className="w-4 h-4 animate-spin" />
-                <span>Getting page count...</span>
+                <Loader className="w-4 h-4 animate-spin shrink-0" />
+                <span>Getting page count…</span>
               </>
             ) : (
-              <div className="flex items-center justify-center gap-2 relative z-10">
-                <span>Submit & Print Now</span>
-              </div>
+              <span>Submit & Print Now</span>
             )}
           </button>
 

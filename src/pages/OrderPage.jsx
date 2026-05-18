@@ -1933,11 +1933,13 @@ const OrderPage = () => {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex-1">
-              <h1 className="text-xl sm:text-2xl font-bold mb-1">{shop.name}</h1>
-              <p className="text-sm sm:text-base text-gray-600">{shop.address}</p>
-              <ShopLocationBar shop={shop} variant="inline" />
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0 pr-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight">{shop.name}</h1>
+              {shop.address && (
+                <p className="mt-1.5 text-sm text-gray-600 leading-snug">{shop.address}</p>
+              )}
+              <ShopLocationBar shop={shop} variant="inline" className="mt-2.5" />
             </div>
             <div className="flex gap-2 items-center">
               {/* Guide Toggle */}
@@ -1970,7 +1972,7 @@ const OrderPage = () => {
 
           {/* Today's Hours and Status */}
           {shop.operating_hours && (
-            <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-200">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 pt-3 border-t border-gray-100">
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="w-4 h-4 text-gray-500" />
                 <span className="text-gray-700 font-medium">
@@ -2065,8 +2067,6 @@ const OrderPage = () => {
             </div>
           </div>
         )}
-
-        <ShopLocationBar shop={shop} variant="card" className="mb-4 sm:mb-6 !mt-0" />
 
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* File Upload */}

@@ -46,13 +46,16 @@ const ShopLocationBar = ({ shop, variant = 'card', className = '' }) => {
 
   if (variant === 'inline') {
     return (
-      <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 mt-2 ${className}`.trim()}>
+      <div className={`flex flex-wrap items-center gap-2 ${className}`.trim()}>
         {distanceLabel && (
-          <span className="text-sm font-semibold text-blue-600">{distanceLabel}</span>
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
+            <MapPin className="w-3 h-3 flex-shrink-0" />
+            {distanceLabel}
+          </span>
         )}
         {directionsLink}
         {!userLocation && directionsLink && (
-          <span className="text-xs text-gray-500">Allow location on home to see distance</span>
+          <span className="text-[11px] text-gray-500">Enable location on home for distance</span>
         )}
       </div>
     )

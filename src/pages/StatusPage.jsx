@@ -403,11 +403,13 @@ const StatusPage = () => {
                   {shop && <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400 truncate">{shop.name}</p>}
                 </div>
                 <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 leading-none">{getStatusText(statusForDisplay)}</h1>
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                  <span>Last updated: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  {shop?.address && <span className="truncate max-w-[180px] sm:max-w-xs">{shop.address}</span>}
-                </div>
-                {shop && <ShopLocationBar shop={shop} variant="inline" />}
+                <p className="mt-2 text-xs text-gray-500">
+                  Last updated: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+                {shop?.address && (
+                  <p className="mt-1 text-xs text-gray-600 leading-snug line-clamp-2">{shop.address}</p>
+                )}
+                {shop && <ShopLocationBar shop={shop} variant="inline" className="mt-2" />}
               </div>
             </div>
 
@@ -729,12 +731,6 @@ const StatusPage = () => {
           </div>
         )}
 
-        {shop && (
-          <div className="mb-5">
-            <ShopLocationBar shop={shop} variant="card" />
-          </div>
-        )}
-
         {/* Order Details Card */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-5">
           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -810,8 +806,7 @@ const StatusPage = () => {
         </div>
 
         {/* Back to Shop */}
-        <div className="text-center pb-4 space-y-3">
-          {shop && <ShopLocationBar shop={shop} variant="inline" />}
+        <div className="text-center pb-4">
           <Link
             to={`/shop/${job.shop_id}`}
             className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-blue-600 font-medium transition-colors"

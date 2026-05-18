@@ -352,7 +352,7 @@ export default async function handler(req, res) {
         type: 'PG_CHECKOUT',
         message: 'PrintGet Print Order',
         merchantUrls: {
-          redirectUrl: `${APP_URL}/payment/${jobId}?orderId=${merchantOrderId}`,
+          redirectUrl: `${APP_URL}/status/${jobId}?orderId=${merchantOrderId}`,
         },
         ...(mobilePaymentModeConfig
           ? { paymentModeConfig: mobilePaymentModeConfig }

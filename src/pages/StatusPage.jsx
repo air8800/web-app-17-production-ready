@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { confirmPhonePeReturn } from '../services/paymentService'
 import { getJobStatus, getShopInfo, subscribeToJobUpdates, startJobStatusPolling, formatCurrency, updatePrintJob, updatePaymentStatus } from '../utils/supabase'
 import { Mail, Upload, AlertCircle, RefreshCw, X, CheckCircle2, Store, Printer, Package, CreditCard, Clock, ArrowLeft, FileText, Hash, Palette, Copy as CopyIcon, User, Wifi, WifiOff, PartyPopper, HandCoins, Home } from 'lucide-react'
 import useUploadStore from '../stores/uploadStore'
@@ -10,9 +11,12 @@ import InstallButton from '../components/InstallButton'
 const StatusPage = () => {
   const { jobId } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const phonePeOrderId = searchParams.get('orderId')
   const [job, setJob] = useState(null)
   const [shop, setShop] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [confirmingPayment, setConfirmingPayment] = useState(!!phonePeOrderId)
   const [error, setError] = useState(null)
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [connectionStatus, setConnectionStatus] = useState('connecting')
@@ -67,6 +71,63 @@ const StatusPage = () => {
   }, [isThisJobUploading])
 
   useEffect(() => {
+    if (!phonePeOrderId) {
+      loadJobStatus()
+      return
+    }
+
+    let cancelled = false
+
+    const run = async () => {
+      setConfirmingPayment(true)
+      setLoading(true)
+      try {
+        const result = await confirmPhonePeReturn(jobId, phonePeOrderId)
+        if (cancelled) return
+
+        if (result.ok) {
+          try {
+            localStorage.setItem('printget_recent_order', JSON.stringify({
+              jobId,
+              timestamp: Date.now(),
+            }))
+            const history = JSON.parse(localStorage.getItem('printget_order_history') || '[]')
+            if (!history.includes(jobId)) {
+              history.push(jobId)
+              localStorage.setItem('printget_order_history', JSON.stringify(history))
+            }
+          } catch (_) { /* ignore */ }
+
+          const next = new URLSearchParams(searchParams)
+          next.delete('orderId')
+          setSearchParams(next, { replace: true })
+        } else {
+          setError(
+            result.state === 'PENDING'
+              ? 'Payment is still processing. This page will update shortly.'
+              : 'Payment was not completed. You can retry from your order.'
+          )
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Payment confirmation error:', err)
+          setError('Could not confirm payment. Please refresh.')
+        }
+      } finally {
+        if (!cancelled) {
+          setConfirmingPayment(false)
+          await loadJobStatus()
+        }
+      }
+    }
+
+    run()
+    return () => { cancelled = true }
+  }, [phonePeOrderId, jobId])
+
+  useEffect(() => {
+    if (phonePeOrderId) return
+
     loadJobStatus()
 
     // Set up real-time subscription
@@ -97,7 +158,7 @@ const StatusPage = () => {
       }
       stopPolling()
     }
-  }, [jobId])
+  }, [jobId, phonePeOrderId])
 
   const loadJobStatus = async () => {
     try {
@@ -256,7 +317,9 @@ const StatusPage = () => {
             <div className="absolute inset-0 rounded-full border-4 border-blue-100"></div>
             <div className="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
           </div>
-          <p className="text-gray-700 font-medium">Loading your order…</p>
+          <p className="text-gray-700 font-medium">
+            {confirmingPayment ? 'Confirming your payment…' : 'Loading your order…'}
+          </p>
           <p className="text-sm text-gray-400 mt-1">Just a moment</p>
         </div>
       </div>

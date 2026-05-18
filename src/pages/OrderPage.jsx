@@ -19,6 +19,7 @@ import PDFEditorSheetPopup from '../components/PDFEditorSheetPopup'
 import { useTour } from '../hooks/useTour'
 import { usePageTitle } from '../hooks/usePageTitle'
 import InstallButton from '../components/InstallButton'
+import { startPhonePeCheckoutForJob } from '../services/paymentService'
 
 const OrderPage = () => {
   const { shopId } = useParams()
@@ -1485,7 +1486,12 @@ const OrderPage = () => {
         finishUpload()
         
         if (orderData.paymentMethod === 'ONLINE') {
-          navigate(`/payment/${jobId}`)
+          try {
+            await startPhonePeCheckoutForJob(jobId)
+          } catch (payErr) {
+            console.error('PhonePe redirect failed:', payErr)
+            navigate(`/payment/${jobId}`)
+          }
         } else {
           navigate(`/status/${jobId}`)
         }
@@ -1563,7 +1569,12 @@ const OrderPage = () => {
       } catch (_) { }
 
       if (orderData.paymentMethod === 'ONLINE') {
-        navigate(`/payment/${jobId}`)
+        try {
+          await startPhonePeCheckoutForJob(jobId)
+        } catch (payErr) {
+          console.error('PhonePe redirect failed:', payErr)
+          navigate(`/payment/${jobId}`)
+        }
       } else {
         navigate(`/status/${jobId}`)
       }

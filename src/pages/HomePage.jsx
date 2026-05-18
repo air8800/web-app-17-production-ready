@@ -1,7 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { getAllActiveShops } from '../utils/supabase'
-import { Printer, Search, Store, Clock, Star, MapPin, Phone, ArrowRight, Zap, Shield, Award, Globe, Upload, Settings, FileCheck, Package, Mail, Sparkles, ChevronDown, ChevronRight, Check, CreditCard } from 'lucide-react'
+import {
+  loadStoredUserLocation,
+  storeUserLocation,
+  USER_LOCATION_STORAGE_KEY,
+  getDistanceLabel,
+  getDistanceKm,
+  getGoogleMapsDirectionsUrl,
+  sortShopsByDistance,
+} from '../utils/location'
+import { Printer, Search, Store, Clock, Star, MapPin, Phone, ArrowRight, Zap, Shield, Award, Globe, Upload, Settings, FileCheck, Package, Mail, Sparkles, ChevronDown, ChevronRight, Check, CreditCard, Navigation, LocateFixed, Loader2 } from 'lucide-react'
 
 // Helper: Check if a shop is currently open based on operating_hours
 const isShopOpen = (shop) => {
@@ -32,9 +41,11 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import InstallButton from '../components/InstallButton'
 
 // Individual shop card with scroll-triggered animation
-const ShopCard = ({ shop, index, glow }) => {
+const ShopCard = ({ shop, index, glow, userLocation, isNearest }) => {
   const cardRef = useRef(null)
   const [isVisible, setIsVisible] = useState(false)
+  const distanceLabel = userLocation ? getDistanceLabel(userLocation, shop) : null
+  const directionsUrl = getGoogleMapsDirectionsUrl(shop)
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -68,7 +79,17 @@ const ShopCard = ({ shop, index, glow }) => {
           <Printer className="w-7 h-7 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-xl text-gray-900 mb-1.5 truncate">{shop.name}</h3>
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+            <h3 className="font-bold text-xl text-gray-900 truncate">{shop.name}</h3>
+            {isNearest && distanceLabel && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-indigo-50 text-indigo-700 border border-indigo-100">
+                Nearest
+              </span>
+            )}
+          </div>
+          {distanceLabel && (
+            <p className="text-sm font-semibold text-blue-600 mb-1.5">{distanceLabel}</p>
+          )}
           <div className="flex items-center gap-1.5 text-gray-500 mb-2">
             <MapPin className="w-4 h-4 flex-shrink-0 text-gray-400" />
             <span className="text-sm font-medium truncate">{shop.address}</span>
@@ -81,7 +102,7 @@ const ShopCard = ({ shop, index, glow }) => {
       </div>
 
       <div className="flex items-center justify-between pt-4 border-t border-gray-100 relative z-10">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {(() => {
             const open = isShopOpen(shop)
             if (open === true) return (
@@ -100,6 +121,18 @@ const ShopCard = ({ shop, index, glow }) => {
               </span>
             )
           })()}
+          {directionsUrl && (
+            <a
+              href={directionsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors"
+            >
+              <Navigation className="w-3 h-3" />
+              Directions
+            </a>
+          )}
         </div>
         <div className="flex items-center gap-1.5 text-blue-600">
           <span className="text-xs font-semibold text-gray-400">Order</span>
@@ -132,10 +165,15 @@ const HomePage = () => {
   const [cityVisible, setCityVisible] = useState(false)
   const [shouldGlow, setShouldGlow] = useState(false)
   const [visibleShopsCount, setVisibleShopsCount] = useState(5)
+  const [userLocation, setUserLocation] = useState(() => loadStoredUserLocation())
+  const [locationStatus, setLocationStatus] = useState(() =>
+    loadStoredUserLocation() ? 'ready' : 'idle'
+  )
+  const [locationError, setLocationError] = useState(null)
 
   useEffect(() => {
     setVisibleShopsCount(5)
-  }, [selectedCity, searchTerm])
+  }, [selectedCity, searchTerm, userLocation])
 
   const [recentOrder, setRecentOrder] = useState(() => {
     try {
@@ -221,20 +259,73 @@ const HomePage = () => {
     setTimeout(() => setShouldGlow(false), 1500)
   }
 
-  const filteredShops = shops.filter(shop => {
-    // 1. City Filter (Primary)
-    if (selectedCity && selectedCity !== 'All Cities' && !shop.address.toLowerCase().includes(selectedCity.toLowerCase())) {
-      return false
-    }
+  const filteredShops = useMemo(() => {
+    return shops.filter(shop => {
+      if (selectedCity && selectedCity !== 'All Cities' && !shop.address.toLowerCase().includes(selectedCity.toLowerCase())) {
+        return false
+      }
+      if (searchTerm && !shop.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        !shop.address.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false
+      }
+      return true
+    })
+  }, [shops, selectedCity, searchTerm])
 
-    // 2. Search Filter (Secondary)
-    if (searchTerm && !shop.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      !shop.address.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false
-    }
+  const sortedFilteredShops = useMemo(
+    () => sortShopsByDistance(filteredShops, userLocation),
+    [filteredShops, userLocation]
+  )
 
-    return true
-  })
+  const nearestShopId = useMemo(() => {
+    if (!userLocation || sortedFilteredShops.length === 0) return null
+    const first = sortedFilteredShops.find((shop) => getDistanceKm(userLocation, shop) != null)
+    return first?.id ?? null
+  }, [sortedFilteredShops, userLocation])
+
+  const recentShopsEnriched = useMemo(() => {
+    return recentShops.map((recent) => {
+      const full = shops.find((s) => s.id === recent.id)
+      return full ? { ...recent, ...full } : recent
+    })
+  }, [recentShops, shops])
+
+  const requestUserLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationStatus('error')
+      setLocationError('Location is not supported on this device.')
+      return
+    }
+    setLocationStatus('loading')
+    setLocationError(null)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const loc = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        }
+        setUserLocation(loc)
+        storeUserLocation(loc)
+        setLocationStatus('ready')
+      },
+      (err) => {
+        setLocationStatus('error')
+        setLocationError(
+          err.code === 1
+            ? 'Location permission denied. You can still browse shops by city.'
+            : 'Could not detect your location. Try again or pick a city.'
+        )
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+    )
+  }, [])
+
+  const clearUserLocation = useCallback(() => {
+    setUserLocation(null)
+    setLocationStatus('idle')
+    setLocationError(null)
+    localStorage.removeItem(USER_LOCATION_STORAGE_KEY)
+  }, [])
 
   const features = [
     {
@@ -412,7 +503,10 @@ const HomePage = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {recentShops.map((shop, index) => (
+              {recentShopsEnriched.map((shop, index) => {
+                const distanceLabel = userLocation ? getDistanceLabel(userLocation, shop) : null
+                const directionsUrl = getGoogleMapsDirectionsUrl(shop)
+                return (
                 <Link
                   key={shop.id}
                   to={`/shop/${shop.id}`}
@@ -425,22 +519,37 @@ const HomePage = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-lg text-gray-900 mb-1 truncate">{shop.name}</h3>
+                      {distanceLabel && (
+                        <p className="text-sm font-semibold text-blue-600 mb-1">{distanceLabel}</p>
+                      )}
                       <div className="flex items-center gap-1 text-gray-600 mb-2">
                         <MapPin className="w-4 h-4 flex-shrink-0" />
                         <span className="text-sm truncate">{shop.address}</span>
                       </div>
-                      <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-3 text-sm flex-wrap">
                         {(() => {
                           const open = isShopOpen(shop)
                           if (open === true) return <span className="text-green-600 font-medium">Open</span>
                           if (open === false) return <span className="text-red-500 font-medium">Closed</span>
                           return <span className="text-gray-400 font-medium">Hours N/A</span>
                         })()}
+                        {directionsUrl && (
+                          <a
+                            href={directionsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 text-blue-600 font-semibold hover:underline"
+                          >
+                            <Navigation className="w-3.5 h-3.5" />
+                            Directions
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>
                 </Link>
-              ))}
+              )})}
             </div>
           </div>
         )}
@@ -525,7 +634,45 @@ const HomePage = () => {
                       </div>
                     </div>
 
-                    {/* Search Bar - Animated Appearance */}
+                    <div className="pt-2 border-t border-gray-100">
+                      <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Find shops near you</label>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          type="button"
+                          onClick={requestUserLocation}
+                          disabled={locationStatus === 'loading'}
+                          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-70"
+                        >
+                          {locationStatus === 'loading' ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <LocateFixed className="w-4 h-4" />
+                          )}
+                          {locationStatus === 'ready' ? 'Update my location' : 'Use my location'}
+                        </button>
+                        {userLocation && (
+                          <button
+                            type="button"
+                            onClick={clearUserLocation}
+                            className="inline-flex items-center justify-center px-5 py-3 rounded-2xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
+                          >
+                            Clear location
+                          </button>
+                        )}
+                      </div>
+                      {locationStatus === 'ready' && (
+                        <p className="text-xs text-emerald-600 font-medium mt-2 ml-1">
+                          Showing shops sorted by distance from you.
+                        </p>
+                      )}
+                      {locationError && (
+                        <p className="text-xs text-red-600 mt-2 ml-1">{locationError}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-2 ml-1">
+                        Location stays on your device and is only used to sort nearby shops.
+                      </p>
+                    </div>
+
                     {selectedCity && (
                       <div className="animate-fadeIn pt-6 border-t border-gray-100">
                         <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Search in {selectedCity}</label>
@@ -550,7 +697,7 @@ const HomePage = () => {
 
             {/* Filtered Shops Grid */}
             {selectedCity ? (
-              filteredShops.length > 0 ? (
+              sortedFilteredShops.length > 0 ? (
                 <>
                   {/* Section label */}
                   <div className="mb-6 px-1">
@@ -559,15 +706,24 @@ const HomePage = () => {
                       <span className="text-blue-600">Near You</span>
                       <ChevronRight className="w-5 h-5 text-blue-500 animate-arrow-point" />
                     </h3>
-                    <p className="text-sm text-gray-400 mt-1">Tap a shop to place your order</p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      {userLocation ? 'Sorted by distance · tap a shop to order' : 'Tap a shop to place your order'}
+                    </p>
                   </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {filteredShops.slice(0, visibleShopsCount).map((shop, index) => (
-                    <ShopCard key={shop.id} shop={shop} index={index} glow={shouldGlow} />
+                  {sortedFilteredShops.slice(0, visibleShopsCount).map((shop, index) => (
+                    <ShopCard
+                      key={shop.id}
+                      shop={shop}
+                      index={index}
+                      glow={shouldGlow}
+                      userLocation={userLocation}
+                      isNearest={shop.id === nearestShopId}
+                    />
                   ))}
                 </div>
-                {filteredShops.length > visibleShopsCount && (
+                {sortedFilteredShops.length > visibleShopsCount && (
                   <div className="mt-8 text-center relative z-10">
                     <button 
                       onClick={() => setVisibleShopsCount(prev => prev + 6)}

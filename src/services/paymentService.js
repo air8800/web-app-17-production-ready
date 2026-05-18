@@ -1,3 +1,6 @@
+import { updatePaymentStatus } from '../utils/supabase';
+import { getCheckoutPlatform } from '../utils/devicePlatform';
+
 export function isOnlinePaymentMethod(job) {
   const method = (job?.payment_method || '').toLowerCase();
   return (
@@ -7,90 +10,6 @@ export function isOnlinePaymentMethod(job) {
   );
 }
 
-/**
- * PhonePe Standard Checkout v2 — client service.
- *
- * Mobile: full-page redirect to PhonePe (their page detects device + shows app UI).
- * IFRAME is avoided on mobile — it often renders the desktop layout in a small frame.
- */
-
-function checkoutScriptUrlForRedirect(redirectUrl) {
-  try {
-    const { hostname } = new URL(redirectUrl);
-    if (hostname === 'mercury.phonepe.com') {
-      return 'https://mercury.phonepe.com/web/bundle/checkout.js';
-    }
-    if (hostname === 'mercury-stg.phonepe.com' || hostname === 'mercury-uat.phonepe.com') {
-      return 'https://mercury-stg.phonepe.com/web/bundle/checkout.js';
-    }
-  } catch {
-    /* use production default */
-  }
-  return 'https://mercury.phonepe.com/web/bundle/checkout.js';
-}
-
-function loadPhonePeCheckoutScript(redirectUrl) {
-  const src = checkoutScriptUrlForRedirect(redirectUrl);
-
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined') {
-      reject(new Error('PhonePe checkout is only available in the browser'));
-      return;
-    }
-
-    if (window.PhonePeCheckout?.transact) {
-      resolve();
-      return;
-    }
-
-    const existing = document.querySelector('script[data-phonepe-checkout]');
-    if (existing) {
-      const onLoad = () => {
-        existing.removeEventListener('load', onLoad);
-        existing.removeEventListener('error', onError);
-        resolve();
-      };
-      const onError = () => {
-        existing.removeEventListener('load', onLoad);
-        existing.removeEventListener('error', onError);
-        reject(new Error('Failed to load PhonePe checkout'));
-      };
-      existing.addEventListener('load', onLoad);
-      existing.addEventListener('error', onError);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = src;
-    script.defer = true;
-    script.dataset.phonepeCheckout = 'true';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load PhonePe checkout'));
-    document.head.appendChild(script);
-  });
-}
-
-/**
- * Open PhonePe PayPage with a full-page redirect (recommended for mobile).
- * Uses PhonePe's transact() when the script loads; falls back to location.href.
- */
-export async function openPhonePeCheckout({ redirectUrl }) {
-  try {
-    await loadPhonePeCheckoutScript(redirectUrl);
-    if (window.PhonePeCheckout?.transact) {
-      window.PhonePeCheckout.transact({ tokenUrl: redirectUrl });
-      return;
-    }
-  } catch (err) {
-    console.warn('PhonePe checkout.js unavailable, using direct redirect:', err);
-  }
-
-  window.location.href = redirectUrl;
-}
-
-/**
- * @param {{ jobId: string, platform?: 'mobile'|'desktop' }} params
- */
 export const initiatePhonePePayment = async ({ jobId, platform }) => {
   const response = await fetch('/api/phonepe-initiate', {
     method: 'POST',
@@ -101,17 +20,6 @@ export const initiatePhonePePayment = async ({ jobId, platform }) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok || !data.success) {
-    if (data && (data.serverProjectRef || data.hint || data.details || data.likelyCauses || data.phonepeBody)) {
-      console.error('phonepe-initiate failed:', {
-        status: response.status,
-        buildVersion: data.buildVersion,
-        error: data.error,
-        hint: data.hint,
-        details: data.details,
-        phonepeStatus: data.phonepeStatus,
-        phonepeBody: data.phonepeBody,
-      });
-    }
     const baseMsg = data.message || data.error || 'PhonePe payment initiation failed';
     const causeMsg = Array.isArray(data.likelyCauses) && data.likelyCauses.length
       ? ` — ${data.likelyCauses.join(' ')}`
@@ -140,3 +48,37 @@ export const verifyPhonePePayment = async (merchantOrderId) => {
 
   return data;
 };
+
+/** Immediate redirect — fastest path to PhonePe PayPage. */
+export function openPhonePeCheckout({ redirectUrl }) {
+  window.location.assign(redirectUrl);
+}
+
+export async function startPhonePeCheckoutForJob(jobId) {
+  const platform = getCheckoutPlatform();
+  const { redirectUrl, merchantOrderId } = await initiatePhonePePayment({ jobId, platform });
+  localStorage.setItem(`pp_txn_${jobId}`, merchantOrderId);
+  openPhonePeCheckout({ redirectUrl });
+}
+
+/** After PhonePe redirect: verify and mark paid (StatusPage). */
+export async function confirmPhonePeReturn(jobId, merchantOrderId) {
+  const POLL_INTERVAL_MS = 1000;
+  const MAX_ATTEMPTS = 20;
+  let lastResult = null;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    lastResult = await verifyPhonePePayment(merchantOrderId);
+    if (lastResult.state !== 'PENDING') break;
+    if (attempt < MAX_ATTEMPTS - 1) {
+      await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+    }
+  }
+
+  if (lastResult?.success && lastResult.state === 'COMPLETED') {
+    await updatePaymentStatus(jobId, 'paid');
+    return { ok: true };
+  }
+
+  return { ok: false, state: lastResult?.state };
+}

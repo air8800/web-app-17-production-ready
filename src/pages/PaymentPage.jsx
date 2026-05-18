@@ -3,13 +3,10 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { getJobStatus, updatePaymentStatus, getShopInfo } from '../utils/supabase'
 import { usePageTitle } from '../hooks/usePageTitle'
 import {
-  initiatePhonePePayment,
-  verifyPhonePePayment,
-  openPhonePeCheckout,
+  startPhonePeCheckoutForJob,
   isOnlinePaymentMethod,
 } from '../services/paymentService'
-import { getCheckoutPlatform } from '../utils/devicePlatform'
-import { CheckCircle2, AlertCircle, Loader2, ShieldCheck, CreditCard } from 'lucide-react'
+import { AlertCircle, Loader2, ShieldCheck, CreditCard } from 'lucide-react'
 
 const PaymentPage = () => {
   const { jobId } = useParams()
@@ -19,9 +16,7 @@ const PaymentPage = () => {
 
   const [job, setJob] = useState(null)
   const [shop, setShop] = useState(null)
-  const [paymentConfirmed, setPaymentConfirmed] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [verifying, setVerifying] = useState(false)
   const [redirectingToPhonePe, setRedirectingToPhonePe] = useState(false)
   const [error, setError] = useState(null)
   const [processing, setProcessing] = useState(false)
@@ -44,26 +39,14 @@ const PaymentPage = () => {
     }
   }
 
-  const startPhonePeCheckout = useCallback(async () => {
-    setProcessing(true)
-    setError(null)
-    setRedirectingToPhonePe(true)
-    const platform = getCheckoutPlatform()
+  const orderIdParam = searchParams.get('orderId')
 
-    try {
-      const { redirectUrl, merchantOrderId } = await initiatePhonePePayment({
-        jobId,
-        platform,
-      })
-      localStorage.setItem(`pp_txn_${jobId}`, merchantOrderId)
-      await openPhonePeCheckout({ redirectUrl })
-    } catch (err) {
-      console.error('PhonePe initiation error:', err)
-      setError(err.message || 'Failed to start payment. Please try again.')
-      setRedirectingToPhonePe(false)
-      setProcessing(false)
+  // Legacy return URL on /payment — send to status page (handles verify there).
+  useEffect(() => {
+    if (orderIdParam) {
+      navigate(`/status/${jobId}?orderId=${encodeURIComponent(orderIdParam)}`, { replace: true })
     }
-  }, [jobId])
+  }, [orderIdParam, jobId, navigate])
 
   const loadJobDetails = useCallback(async () => {
     try {
@@ -84,11 +67,17 @@ const PaymentPage = () => {
       const { data: shopData } = await getShopInfo(jobData.shop_id)
       if (shopData) setShop(shopData)
 
-      // User already chose Pay Online on the order page — go straight to PhonePe.
       if (isOnlinePaymentMethod(jobData) && !autoPayAttempted.current) {
         autoPayAttempted.current = true
         setLoading(false)
-        await startPhonePeCheckout()
+        setRedirectingToPhonePe(true)
+        try {
+          await startPhonePeCheckoutForJob(jobId)
+        } catch (err) {
+          console.error('PhonePe initiation error:', err)
+          setError(err.message || 'Failed to start payment. Please try again.')
+          setRedirectingToPhonePe(false)
+        }
         return
       }
     } catch (err) {
@@ -97,66 +86,33 @@ const PaymentPage = () => {
     } finally {
       setLoading(false)
     }
-  }, [jobId, navigate, startPhonePeCheckout])
-
-  const handleReturnFromPhonePe = useCallback(async (txnId) => {
-    setVerifying(true)
-    const POLL_INTERVAL_MS = 3000
-    const MAX_ATTEMPTS = 20
-    let lastResult = null
-
-    try {
-      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        lastResult = await verifyPhonePePayment(txnId)
-        if (lastResult.state !== 'PENDING') break
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
-      }
-
-      if (lastResult?.success && lastResult.state === 'COMPLETED') {
-        await updatePaymentStatus(jobId, 'paid')
-        saveToLocalHistory(jobId)
-        setPaymentConfirmed(true)
-        setTimeout(() => navigate(`/status/${jobId}`), 2500)
-      } else {
-        setError(
-          lastResult?.state === 'PENDING'
-            ? 'Payment is still processing. Please check your order status.'
-            : 'Payment was not successful. Please try again or choose Pay at Shop.'
-        )
-        const { data: jobData } = await getJobStatus(jobId)
-        if (jobData) setJob(jobData)
-      }
-    } catch (err) {
-      console.error('Payment verification error:', err)
-      setError('Could not verify payment. Please check your order status.')
-      const { data: jobData } = await getJobStatus(jobId)
-      if (jobData) setJob(jobData)
-    } finally {
-      setVerifying(false)
-      setProcessing(false)
-      setRedirectingToPhonePe(false)
-    }
   }, [jobId, navigate])
 
-  const orderIdParam = searchParams.get('orderId')
-
   useEffect(() => {
-    if (orderIdParam) {
-      handleReturnFromPhonePe(orderIdParam)
-    } else {
+    if (!orderIdParam) {
       loadJobDetails()
     }
-  }, [jobId, orderIdParam])
+  }, [jobId, orderIdParam, loadJobDetails])
 
-  const handlePayOnline = () => startPhonePeCheckout()
+  const handlePayOnline = async () => {
+    setProcessing(true)
+    setError(null)
+    setRedirectingToPhonePe(true)
+    try {
+      await startPhonePeCheckoutForJob(jobId)
+    } catch (err) {
+      setError(err.message || 'Failed to start payment. Please try again.')
+      setRedirectingToPhonePe(false)
+      setProcessing(false)
+    }
+  }
 
   const handlePayAtShop = async () => {
     setProcessing(true)
     try {
       await updatePaymentStatus(jobId, 'paid')
       saveToLocalHistory(jobId)
-      setPaymentConfirmed(true)
-      setTimeout(() => navigate(`/status/${jobId}`), 2000)
+      navigate(`/status/${jobId}`, { replace: true })
     } catch (err) {
       console.error('Error confirming order:', err)
       setError('Failed to confirm order. Please try again.')
@@ -164,17 +120,13 @@ const PaymentPage = () => {
     }
   }
 
-  if (loading || verifying || redirectingToPhonePe) {
+  if (orderIdParam || loading || redirectingToPhonePe) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <Loader2 className="animate-spin w-12 h-12 text-blue-600 mx-auto mb-4" />
           <p className="text-gray-600 font-medium">
-            {verifying
-              ? 'Verifying your payment...'
-              : redirectingToPhonePe
-                ? 'Opening secure payment...'
-                : 'Loading...'}
+            {redirectingToPhonePe ? 'Opening secure payment...' : 'Loading...'}
           </p>
         </div>
       </div>
@@ -194,21 +146,6 @@ const PaymentPage = () => {
           >
             Try Again
           </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (paymentConfirmed) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-        <div className="text-center max-w-md bg-white p-10 rounded-3xl shadow-2xl border border-green-100">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-10 h-10 text-green-600" />
-          </div>
-          <h1 className="text-3xl font-black text-green-600 mb-2">Payment Successful!</h1>
-          <p className="text-gray-600 mb-6">Your order has been confirmed and sent to the shop.</p>
-          <p className="text-sm text-gray-400">Redirecting to status page...</p>
         </div>
       </div>
     )
@@ -245,7 +182,7 @@ const PaymentPage = () => {
                   </div>
                 )}
                 <div className="pt-2 border-t border-slate-200 flex justify-between items-center mt-2">
-                  <span className="font-bold text-slate-900">Total Amount</span>
+                  <span className="font-bold text-slate-900">Total</span>
                   <span className="text-2xl font-black text-blue-600">₹{job?.total_cost?.toFixed(2)}</span>
                 </div>
               </div>
@@ -255,22 +192,13 @@ const PaymentPage = () => {
               <button
                 onClick={handlePayOnline}
                 disabled={processing}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-base py-4 px-5 rounded-2xl shadow-lg hover:opacity-90 active:scale-95 transition-all flex items-center justify-between gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-base py-4 px-5 rounded-2xl shadow-lg flex items-center justify-between gap-2 disabled:opacity-70"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
-                    <CreditCard className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-sm font-black">Pay Online</div>
-                    <div className="text-xs text-blue-200">UPI · Cards · Net Banking</div>
-                  </div>
+                  <CreditCard className="w-5 h-5" />
+                  <span className="text-sm font-black">Pay Online</span>
                 </div>
-                {processing ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <span className="text-lg font-black">₹{job?.total_cost?.toFixed(2)}</span>
-                )}
+                <span className="text-lg font-black">₹{job?.total_cost?.toFixed(2)}</span>
               </button>
 
               <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400">
@@ -278,26 +206,14 @@ const PaymentPage = () => {
                 <span>Secured checkout</span>
               </div>
 
-              <div className="flex items-center gap-3 my-2">
-                <div className="flex-1 h-px bg-slate-200" />
-                <span className="text-xs text-slate-400 font-medium">or</span>
-                <div className="flex-1 h-px bg-slate-200" />
-              </div>
-
               <button
                 onClick={handlePayAtShop}
                 disabled={processing}
-                className="w-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-sm py-3.5 rounded-xl hover:bg-slate-200 active:scale-95 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-sm py-3.5 rounded-xl disabled:opacity-70"
               >
                 Pay at Shop (Cash / UPI on Pickup)
               </button>
             </div>
-
-            <p className="text-center text-xs text-slate-400 mt-4">
-              By proceeding, you agree to PrintGet's{' '}
-              <a href="/terms" className="underline text-blue-500">Terms</a> &amp;{' '}
-              <a href="/refund-policy" className="underline text-blue-500">Refund Policy</a>
-            </p>
           </div>
         </div>
       </div>

@@ -7,6 +7,7 @@ import useUploadStore from '../stores/uploadStore'
 
 import { usePageTitle } from '../hooks/usePageTitle'
 import InstallButton from '../components/InstallButton'
+import ShopLocationBar from '../components/ShopLocationBar'
 
 const StatusPage = () => {
   const { jobId } = useParams()
@@ -406,6 +407,7 @@ const StatusPage = () => {
                   <span>Last updated: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   {shop?.address && <span className="truncate max-w-[180px] sm:max-w-xs">{shop.address}</span>}
                 </div>
+                {shop && <ShopLocationBar shop={shop} variant="inline" />}
               </div>
             </div>
 
@@ -727,6 +729,12 @@ const StatusPage = () => {
           </div>
         )}
 
+        {shop && (
+          <div className="mb-5">
+            <ShopLocationBar shop={shop} variant="card" />
+          </div>
+        )}
+
         {/* Order Details Card */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-5">
           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -802,7 +810,8 @@ const StatusPage = () => {
         </div>
 
         {/* Back to Shop */}
-        <div className="text-center pb-4">
+        <div className="text-center pb-4 space-y-3">
+          {shop && <ShopLocationBar shop={shop} variant="inline" />}
           <Link
             to={`/shop/${job.shop_id}`}
             className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-blue-600 font-medium transition-colors"

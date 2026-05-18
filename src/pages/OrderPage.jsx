@@ -19,6 +19,7 @@ import PDFEditorSheetPopup from '../components/PDFEditorSheetPopup'
 import { useTour } from '../hooks/useTour'
 import { usePageTitle } from '../hooks/usePageTitle'
 import InstallButton from '../components/InstallButton'
+import ShopLocationBar from '../components/ShopLocationBar'
 import { startPhonePeCheckoutForJob } from '../services/paymentService'
 
 const OrderPage = () => {
@@ -1936,6 +1937,7 @@ const OrderPage = () => {
             <div className="flex-1">
               <h1 className="text-xl sm:text-2xl font-bold mb-1">{shop.name}</h1>
               <p className="text-sm sm:text-base text-gray-600">{shop.address}</p>
+              <ShopLocationBar shop={shop} variant="inline" />
             </div>
             <div className="flex gap-2 items-center">
               {/* Guide Toggle */}
@@ -2005,7 +2007,8 @@ const OrderPage = () => {
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">Contact</h3>
                   <p className="text-sm text-gray-600 mb-1">{shop.address}</p>
-                  <p className="text-sm text-blue-600">{shop.phone}</p>
+                  <ShopLocationBar shop={shop} variant="inline" />
+                  <p className="text-sm text-blue-600 mt-2">{shop.phone}</p>
                   {shop.email && <p className="text-sm text-gray-600">{shop.email}</p>}
                 </div>
 
@@ -2062,6 +2065,8 @@ const OrderPage = () => {
             </div>
           </div>
         )}
+
+        <ShopLocationBar shop={shop} variant="card" className="mb-4 sm:mb-6 !mt-0" />
 
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* File Upload */}

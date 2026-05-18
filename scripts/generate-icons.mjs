@@ -45,7 +45,7 @@ const ensure = async () => {
           </text>
         </svg>`
       )
-      const iconPng = await sharp(svgBuffer).resize(360, 360).png().toBuffer()
+      const iconPng = await sharp(svgBuffer).resize(360, 360).flatten({ background: '#2563eb' }).png().toBuffer()
       await sharp(bg)
         .composite([{ input: iconPng, top: 90, left: 420 }])
         .png()
@@ -53,14 +53,19 @@ const ensure = async () => {
       console.log('Generated', t.file)
       continue
     }
-    await sharp(svgBuffer).resize(t.size, t.size).png().toFile(out)
+    await sharp(svgBuffer)
+      .resize(t.size, t.size)
+      .flatten({ background: '#2563eb' })
+      .png()
+      .toFile(out)
     console.log('Generated', t.file)
   }
 
   // Generate a multi-resolution favicon.ico (16, 32, 48) from PNG buffers
-  const ico16 = await sharp(svgBuffer).resize(16, 16).png().toBuffer()
-  const ico32 = await sharp(svgBuffer).resize(32, 32).png().toBuffer()
-  const ico48 = await sharp(svgBuffer).resize(48, 48).png().toBuffer()
+  const flatten = { background: '#2563eb' }
+  const ico16 = await sharp(svgBuffer).resize(16, 16).flatten(flatten).png().toBuffer()
+  const ico32 = await sharp(svgBuffer).resize(32, 32).flatten(flatten).png().toBuffer()
+  const ico48 = await sharp(svgBuffer).resize(48, 48).flatten(flatten).png().toBuffer()
   const icoBuffer = await pngToIco([ico16, ico32, ico48])
   writeFileSync(resolve(PUBLIC, 'favicon.ico'), icoBuffer)
   console.log('Generated favicon.ico')

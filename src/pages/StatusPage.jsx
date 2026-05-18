@@ -389,29 +389,33 @@ const StatusPage = () => {
 
         {/* Top Summary Card */}
         <div className="bg-white rounded-3xl p-5 sm:p-6 mb-5 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 min-w-0">
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-                {React.cloneElement(getStatusIcon(statusForDisplay), {
-                  className: `w-6 h-6 ${getStatusIcon(statusForDisplay).props.className.split(' ').slice(2).join(' ')}`
-                })}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap mb-2 pr-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-600">Order Status</p>
+                {shop && <span className="w-1 h-1 rounded-full bg-gray-300" />}
+                {shop && <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400 truncate">{shop.name}</p>}
               </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-600">Order Status</p>
-                  {shop && <span className="w-1 h-1 rounded-full bg-gray-300" />}
-                  {shop && <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400 truncate">{shop.name}</p>}
+
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+                  {React.cloneElement(getStatusIcon(statusForDisplay), {
+                    className: `w-5 h-5 ${getStatusIcon(statusForDisplay).props.className.split(' ').slice(2).join(' ')}`
+                  })}
                 </div>
-                <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 leading-none">{getStatusText(statusForDisplay)}</h1>
-                <p className="mt-2 text-xs text-gray-500">
-                  Last updated: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 leading-none">
+                  {getStatusText(statusForDisplay)}
+                </h1>
               </div>
+
+              <p className="mt-2 text-xs text-gray-500">
+                Last updated: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </p>
             </div>
 
             <button
               onClick={handleRefresh}
-              className="flex-shrink-0 w-10 h-10 rounded-xl border border-gray-100 bg-white text-gray-400 shadow-sm hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 active:scale-95 transition-all"
+              className="flex-shrink-0 w-10 h-10 rounded-xl border border-gray-100 bg-white text-gray-400 shadow-sm hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 active:scale-95 transition-all mt-6 sm:mt-7"
             >
               <RefreshCw className="w-4 h-4 mx-auto" />
             </button>

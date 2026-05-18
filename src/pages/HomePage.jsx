@@ -42,6 +42,7 @@ const isShopOpen = (shop) => {
 
 import { usePageTitle } from '../hooks/usePageTitle'
 import InstallButton from '../components/InstallButton'
+import PrintGetLogo from '../components/PrintGetLogo'
 
 // Individual shop card with scroll-triggered animation
 const ShopCard = ({ shop, index, glow, userLocation, isNearest, needsLocation }) => {
@@ -390,14 +391,7 @@ const HomePage = () => {
         <div className="absolute top-0 -right-4 w-24 h-24 bg-gradient-to-bl from-blue-600/15 via-blue-400/5 to-transparent rounded-bl-[80px] pointer-events-none" />
         
         <div className="max-w-7xl mx-auto flex items-center justify-between relative z-10">
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-active:scale-95 transition-transform">
-              <Printer className="w-5 h-5 text-white" />
-            </div>
-            <h3 className="font-bold text-xl tracking-tight text-gray-900">
-              Print<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Get</span>
-            </h3>
-          </Link>
+          <PrintGetLogo to="/" size="md" />
           <div className="flex items-center gap-2 sm:gap-3">
             <InstallButton />
             <Link 
@@ -967,13 +961,8 @@ const HomePage = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
             {/* Company Info */}
             <div className="col-span-2 lg:col-span-1">
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                  <Printer className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-white font-bold text-xl tracking-tight">
-                  Print<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Get</span>
-                </h3>
+              <div className="mb-4">
+                <PrintGetLogo size="md" variant="light" />
               </div>
               <p className="text-sm text-gray-400 mb-4 leading-relaxed">
                 Your trusted platform for convenient printing services. Connect with local print shops and get your documents printed quickly.

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Printer, ArrowLeft } from 'lucide-react'
 import { usePageTitle } from '../hooks/usePageTitle'
+import PrintGetLogo from '../components/PrintGetLogo'
 
 const faqs = [
     {
@@ -106,14 +107,7 @@ const FAQPage = () => {
                         <ArrowLeft className="w-4 h-4" />
                         <span className="text-sm font-medium hidden sm:inline">Home</span>
                     </Link>
-                    <Link to="/" className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                            <Printer className="w-3.5 h-3.5 text-white" />
-                        </div>
-                        <span className="font-bold text-gray-900">
-                            Print<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500">Get</span>
-                        </span>
-                    </Link>
+                    <PrintGetLogo to="/" size="sm" />
                 </div>
             </div>
 

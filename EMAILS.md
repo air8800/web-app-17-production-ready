@@ -6,7 +6,7 @@ All emails are on the `@printget.in` domain.
 |---|---|---|---|
 | orders | orders@printget.in | New order confirmations & order-related notifications sent to customers | Order confirmation emails, transactional notifications |
 | support | support@printget.in | Primary shop partner & customer support inbox | Contact Page, Privacy Policy (data deletion requests), Terms Page |
-| noreply | noreply@printget.in | System-generated emails (OTPs, alerts, automatic notifications) | Auth emails, automated system alerts |
+| hello | hello@printget.in | Partner desktop signup (OTP + welcome) and authenticated SMTP sender | Desktop partner auth; order mail auth user |
 | info | info@printget.in | General public-facing enquiries, onboarding new shop partners | About Page, general website footer |
 | contact | contact@printget.in | Alternative public contact form submissions | Web app contact form |
 | billing | billing@printget.in | Payment issues, invoice disputes, settlement queries from shop partners | Refund Policy, financial dispute communications |

@@ -29,6 +29,7 @@ import CookiePolicyPage from './pages/CookiePolicyPage'
 import FAQPage from './pages/FAQPage'
 import NotFoundPage from './pages/NotFoundPage'
 import RefundPolicyPage from './pages/RefundPolicyPage'
+import DesktopAuthCallbackPage from './pages/DesktopAuthCallbackPage'
 import InstallPrompt from './components/InstallPrompt'
 
 function App() {
@@ -56,6 +57,7 @@ function App() {
           <Route path="/shop/:shopId/order" element={<OrderPage />} />
           <Route path="/payment/:jobId" element={<PaymentPage />} />
           <Route path="/status/:jobId" element={<StatusPage />} />
+          <Route path="/auth/desktop-callback" element={<DesktopAuthCallbackPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />

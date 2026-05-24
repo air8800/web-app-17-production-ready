@@ -49,6 +49,22 @@ export const getTodayHours = (operatingHours?: OperatingHours | null): string =>
   return `Today: ${hours || 'Closed'}`
 }
 
+export type ShopAvailability = {
+  desktop_live?: boolean | null
+  operating_hours?: OperatingHours | null
+}
+
+/**
+ * Whether a shop accepts orders right now.
+ * Desktop app session overrides scheduled hours when desktop_live is set.
+ */
+export const isShopAvailable = (shop: ShopAvailability | null | undefined): boolean => {
+  if (!shop) return false
+  if (shop.desktop_live === false) return false
+  if (shop.desktop_live === true) return true
+  return isShopOpen(shop.operating_hours)
+}
+
 /**
  * Check if a shop is currently open based on operating hours
  * @param operatingHours - Shop's operating hours object

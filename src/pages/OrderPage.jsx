@@ -9,7 +9,7 @@ import Dropdown from '../components/Dropdown'
 import { PDFDocument } from 'pdf-lib'
 import { CreditCard as Edit, FileText, Image as ImageIcon, Info, Clock, CircleDot, Maximize2, Home, ChevronRight, Copy, Layers, BookOpen, Square, Grid2x2, FlipHorizontal2, MoreHorizontal, Columns2, ArrowLeftRight, X, AlertTriangle, Zap, ShieldCheck, Printer, ShoppingCart, Loader, MapPin, Phone, HandCoins } from 'lucide-react'
 import { PAGE_SIZES, DEFAULT_PAGE_SIZE, getPageSize } from '../utils/pageSizes'
-import { getTodayDayName, getTodayHours, isShopOpen } from '../utils/shop'
+import { getTodayDayName, getTodayHours, isShopAvailable } from '../utils/shop'
 import { normalizePdfToA4 } from '../utils/pdf/normalizeToA4'
 
 const ImageEditor = lazy(() => import('../components/ImageEditor'))
@@ -1978,10 +1978,10 @@ const OrderPage = () => {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <CircleDot className={`w-4 h-4 ${isShopOpen(shop.operating_hours) ? 'text-green-500' : 'text-red-500'}`} />
-                <span className={`text-sm font-medium ${isShopOpen(shop.operating_hours) ? 'text-green-600' : 'text-red-600'
+                <CircleDot className={`w-4 h-4 ${isShopAvailable(shop) ? 'text-green-500' : 'text-red-500'}`} />
+                <span className={`text-sm font-medium ${isShopAvailable(shop) ? 'text-green-600' : 'text-red-600'
                   }`}>
-                  {isShopOpen(shop.operating_hours) ? 'Open Now' : 'Closed'}
+                  {isShopAvailable(shop) ? 'Open Now' : 'Closed'}
                 </span>
               </div>
             </div>

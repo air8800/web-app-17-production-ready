@@ -15,8 +15,10 @@ import {
 } from '../utils/location'
 import { Printer, Search, Store, Clock, Star, MapPin, Phone, ArrowRight, Zap, Shield, Award, Globe, Upload, Settings, FileCheck, Package, Mail, Sparkles, ChevronDown, ChevronRight, Check, CreditCard, Navigation, LocateFixed, Loader2 } from 'lucide-react'
 
-// Helper: Check if a shop is currently open based on operating_hours
+// Helper: Check if a shop is currently open (desktop session overrides scheduled hours)
 const isShopOpen = (shop) => {
+  if (shop?.desktop_live === false) return false
+  if (shop?.desktop_live === true) return true
   if (!shop?.operating_hours) return null // unknown
   const now = new Date()
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']

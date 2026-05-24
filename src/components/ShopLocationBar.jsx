@@ -1,34 +1,64 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { MapPin, Navigation } from 'lucide-react'
 import {
   enrichShopWithCoordinates,
-  getDistanceLabel,
+  fetchDrivingDistancesKm,
+  getDrivingDistanceLabel,
   getGoogleMapsDirectionsUrl,
-  loadStoredUserLocation,
+  getShopCoords,
 } from '../utils/location'
+import { useUserLocation } from '../hooks/useUserLocation'
 
 /**
- * Distance + Google Maps directions for a shop (uses stored user location from home page).
+ * Distance + Google Maps directions for a shop (uses live GPS + driving route distance).
  */
 const ShopLocationBar = ({ shop, variant = 'card', className = '' }) => {
-  const [userLocation, setUserLocation] = useState(() => loadStoredUserLocation())
+  const { userLocation } = useUserLocation()
+  const [drivingKm, setDrivingKm] = useState(null)
+  const [loadingDistance, setLoadingDistance] = useState(false)
 
   useEffect(() => {
-    const refresh = () => setUserLocation(loadStoredUserLocation())
-    refresh()
-    window.addEventListener('storage', refresh)
-    window.addEventListener('focus', refresh)
-    return () => {
-      window.removeEventListener('storage', refresh)
-      window.removeEventListener('focus', refresh)
+    if (!shop || !userLocation) {
+      setDrivingKm(null)
+      setLoadingDistance(false)
+      return undefined
     }
-  }, [])
+
+    const enriched = enrichShopWithCoordinates(shop)
+    const coords = getShopCoords(enriched)
+    if (!coords) {
+      setDrivingKm(null)
+      return undefined
+    }
+
+    let cancelled = false
+    setLoadingDistance(true)
+
+    fetchDrivingDistancesKm(userLocation, [coords])
+      .then((distances) => {
+        if (cancelled) return
+        const km = distances?.[0]
+        setDrivingKm(Number.isFinite(km) ? km : null)
+      })
+      .catch(() => {
+        if (!cancelled) setDrivingKm(null)
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDistance(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [shop, userLocation?.lat, userLocation?.lng])
 
   if (!shop) return null
 
   const shopWithCoords = enrichShopWithCoordinates(shop)
-  const distanceLabel = userLocation ? getDistanceLabel(userLocation, shopWithCoords) : null
-  const directionsUrl = getGoogleMapsDirectionsUrl(shopWithCoords)
+  const distanceLabel = userLocation
+    ? getDrivingDistanceLabel(drivingKm, { loading: loadingDistance })
+    : null
+  const directionsUrl = getGoogleMapsDirectionsUrl(shopWithCoords, userLocation)
 
   if (!directionsUrl && !distanceLabel) return null
 

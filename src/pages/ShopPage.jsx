@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getShopInfo, testConnection } from '../utils/supabase'
 import { getGoogleMapsDirectionsUrl } from '../utils/location'
+import { useUserLocation } from '../hooks/useUserLocation'
 
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const ShopPage = () => {
   const { shopId } = useParams()
   const navigate = useNavigate()
+  const { userLocation } = useUserLocation()
   const [shop, setShop] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -111,9 +113,9 @@ const ShopPage = () => {
         <div className="max-w-4xl mx-auto px-4 py-4 sm:py-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{shop.name}</h1>
           <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">{shop.address}</p>
-          {getGoogleMapsDirectionsUrl(shop) && (
+          {getGoogleMapsDirectionsUrl(shop, userLocation) && (
             <a
-              href={getGoogleMapsDirectionsUrl(shop)}
+              href={getGoogleMapsDirectionsUrl(shop, userLocation)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block text-sm font-semibold text-blue-600 hover:underline mt-3"

@@ -2,17 +2,14 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { getAllActiveShops } from '../utils/supabase'
 import {
-  loadStoredUserLocation,
-  storeUserLocation,
-  USER_LOCATION_STORAGE_KEY,
-  getDistanceLabel,
-  getDistanceKm,
+  getDrivingDistanceKm,
+  getDrivingDistanceLabel,
   getGoogleMapsDirectionsUrl,
-  sortShopsByDistance,
-  isGeolocationSupported,
-  isSecureContextForGeolocation,
+  sortShopsByDrivingDistance,
   enrichShopWithCoordinates,
 } from '../utils/location'
+import { useUserLocation } from '../hooks/useUserLocation'
+import { useDrivingDistances } from '../hooks/useDrivingDistances'
 import { Printer, Search, Store, Clock, Star, MapPin, Phone, ArrowRight, Zap, Shield, Award, Globe, Upload, Settings, FileCheck, Package, Mail, Sparkles, ChevronDown, ChevronRight, Check, CreditCard, Navigation, LocateFixed, Loader2 } from 'lucide-react'
 
 // Helper: Check if a shop is currently open (desktop session overrides scheduled hours)
@@ -47,12 +44,14 @@ import InstallButton from '../components/InstallButton'
 import PrintGetLogo from '../components/PrintGetLogo'
 
 // Individual shop card with scroll-triggered animation
-const ShopCard = ({ shop, index, glow, userLocation, isNearest, needsLocation }) => {
+const ShopCard = ({ shop, index, glow, userLocation, isNearest, needsLocation, drivingKm, distancesLoading }) => {
   const cardRef = useRef(null)
   const [isVisible, setIsVisible] = useState(false)
   const shopWithCoords = enrichShopWithCoordinates(shop)
-  const distanceLabel = userLocation ? getDistanceLabel(userLocation, shopWithCoords) : null
-  const directionsUrl = getGoogleMapsDirectionsUrl(shopWithCoords)
+  const distanceLabel = userLocation
+    ? getDrivingDistanceLabel(drivingKm, { loading: distancesLoading })
+    : null
+  const directionsUrl = getGoogleMapsDirectionsUrl(shopWithCoords, userLocation)
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -174,11 +173,13 @@ const HomePage = () => {
   const [cityVisible, setCityVisible] = useState(false)
   const [shouldGlow, setShouldGlow] = useState(false)
   const [visibleShopsCount, setVisibleShopsCount] = useState(5)
-  const [userLocation, setUserLocation] = useState(() => loadStoredUserLocation())
-  const [locationStatus, setLocationStatus] = useState(() =>
-    loadStoredUserLocation() ? 'ready' : 'idle'
-  )
-  const [locationError, setLocationError] = useState(null)
+  const {
+    userLocation,
+    status: locationStatus,
+    error: locationError,
+    requestLocation,
+    clearLocation: clearUserLocation,
+  } = useUserLocation()
 
   useEffect(() => {
     setVisibleShopsCount(5)
@@ -281,76 +282,49 @@ const HomePage = () => {
     })
   }, [shops, selectedCity, searchTerm])
 
+  const recentShopsMerged = useMemo(() => {
+    return recentShops.map((recent) => {
+      const full = shops.find((s) => s.id === recent.id)
+      return full ? { ...recent, ...full } : recent
+    })
+  }, [recentShops, shops])
+
+  const shopsForDistance = useMemo(() => {
+    const byId = new Map()
+    for (const shop of [...filteredShops, ...recentShopsMerged]) {
+      byId.set(shop.id, shop)
+    }
+    return [...byId.values()]
+  }, [filteredShops, recentShopsMerged])
+
+  const { distancesByShopId, loading: distancesLoading } = useDrivingDistances(
+    userLocation,
+    shopsForDistance
+  )
+
   const sortedFilteredShops = useMemo(
-    () => sortShopsByDistance(filteredShops, userLocation),
-    [filteredShops, userLocation]
+    () =>
+      userLocation
+        ? sortShopsByDrivingDistance(filteredShops, distancesByShopId)
+        : filteredShops,
+    [filteredShops, userLocation, distancesByShopId]
   )
 
   const nearestShopId = useMemo(() => {
     if (!userLocation || sortedFilteredShops.length === 0) return null
-    const first = sortedFilteredShops.find((shop) => getDistanceKm(userLocation, shop) != null)
+    const first = sortedFilteredShops.find(
+      (shop) => getDrivingDistanceKm(distancesByShopId, shop.id) != null
+    )
     return first?.id ?? null
-  }, [sortedFilteredShops, userLocation])
+  }, [sortedFilteredShops, userLocation, distancesByShopId])
 
-  const recentShopsEnriched = useMemo(() => {
-    const merged = recentShops.map((recent) => {
-      const full = shops.find((s) => s.id === recent.id)
-      return full ? { ...recent, ...full } : recent
-    })
-    return sortShopsByDistance(merged, userLocation)
-  }, [recentShops, shops, userLocation])
-
-  const requestUserLocation = useCallback(() => {
-    if (!isGeolocationSupported()) {
-      setLocationStatus('error')
-      setLocationError('Location is not supported on this device.')
-      return
-    }
-    if (!isSecureContextForGeolocation()) {
-      setLocationStatus('error')
-      setLocationError(
-        'Location needs HTTPS. Open https://www.printget.in or use localhost — not a local IP like 192.168.x.x.'
-      )
-      return
-    }
-
-    setLocationStatus('loading')
-    setLocationError(null)
-
-    const onSuccess = (position) => {
-      const loc = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-      }
-      setUserLocation(loc)
-      storeUserLocation(loc)
-      setLocationStatus('ready')
-    }
-
-    const onError = (err) => {
-      setLocationStatus('error')
-      if (err.code === 1) {
-        setLocationError(
-          'Location blocked. Tap the lock icon in your browser address bar → Site settings → Allow location, then try again.'
-        )
-      } else if (err.code === 3) {
-        setLocationError('Location timed out. Try again or move near a window.')
-      } else {
-        setLocationError('Could not detect your location. Tap the button to try again.')
-      }
-    }
-
-    const options = { enableHighAccuracy: false, timeout: 20000, maximumAge: 300000 }
-
-    navigator.geolocation.getCurrentPosition(onSuccess, onError, options)
-  }, [])
-
-  const clearUserLocation = useCallback(() => {
-    setUserLocation(null)
-    setLocationStatus('idle')
-    setLocationError(null)
-    localStorage.removeItem(USER_LOCATION_STORAGE_KEY)
-  }, [])
+  const recentShopsEnriched = useMemo(
+    () =>
+      userLocation
+        ? sortShopsByDrivingDistance(recentShopsMerged, distancesByShopId)
+        : recentShopsMerged,
+    [recentShopsMerged, userLocation, distancesByShopId]
+  )
 
   const handleCitySelect = useCallback(
     (city) => {
@@ -359,10 +333,10 @@ const HomePage = () => {
       setSearchTerm('')
       setIsDropdownOpen(false)
       if (value && value !== 'All Cities' && !userLocation) {
-        requestUserLocation()
+        requestLocation()
       }
     },
-    [requestUserLocation, userLocation]
+    [requestLocation, userLocation]
   )
 
   const features = [
@@ -535,8 +509,11 @@ const HomePage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recentShopsEnriched.map((shop, index) => {
-                const distanceLabel = userLocation ? getDistanceLabel(userLocation, shop) : null
-                const directionsUrl = getGoogleMapsDirectionsUrl(shop)
+                const drivingKm = getDrivingDistanceKm(distancesByShopId, shop.id)
+                const distanceLabel = userLocation
+                  ? getDrivingDistanceLabel(drivingKm, { loading: distancesLoading })
+                  : null
+                const directionsUrl = getGoogleMapsDirectionsUrl(shop, userLocation)
                 return (
                 <Link
                   key={shop.id}
@@ -672,7 +649,7 @@ const HomePage = () => {
                       <div className="flex flex-col sm:flex-row gap-3">
                         <button
                           type="button"
-                          onClick={requestUserLocation}
+                          onClick={() => requestLocation()}
                           disabled={locationStatus === 'loading'}
                           className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-70"
                         >
@@ -695,7 +672,7 @@ const HomePage = () => {
                       </div>
                       {locationStatus === 'ready' && (
                         <p className="text-xs text-emerald-600 font-medium mt-2 ml-1">
-                          Showing shops sorted by distance from you.
+                          Showing shops sorted by driving distance from your GPS location.
                         </p>
                       )}
                       {locationError && (
@@ -750,7 +727,7 @@ const HomePage = () => {
                     </h3>
                     <p className="text-sm text-gray-400 mt-1">
                       {userLocation
-                        ? 'Closest shop at the top · distances use your location'
+                        ? 'Closest shop at the top · driving distance via road routes'
                         : 'Allow location above to sort nearest shop first'}
                     </p>
                   </div>
@@ -765,6 +742,8 @@ const HomePage = () => {
                       userLocation={userLocation}
                       isNearest={shop.id === nearestShopId}
                       needsLocation={!userLocation && locationStatus !== 'loading'}
+                      drivingKm={getDrivingDistanceKm(distancesByShopId, shop.id)}
+                      distancesLoading={distancesLoading}
                     />
                   ))}
                 </div>

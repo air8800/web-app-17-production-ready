@@ -72,8 +72,11 @@ export function useUserLocation({ autoRefresh = true } = {}) {
           setError(
             'Location blocked. Tap the lock icon in your browser address bar → Site settings → Allow location, then try again.'
           )
+        } else if (err.code === 2 || err.code === 4) {
+          setError('Device GPS is off or unavailable. Please turn ON your device Location/GPS.')
+          alert('Please turn ON your device Location / GPS in your phone settings to get accurate distances.')
         } else if (err.code === 3) {
-          setError('Location timed out. Try again or move near a window.')
+          setError('Location timed out. Try again or move outdoors.')
         } else {
           setError('Could not detect your location. Tap the button to try again.')
         }

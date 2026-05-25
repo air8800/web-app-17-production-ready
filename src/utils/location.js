@@ -268,6 +268,36 @@ async function osrmDrivingDistancesKm(origin, destinations) {
   )
 }
 
+const OSRM_ROUTE = 'https://router.project-osrm.org/route/v1/driving'
+
+/**
+ * Road distance for a single origin→destination via OSRM route API.
+ * @returns {Promise<number | null>} distance in km, or null on failure
+ */
+async function osrmSingleRouteKm(origin, destination) {
+  const coordStr = `${origin.lng},${origin.lat};${destination.lng},${destination.lat}`
+  const url = `${OSRM_ROUTE}/${coordStr}?overview=false`
+  const resp = await fetch(url)
+  const data = await resp.json()
+  if (data.code !== 'Ok' || !data.routes?.[0]) return null
+  const meters = data.routes[0].distance
+  return Number.isFinite(meters) ? meters / 1000 : null
+}
+
+/**
+ * Fetch road driving distance for a single shop (uses OSRM route API).
+ * Useful as a fallback when batch table distances haven't loaded yet.
+ * @returns {Promise<number | null>}
+ */
+export async function fetchSingleDrivingDistanceKm(origin, destination) {
+  if (!origin || !destination) return null
+  try {
+    return await osrmSingleRouteKm(origin, destination)
+  } catch {
+    return null
+  }
+}
+
 /**
  * Road driving distances in km (same travel mode as Google Maps directions).
  * @returns {Promise<(number | null)[]>}

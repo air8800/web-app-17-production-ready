@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { MapPin, Navigation } from 'lucide-react'
 import {
-  distanceKm,
   enrichShopWithCoordinates,
   fetchDrivingDistancesKm,
+  fetchSingleDrivingDistanceKm,
   formatDistance,
   getDrivingDistanceLabel,
   getGoogleMapsDirectionsUrl,
@@ -54,23 +54,44 @@ const ShopLocationBar = ({ shop, variant = 'card', className = '' }) => {
     }
   }, [shop, userLocation?.lat, userLocation?.lng])
 
+  // Fallback: fetch single road distance via OSRM route when batch table didn't return result
+  const [fallbackKm, setFallbackKm] = useState(null)
+  const [loadingFallback, setLoadingFallback] = useState(false)
+
+  useEffect(() => {
+    // Only run fallback if main driving distance is null and not loading
+    if (drivingKm != null || loadingDistance || !shop || !userLocation) {
+      setFallbackKm(null)
+      return
+    }
+
+    const enriched = enrichShopWithCoordinates(shop)
+    const coords = getShopCoords(enriched)
+    if (!coords) return
+
+    let cancelled = false
+    setLoadingFallback(true)
+
+    fetchSingleDrivingDistanceKm(userLocation, coords)
+      .then((km) => {
+        if (!cancelled) setFallbackKm(km)
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingFallback(false)
+      })
+
+    return () => { cancelled = true }
+  }, [drivingKm, loadingDistance, shop, userLocation?.lat, userLocation?.lng])
+
   if (!shop) return null
 
   const shopWithCoords = enrichShopWithCoordinates(shop)
-  const shopCoords = getShopCoords(shopWithCoords)
-  // Try driving distance first; fall back to straight-line Haversine distance
+  // Use batch driving distance → fallback to single OSRM route distance
+  const effectiveKm = drivingKm ?? fallbackKm
+  const isLoading = loadingDistance || (drivingKm == null && loadingFallback)
   let distanceLabel = null
   if (userLocation) {
-    const drivingLabel = getDrivingDistanceLabel(drivingKm, { loading: loadingDistance })
-    if (drivingLabel) {
-      distanceLabel = drivingLabel
-    } else if (shopCoords) {
-      // Haversine straight-line fallback when driving route is unavailable
-      const straightKm = distanceKm(userLocation.lat, userLocation.lng, shopCoords.lat, shopCoords.lng)
-      if (straightKm != null) {
-        distanceLabel = '~' + formatDistance(straightKm)
-      }
-    }
+    distanceLabel = getDrivingDistanceLabel(effectiveKm, { loading: isLoading })
   }
   const directionsUrl = getGoogleMapsDirectionsUrl(shopWithCoords, userLocation)
 

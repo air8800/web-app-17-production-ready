@@ -2,12 +2,9 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { getAllActiveShops } from '../utils/supabase'
 import {
-  distanceKm,
-  formatDistance,
   getDrivingDistanceKm,
   getDrivingDistanceLabel,
   getGoogleMapsDirectionsUrl,
-  getShopCoords,
   LOCATION_COARSE_ACCURACY_M,
   sortShopsByDrivingDistance,
   enrichShopWithCoordinates,
@@ -52,20 +49,10 @@ const ShopCard = ({ shop, index, glow, userLocation, isNearest, needsLocation, d
   const cardRef = useRef(null)
   const [isVisible, setIsVisible] = useState(false)
   const shopWithCoords = enrichShopWithCoordinates(shop)
-  const shopCoords = getShopCoords(shopWithCoords)
-  // Prefer driving distance; fall back to Haversine straight-line when route unavailable
-  let distanceLabel = null
-  if (userLocation) {
-    const drivingLabel = getDrivingDistanceLabel(drivingKm, { loading: distancesLoading })
-    if (drivingLabel) {
-      distanceLabel = drivingLabel
-    } else if (shopCoords) {
-      const straightKm = distanceKm(userLocation.lat, userLocation.lng, shopCoords.lat, shopCoords.lng)
-      if (straightKm != null) {
-        distanceLabel = '~' + formatDistance(straightKm)
-      }
-    }
-  }
+  // Show driving distance from OSRM batch table
+  const distanceLabel = userLocation
+    ? getDrivingDistanceLabel(drivingKm, { loading: distancesLoading })
+    : null
   const directionsUrl = getGoogleMapsDirectionsUrl(shopWithCoords, userLocation)
 
   useEffect(() => {
@@ -511,20 +498,9 @@ const HomePage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recentShopsEnriched.map((shop, index) => {
                 const drivingKm = getDrivingDistanceKm(distancesByShopId, shop.id)
-                const enrichedShop = enrichShopWithCoordinates(shop)
-                const shopCoords = getShopCoords(enrichedShop)
-                let distanceLabel = null
-                if (userLocation) {
-                  const drivingLabel = getDrivingDistanceLabel(drivingKm, { loading: distancesLoading })
-                  if (drivingLabel) {
-                    distanceLabel = drivingLabel
-                  } else if (shopCoords) {
-                    const straightKm = distanceKm(userLocation.lat, userLocation.lng, shopCoords.lat, shopCoords.lng)
-                    if (straightKm != null) {
-                      distanceLabel = '~' + formatDistance(straightKm)
-                    }
-                  }
-                }
+                const distanceLabel = userLocation
+                  ? getDrivingDistanceLabel(drivingKm, { loading: distancesLoading })
+                  : null
                 const directionsUrl = getGoogleMapsDirectionsUrl(shop, userLocation)
                 return (
                 <Link
@@ -684,13 +660,13 @@ const HomePage = () => {
                       </div>
                       {locationStatus === 'ready' && (
                         <p className={`text-xs font-medium mt-2 ml-1 ${hasCoarseLocation ? 'text-amber-600' : 'text-emerald-600'}`}>
-                          Showing shops sorted by driving distance from your GPS location
-                          {locationAccuracy != null ? ` (accuracy about ${locationAccuracy} m).` : '.'}
+                          {hasCoarseLocation
+                            ? `Location accuracy is about ${locationAccuracy} m — try moving to an open area with better GPS/network coverage for more accurate distance.`
+                            : `Showing shops sorted by driving distance from your GPS location${locationAccuracy != null ? ` (accuracy ${locationAccuracy} m).` : '.'}`
+                          }
                         </p>
                       )}
-                      {locationError && (
-                        <p className="text-xs text-red-600 mt-2 ml-1">{locationError}</p>
-                      )}
+
                       <p className="text-xs text-gray-400 mt-2 ml-1">
                         Location stays on your device and is only used to sort nearby shops.
                       </p>

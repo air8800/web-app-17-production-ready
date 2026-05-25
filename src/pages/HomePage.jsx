@@ -215,6 +215,11 @@ const HomePage = () => {
             setIsCitySupported(false)
             setSelectedCity(city)
           }
+        } else {
+          // If reverse geocoding fails to find a city name, but we have GPS,
+          // safely default to All Cities so the nearest shops still load perfectly!
+          setIsCitySupported(true)
+          setSelectedCity('All Cities')
         }
       })
     } else if (locationStatus === 'error' && !selectedCity) {

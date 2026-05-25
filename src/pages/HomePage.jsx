@@ -203,17 +203,22 @@ const HomePage = () => {
         if (city) {
           setDetectedCityName(city)
           const supportedCities = ['Nashik', 'Pune']
-          if (supportedCities.includes(city)) {
+          const matchedCity = supportedCities.find(c => city.toLowerCase().includes(c.toLowerCase()))
+          
+          if (matchedCity) {
             setIsCitySupported(true)
-            setSelectedCity(city)
+            setSelectedCity(matchedCity)
           } else {
             setIsCitySupported(false)
             setSelectedCity(city)
           }
         }
       })
+    } else if (locationStatus === 'error' && !selectedCity) {
+      // Fallback if they deny location prompt
+      setSelectedCity('All Cities')
     }
-  }, [userLocation])
+  }, [userLocation, locationStatus, selectedCity])
 
   useEffect(() => {
     setVisibleShopsCount(5)
@@ -305,7 +310,8 @@ const HomePage = () => {
 
   const filteredShops = useMemo(() => {
     return shops.filter(shop => {
-      if (selectedCity && selectedCity !== 'All Cities' && !shop.address.toLowerCase().includes(selectedCity.toLowerCase())) {
+      // If the city is unsupported (e.g. Mumbai), don't filter out shops, show all so they can route to nearest
+      if (isCitySupported && selectedCity && selectedCity !== 'All Cities' && !shop.address.toLowerCase().includes(selectedCity.toLowerCase())) {
         return false
       }
       if (searchTerm && !shop.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -314,7 +320,7 @@ const HomePage = () => {
       }
       return true
     })
-  }, [shops, selectedCity, searchTerm])
+  }, [shops, selectedCity, searchTerm, isCitySupported])
 
   const recentShopsMerged = useMemo(() => {
     return recentShops.map((recent) => {

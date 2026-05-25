@@ -8,16 +8,16 @@
 import { createClient } from '@supabase/supabase-js'
 
 const OSRM_TABLE = 'https://router.project-osrm.org/table/v1/driving'
-const MAX_DESTINATIONS = 25
+const MAX_DESTINATIONS = 3
 
 // Initialize Supabase (Using standard process.env for Vercel backend)
 const supabaseUrl = process.env.VITE_SUPABASE_URL
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY
 const supabase = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null
 
-// Round to 3 decimal places (~110 meters accuracy) to group neighborhood requests
+// Round to 2 decimal places (~1.1 kilometers accuracy) to group neighborhood requests
 function roundCoord(num) {
-  return Math.round(num * 1000) / 1000
+  return Math.round(num * 100) / 100
 }
 
 async function googleDrivingDistancesKm(origin, destinations, apiKey) {

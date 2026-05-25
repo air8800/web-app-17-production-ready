@@ -259,7 +259,7 @@ export function requestAccurateUserLocation({
   })
 }
 
-async function osrmDrivingDistancesKm(origin, destinations) {
+export async function osrmDrivingDistancesKm(origin, destinations) {
   const coordStr = [
     `${origin.lng},${origin.lat}`,
     ...destinations.map((d) => `${d.lng},${d.lat}`),
@@ -378,11 +378,26 @@ export async function queryGeolocationPermission() {
 export async function fetchCityFromCoordinates(lat, lng) {
   if (!lat || !lng) return null
   try {
+    // 1. Try our secure backend (works in Vercel production)
     const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`)
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.city || null
+    if (res.ok) {
+      const data = await res.json()
+      if (data.city && data.city !== 'Unknown Location') return data.city
+    }
   } catch {
-    return null
+    // Fallthrough
   }
+
+  try {
+    // 2. Fallback to free client-side API (works in local dev without Vercel API routes)
+    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`)
+    if (res.ok) {
+      const data = await res.json()
+      return data.city || data.locality || null
+    }
+  } catch {
+    // Both failed
+  }
+  
+  return null
 }

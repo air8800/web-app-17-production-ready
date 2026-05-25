@@ -345,9 +345,11 @@ const HomePage = () => {
     return [...byId.values()]
   }, [filteredShops, recentShopsMerged])
 
+  const exactDistanceLimit = Math.max(50, visibleShopsCount)
   const { distancesByShopId, loading: distancesLoading } = useDrivingDistances(
     userLocation,
-    shopsForDistance
+    shopsForDistance,
+    exactDistanceLimit
   )
 
   const sortedFilteredShops = useMemo(

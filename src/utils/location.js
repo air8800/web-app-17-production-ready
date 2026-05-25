@@ -308,7 +308,7 @@ export async function fetchSingleDrivingDistanceKm(origin, destination) {
 }
 
 /**
- * Road driving distances in km (same travel mode as Google Maps directions).
+ * Road driving distances in km (same driving mode used by the directions link).
  * @returns {Promise<(number | null)[]>}
  */
 export async function fetchDrivingDistancesKm(origin, destinations) {

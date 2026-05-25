@@ -2,22 +2,60 @@
  * POST /api/driving-distances
  * Body: { origin: { lat, lng }, destinations: [{ lat, lng }, ...] }
  * Returns road driving distances in km.
- * Implements Supabase Database caching to save Google Maps API costs.
+ * Implements Supabase Database caching to save paid routing API costs.
  */
 
 import { createClient } from '@supabase/supabase-js'
 
+const OLA_DISTANCE_MATRIX_BASIC = 'https://api.olamaps.io/routing/v1/distanceMatrix/basic'
 const OSRM_TABLE = 'https://router.project-osrm.org/table/v1/driving'
-const MAX_DESTINATIONS = 3
+const configuredMaxDestinations = Number.parseInt(process.env.DISTANCE_MATRIX_MAX_DESTINATIONS || '50', 10)
+const MAX_DESTINATIONS = Number.isFinite(configuredMaxDestinations) && configuredMaxDestinations > 0
+  ? configuredMaxDestinations
+  : 50
 
 // Initialize Supabase (Using standard process.env for Vercel backend)
-const supabaseUrl = process.env.VITE_SUPABASE_URL
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY
-const supabase = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
+const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null
 
 // Round to 2 decimal places (~1.1 kilometers accuracy) to group neighborhood requests
 function roundCoord(num) {
   return Math.round(num * 100) / 100
+}
+
+async function olaDrivingDistancesKm(origin, destinations, apiKey) {
+  const params = new URLSearchParams({
+    origins: `${origin.lat},${origin.lng}`,
+    destinations: destinations.map((d) => `${d.lat},${d.lng}`).join('|'),
+    route_preference: 'fastest',
+    api_key: apiKey
+  })
+
+  const resp = await fetch(`${OLA_DISTANCE_MATRIX_BASIC}?${params.toString()}`, {
+    headers: {
+      'x-request-id': `printget-${Date.now()}`,
+      'x-correlation-id': 'printget-driving-distances'
+    }
+  })
+
+  if (!resp.ok) {
+    const errorText = await resp.text()
+    throw new Error(`Ola Distance Matrix request failed: ${resp.status} - ${errorText}`)
+  }
+
+  const data = await resp.json()
+  const elements = data?.rows?.[0]?.elements
+  if (!Array.isArray(elements)) {
+    throw new Error('Ola Distance Matrix did not return rows[0].elements')
+  }
+
+  return destinations.map((_, index) => {
+    const el = elements[index]
+    const isOk = !el?.status || String(el.status).toUpperCase() === 'OK'
+    const meters = Number(el?.distance)
+    return isOk && Number.isFinite(meters) ? meters / 1000 : null
+  })
 }
 
 async function googleDrivingDistancesKm(origin, destinations, apiKey) {
@@ -102,6 +140,33 @@ async function osrmDrivingDistancesKm(origin, destinations) {
   )
 }
 
+async function fetchPaidDistancesKm(origin, destinations, { olaKey, googleKey }) {
+  const distances = []
+  let provider = olaKey ? 'ola' : 'google'
+
+  for (let i = 0; i < destinations.length; i += MAX_DESTINATIONS) {
+    const chunk = destinations.slice(i, i + MAX_DESTINATIONS)
+    let chunkDistances
+
+    if (olaKey) {
+      try {
+        chunkDistances = await olaDrivingDistancesKm(origin, chunk, olaKey)
+      } catch (olaError) {
+        if (!googleKey) throw olaError
+        console.error('Ola Distance Matrix failed, falling back to Google Routes:', olaError)
+        provider = 'google'
+        chunkDistances = await googleDrivingDistancesKm(origin, chunk, googleKey)
+      }
+    } else {
+      chunkDistances = await googleDrivingDistancesKm(origin, chunk, googleKey)
+    }
+
+    distances.push(...chunkDistances)
+  }
+
+  return { distances, provider }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
 
@@ -118,7 +183,6 @@ export default async function handler(req, res) {
   }
 
   const dests = destinations
-    .slice(0, MAX_DESTINATIONS)
     .map((d) => ({ lat: parseFloat(d.lat), lng: parseFloat(d.lng) }))
     .filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
 
@@ -126,12 +190,15 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No valid destinations' })
   }
 
+  const olaKey = process.env.OLA_MAPS_API_KEY
   const googleKey = process.env.GOOGLE_MAPS_API_KEY
   const originLatRounded = roundCoord(originLat)
   const originLngRounded = roundCoord(originLng)
 
   try {
-    if (googleKey) {
+    if (olaKey || googleKey) {
+      const paidProvider = olaKey ? 'ola' : 'google'
+      let responseProvider = paidProvider
       let finalDistances = new Array(dests.length).fill(null)
       let destinationsToFetch = []
       let fetchIndices = [] // To map back which index the fetched dest belongs to
@@ -175,13 +242,15 @@ export default async function handler(req, res) {
         fetchIndices = dests.map((_, i) => i)
       }
 
-      // 2. Fetch missing routes from Google Maps
+      // 2. Fetch missing routes from the configured paid routing provider.
       if (destinationsToFetch.length > 0) {
-        const fetchedDistances = await googleDrivingDistancesKm(
+        const fetched = await fetchPaidDistancesKm(
           { lat: originLat, lng: originLng },
           destinationsToFetch,
-          googleKey
+          { olaKey, googleKey }
         )
+        const fetchedDistances = fetched.distances
+        responseProvider = fetched.provider
 
         const recordsToInsert = []
 
@@ -214,10 +283,10 @@ export default async function handler(req, res) {
         }
       }
 
-      return res.status(200).json({ distancesKm: finalDistances, provider: 'google_cached' })
+      return res.status(200).json({ distancesKm: finalDistances, provider: `${responseProvider}_cached` })
     }
 
-    // Fallback to OSRM if no Google Key
+    // Fallback to OSRM if no paid routing key is configured.
     const distancesKm = await osrmDrivingDistancesKm(
       { lat: originLat, lng: originLng },
       dests

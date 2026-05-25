@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { enrichShopWithCoordinates, fetchDrivingDistancesKm, getShopCoords, osrmDrivingDistancesKm, distanceKm } from '../utils/location'
+import { enrichShopWithCoordinates, fetchDrivingDistancesKm, getShopCoords, distanceKm } from '../utils/location'
+
+const INITIAL_EXACT_DISTANCE_LIMIT = 50
 
 function shopsKey(shops) {
   return shops
@@ -13,14 +15,14 @@ function roundCoord(num) {
 }
 
 /**
- * Hybrid Routing Strategy + Frontend Cache:
+ * Straight-line first + paid matrix refinement:
  * 1. Checks localStorage for a fresh (1 hour) route cache for the user's neighborhood.
- * 2. Fetches OSRM distances for all shops.
- * 3. Takes the top 3 closest shops.
- * 4. Uses Google Maps only for the top 3.
+ * 2. Calculates free straight-line distances for all shops to rank nearby shops.
+ * 3. Uses the paid matrix provider for the nearest batch only.
+ * 4. Expands that exact-distance batch when the UI reveals more shops.
  * 5. Saves final combined distances to localStorage.
  */
-export function useDrivingDistances(userLocation, shops) {
+export function useDrivingDistances(userLocation, shops, exactDistanceLimit = INITIAL_EXACT_DISTANCE_LIMIT) {
   const [distancesByShopId, setDistancesByShopId] = useState({})
   const [loading, setLoading] = useState(false)
 
@@ -35,6 +37,7 @@ export function useDrivingDistances(userLocation, shops) {
   const key = shopsKey(shopsWithCoords)
   const originLat = userLocation?.lat
   const originLng = userLocation?.lng
+  const paidLimit = Math.max(INITIAL_EXACT_DISTANCE_LIMIT, Number(exactDistanceLimit) || 0)
 
   useEffect(() => {
     if (!Number.isFinite(originLat) || !Number.isFinite(originLng) || shopsWithCoords.length === 0) {
@@ -44,7 +47,7 @@ export function useDrivingDistances(userLocation, shops) {
     }
 
     // 1. Check frontend localStorage Cache
-    const cacheKey = `printget_distances_${roundCoord(originLat)}_${roundCoord(originLng)}_${key}`
+    const cacheKey = `printget_distances_v2_${roundCoord(originLat)}_${roundCoord(originLng)}_${paidLimit}_${key}`
     try {
       const cached = localStorage.getItem(cacheKey)
       if (cached) {
@@ -65,67 +68,49 @@ export function useDrivingDistances(userLocation, shops) {
 
     const run = async () => {
       const next = {}
-      const chunkSize = 25
       const origin = { lat: originLat, lng: originLng }
       const shopDistances = []
 
-      // 2. Fetch OSRM distances for all shops in chunks
-      for (let i = 0; i < shopsWithCoords.length; i += chunkSize) {
-        const chunk = shopsWithCoords.slice(i, i + chunkSize)
-        const destinations = chunk.map((shop) => getShopCoords(shop))
-        
-        try {
-          const distancesKm = await osrmDrivingDistancesKm(origin, destinations)
-          if (cancelled) return
-
-          chunk.forEach((shop, idx) => {
-            const km = distancesKm?.[idx]
-            if (km != null && Number.isFinite(km)) {
-              next[shop.id] = km
-              shopDistances.push({ shop, km })
-            }
-          })
-        } catch (e) {
-          console.warn('OSRM fallback fetch failed for chunk', e)
+      // 2. Free straight-line distance for every shop. This gives us a cheap
+      // nearby-first order before spending paid matrix requests.
+      shopsWithCoords.forEach((shop) => {
+        const dest = getShopCoords(shop)
+        const straightKm = distanceKm(originLat, originLng, dest.lat, dest.lng)
+        if (straightKm != null && Number.isFinite(straightKm)) {
+          next[shop.id] = straightKm
+          shopDistances.push({ shop, km: straightKm })
         }
-      }
+      })
 
       if (cancelled) return
 
-      // 3. Fallback: If OSRM completely failed or returned nothing, use straight-line distance locally
-      if (shopDistances.length === 0 && shopsWithCoords.length > 0) {
-        shopsWithCoords.forEach((shop) => {
-          const dest = getShopCoords(shop)
-          const straightKm = distanceKm(originLat, originLng, dest.lat, dest.lng)
-          if (straightKm != null && Number.isFinite(straightKm)) {
-            // We temporarily store the straight-line distance so it sorts correctly
-            next[shop.id] = straightKm 
-            shopDistances.push({ shop, km: straightKm })
-          }
-        })
+      // Sort by free distance and refine the nearest batch with Ola/paid matrix.
+      shopDistances.sort((a, b) => a.km - b.km)
+      const exactShops = shopDistances.slice(0, paidLimit).map(s => s.shop)
+
+      // Show and sort by free straight-line distance immediately while exact
+      // road distances are being refined for the nearest batch.
+      if (!cancelled && Object.keys(next).length > 0) {
+        setDistancesByShopId({ ...next })
       }
 
-      // Sort by whatever distance we found (OSRM or straight-line) and get the Top 3 closest
-      shopDistances.sort((a, b) => a.km - b.km)
-      const top3Shops = shopDistances.slice(0, 3).map(s => s.shop)
-
-      // 4. Fetch Google Maps exact distance ONLY for those Top 3
-      if (top3Shops.length > 0) {
+      // 3. Fetch paid provider exact distance only for shops the user is likely to see.
+      if (exactShops.length > 0) {
         try {
-          const top3Destinations = top3Shops.map((shop) => getShopCoords(shop))
-          const googleDistancesKm = await fetchDrivingDistancesKm(origin, top3Destinations)
+          const exactDestinations = exactShops.map((shop) => getShopCoords(shop))
+          const exactDistancesKm = await fetchDrivingDistancesKm(origin, exactDestinations)
           
           if (cancelled) return
 
-          top3Shops.forEach((shop, idx) => {
-            const km = googleDistancesKm?.[idx]
-            // Overwrite the OSRM distance with the exact Google Maps distance
+          exactShops.forEach((shop, idx) => {
+            const km = exactDistancesKm?.[idx]
+            // Overwrite the straight-line distance with the exact paid-provider distance.
             if (km != null && Number.isFinite(km)) {
               next[shop.id] = km
             }
           })
         } catch (e) {
-          console.warn('Google Maps top 3 fetch failed, falling back entirely to OSRM', e)
+          console.warn('Paid matrix batch fetch failed, keeping straight-line distances', e)
         }
       }
 
@@ -158,7 +143,7 @@ export function useDrivingDistances(userLocation, shops) {
     return () => {
       cancelled = true
     }
-  }, [originLat, originLng, key, shopsWithCoords])
+  }, [originLat, originLng, key, paidLimit, shopsWithCoords])
 
   return { distancesByShopId, loading }
 }

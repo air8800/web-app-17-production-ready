@@ -202,12 +202,15 @@ const HomePage = () => {
       fetchCityFromCoordinates(userLocation.lat, userLocation.lng).then(city => {
         if (city) {
           setDetectedCityName(city)
-          const supportedCities = ['Nashik', 'Pune']
-          const matchedCity = supportedCities.find(c => city.toLowerCase().includes(c.toLowerCase()))
           
-          if (matchedCity) {
+          // Check if any active shop is actually in this city
+          const shopExistsForCity = shops.some(shop => 
+            shop.address.toLowerCase().includes(city.toLowerCase())
+          )
+          
+          if (shopExistsForCity) {
             setIsCitySupported(true)
-            setSelectedCity(matchedCity)
+            setSelectedCity(city)
           } else {
             setIsCitySupported(false)
             setSelectedCity(city)
@@ -218,7 +221,7 @@ const HomePage = () => {
       // Fallback if they deny location prompt
       setSelectedCity('All Cities')
     }
-  }, [userLocation, locationStatus, selectedCity])
+  }, [userLocation, locationStatus, selectedCity, shops])
 
   useEffect(() => {
     setVisibleShopsCount(5)
@@ -640,7 +643,8 @@ const HomePage = () => {
                         {isDropdownOpen && (
                           <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-fadeIn">
                             <div className="p-1.5">
-                              {(isCitySupported ? ['All Cities', 'Nashik', 'Pune'] : ['All Cities', 'Nashik', 'Pune', detectedCityName]).map((city) => (
+                              {/* Always show All Cities, plus statically known cities, plus detected city IF supported */}
+                              {Array.from(new Set(['All Cities', 'Nashik', 'Pune', ...(isCitySupported && detectedCityName ? [detectedCityName] : [])])).map((city) => (
                                 <button
                                   key={city}
                                   type="button"

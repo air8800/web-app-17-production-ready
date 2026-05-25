@@ -49,8 +49,8 @@ export function useDrivingDistances(userLocation, shops) {
       const cached = localStorage.getItem(cacheKey)
       if (cached) {
         const parsed = JSON.parse(cached)
-        // 1-hour expiration
-        if (Date.now() - parsed.timestamp < 60 * 60 * 1000) {
+        // 1-hour expiration AND ensure it actually has valid calculated distances
+        if (Date.now() - parsed.timestamp < 60 * 60 * 1000 && Object.keys(parsed.distances).length > 0) {
           setDistancesByShopId(parsed.distances)
           setLoading(false)
           return
@@ -120,14 +120,16 @@ export function useDrivingDistances(userLocation, shops) {
         setDistancesByShopId(next)
         setLoading(false)
 
-        // 5. Save combined distances to frontend cache
-        try {
-          localStorage.setItem(cacheKey, JSON.stringify({
-            timestamp: Date.now(),
-            distances: next
-          }))
-        } catch (e) {
-          console.warn('Frontend distance cache write failed', e)
+        // 5. Save combined distances to frontend cache ONLY if we successfully calculated routes
+        if (Object.keys(next).length > 0) {
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify({
+              timestamp: Date.now(),
+              distances: next
+            }))
+          } catch (e) {
+            console.warn('Frontend distance cache write failed', e)
+          }
         }
       }
     }

@@ -649,13 +649,24 @@ const HomePage = () => {
                           {locationStatus === 'ready' ? 'Update my location' : 'Detect my location'}
                         </button>
                         {userLocation && (
-                          <button
-                            type="button"
-                            onClick={clearUserLocation}
-                            className="inline-flex items-center justify-center px-5 py-3 rounded-2xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
-                          >
-                            Clear location
-                          </button>
+                          <div className="flex flex-wrap gap-3">
+                            <button
+                              type="button"
+                              onClick={clearUserLocation}
+                              className="inline-flex items-center justify-center px-5 py-3 rounded-2xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
+                            >
+                              Clear location
+                            </button>
+                            <a
+                              href={`https://www.google.com/maps?q=${userLocation.lat},${userLocation.lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border border-blue-200 text-blue-700 font-semibold text-sm hover:bg-blue-50 transition-colors"
+                            >
+                              <MapPin className="w-4 h-4" />
+                              View my location
+                            </a>
+                          </div>
                         )}
                       </div>
                       {locationStatus === 'ready' && (

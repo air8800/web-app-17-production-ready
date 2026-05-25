@@ -3,19 +3,34 @@ import {
   isGeolocationSupported,
   isSecureContextForGeolocation,
   isStoredLocationStale,
+  isUserLocationStale,
   loadStoredUserLocation,
+  LOCATION_COARSE_ACCURACY_M,
   queryGeolocationPermission,
   requestAccurateUserLocation,
   storeUserLocation,
   USER_LOCATION_STORAGE_KEY,
 } from '../utils/location'
 
+function getFreshStoredLocation() {
+  const stored = loadStoredUserLocation()
+  return stored && !isUserLocationStale(stored) ? stored : null
+}
+
+function getAccuracyWarning(location) {
+  if (!Number.isFinite(location?.accuracy) || location.accuracy <= LOCATION_COARSE_ACCURACY_M) {
+    return null
+  }
+
+  return `Location is only accurate within about ${Math.round(location.accuracy)} m. Move near a window and tap Update my location for a better distance.`
+}
+
 /**
  * Accurate user location with silent refresh when permission is already granted.
  */
 export function useUserLocation({ autoRefresh = true } = {}) {
-  const [userLocation, setUserLocation] = useState(() => loadStoredUserLocation())
-  const [status, setStatus] = useState(() => (loadStoredUserLocation() ? 'ready' : 'idle'))
+  const [userLocation, setUserLocation] = useState(() => getFreshStoredLocation())
+  const [status, setStatus] = useState(() => (getFreshStoredLocation() ? 'ready' : 'idle'))
   const [error, setError] = useState(null)
 
   const requestLocation = useCallback(async ({ silent = false } = {}) => {
@@ -42,7 +57,7 @@ export function useUserLocation({ autoRefresh = true } = {}) {
       setUserLocation(loc)
       storeUserLocation(loc)
       setStatus('ready')
-      setError(null)
+      setError(getAccuracyWarning(loc))
       return loc
     } catch (err) {
       if (!silent) {

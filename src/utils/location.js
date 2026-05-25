@@ -5,6 +5,9 @@ const OSRM_TABLE = 'https://router.project-osrm.org/table/v1/driving'
 
 export const USER_LOCATION_STORAGE_KEY = 'printget_user_location'
 export const LOCATION_MAX_AGE_MS = 2 * 60 * 1000
+export const LOCATION_TARGET_ACCURACY_M = 50
+export const LOCATION_COARSE_ACCURACY_M = 250
+export const LOCATION_FIX_TIMEOUT_MS = 25000
 
 /** @returns {{ lat: number, lng: number } | null} */
 export function getShopCoords(shop) {
@@ -90,7 +93,7 @@ export function getGoogleMapsDirectionsUrl(shop, userLocation) {
   return `https://www.google.com/maps/dir/?${params.toString()}`
 }
 
-/** @returns {{ lat: number, lng: number, updatedAt?: number } | null} */
+/** @returns {{ lat: number, lng: number, accuracy?: number | null, capturedAt?: number, updatedAt?: number } | null} */
 export function loadStoredUserLocation() {
   try {
     const raw = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
@@ -100,9 +103,13 @@ export function loadStoredUserLocation() {
     const lng = parseFloat(parsed?.lng)
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
     const updatedAt = Number(parsed?.updatedAt)
+    const accuracy = Number(parsed?.accuracy)
+    const capturedAt = Number(parsed?.capturedAt)
     return {
       lat,
       lng,
+      accuracy: Number.isFinite(accuracy) ? accuracy : null,
+      capturedAt: Number.isFinite(capturedAt) ? capturedAt : 0,
       updatedAt: Number.isFinite(updatedAt) ? updatedAt : 0,
     }
   } catch {
@@ -110,43 +117,113 @@ export function loadStoredUserLocation() {
   }
 }
 
+export function isUserLocationStale(location, maxAgeMs = LOCATION_MAX_AGE_MS) {
+  if (!location?.updatedAt) return true
+  return Date.now() - location.updatedAt > maxAgeMs
+}
+
 export function isStoredLocationStale(maxAgeMs = LOCATION_MAX_AGE_MS) {
   const stored = loadStoredUserLocation()
   if (!stored) return true
-  if (!stored.updatedAt) return true
-  return Date.now() - stored.updatedAt > maxAgeMs
+  return isUserLocationStale(stored, maxAgeMs)
 }
 
 export function storeUserLocation(location) {
-  localStorage.setItem(
-    USER_LOCATION_STORAGE_KEY,
-    JSON.stringify({
-      lat: location.lat,
-      lng: location.lng,
-      updatedAt: Date.now(),
-    })
-  )
+  const payload = {
+    lat: location.lat,
+    lng: location.lng,
+    updatedAt: Date.now(),
+  }
+
+  if (Number.isFinite(location.accuracy)) {
+    payload.accuracy = location.accuracy
+  }
+  if (Number.isFinite(location.capturedAt)) {
+    payload.capturedAt = location.capturedAt
+  }
+
+  localStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(payload))
 }
 
-/** High-accuracy GPS fix for mobile. */
-export function requestAccurateUserLocation() {
+function toUserLocation(position) {
+  const accuracy = Number(position.coords?.accuracy)
+  const capturedAt = Number(position.timestamp)
+
+  return {
+    lat: position.coords.latitude,
+    lng: position.coords.longitude,
+    accuracy: Number.isFinite(accuracy) ? accuracy : null,
+    capturedAt: Number.isFinite(capturedAt) ? capturedAt : Date.now(),
+  }
+}
+
+function isBetterLocation(next, current) {
+  if (!current) return true
+  const nextAccuracy = Number.isFinite(next.accuracy) ? next.accuracy : Number.POSITIVE_INFINITY
+  const currentAccuracy = Number.isFinite(current.accuracy) ? current.accuracy : Number.POSITIVE_INFINITY
+  return nextAccuracy < currentAccuracy
+}
+
+/** High-accuracy GPS fix for mobile. Waits briefly for the browser to refine coarse fixes. */
+export function requestAccurateUserLocation({
+  targetAccuracyM = LOCATION_TARGET_ACCURACY_M,
+  timeoutMs = LOCATION_FIX_TIMEOUT_MS,
+} = {}) {
   return new Promise((resolve, reject) => {
     if (!isGeolocationSupported()) {
       reject(new Error('Geolocation not supported'))
       return
     }
 
-    navigator.geolocation.getCurrentPosition(
+    let settled = false
+    let watchId = null
+    let bestLocation = null
+    let lastError = null
+
+    const cleanup = () => {
+      if (watchId != null) {
+        navigator.geolocation.clearWatch(watchId)
+      }
+      clearTimeout(timeoutId)
+    }
+
+    const finish = (location, error) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      if (location) {
+        resolve(location)
+      } else {
+        reject(error || new Error('Location unavailable'))
+      }
+    }
+
+    const timeoutId = setTimeout(() => {
+      const timeoutError = new Error('Location timed out')
+      timeoutError.code = 3
+      finish(bestLocation, lastError || timeoutError)
+    }, timeoutMs)
+
+    watchId = navigator.geolocation.watchPosition(
       (position) => {
-        resolve({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        })
+        const location = toUserLocation(position)
+        if (isBetterLocation(location, bestLocation)) {
+          bestLocation = location
+        }
+
+        if (Number.isFinite(location.accuracy) && location.accuracy <= targetAccuracyM) {
+          finish(location)
+        }
       },
-      (err) => reject(err),
+      (err) => {
+        lastError = err
+        if (!bestLocation) {
+          finish(null, err)
+        }
+      },
       {
         enableHighAccuracy: true,
-        timeout: 20000,
+        timeout: timeoutMs,
         maximumAge: 0,
       }
     )

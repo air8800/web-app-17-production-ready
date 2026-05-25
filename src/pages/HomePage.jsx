@@ -5,12 +5,13 @@ import {
   getDrivingDistanceKm,
   getDrivingDistanceLabel,
   getGoogleMapsDirectionsUrl,
+  LOCATION_COARSE_ACCURACY_M,
   sortShopsByDrivingDistance,
   enrichShopWithCoordinates,
 } from '../utils/location'
 import { useUserLocation } from '../hooks/useUserLocation'
 import { useDrivingDistances } from '../hooks/useDrivingDistances'
-import { Printer, Search, Store, Clock, Star, MapPin, Phone, ArrowRight, Zap, Shield, Award, Globe, Upload, Settings, FileCheck, Package, Mail, Sparkles, ChevronDown, ChevronRight, Check, CreditCard, Navigation, LocateFixed, Loader2 } from 'lucide-react'
+import { Printer, Search, Store, Clock, MapPin, Phone, ArrowRight, Zap, Shield, Globe, Upload, Settings, FileCheck, Package, Mail, ChevronDown, ChevronRight, Check, Navigation, LocateFixed, Loader2 } from 'lucide-react'
 
 // Helper: Check if a shop is currently open (desktop session overrides scheduled hours)
 const isShopOpen = (shop) => {
@@ -318,6 +319,11 @@ const HomePage = () => {
     return first?.id ?? null
   }, [sortedFilteredShops, userLocation, distancesByShopId])
 
+  const locationAccuracy = Number.isFinite(userLocation?.accuracy)
+    ? Math.round(userLocation.accuracy)
+    : null
+  const hasCoarseLocation = locationAccuracy != null && locationAccuracy > LOCATION_COARSE_ACCURACY_M
+
   const recentShopsEnriched = useMemo(
     () =>
       userLocation
@@ -338,25 +344,6 @@ const HomePage = () => {
     },
     [requestLocation, userLocation]
   )
-
-  const features = [
-    {
-      icon: Zap,
-      title: "Lightning Fast",
-      description: "Get your documents printed in under 15 minutes"
-    },
-    {
-      icon: Shield,
-      title: "Secure & Private",
-      description: "Your files are encrypted and auto-deleted after printing"
-    },
-
-    {
-      icon: Award,
-      title: "Quality Guaranteed",
-      description: "Professional printing with satisfaction guarantee"
-    }
-  ]
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -671,8 +658,9 @@ const HomePage = () => {
                         )}
                       </div>
                       {locationStatus === 'ready' && (
-                        <p className="text-xs text-emerald-600 font-medium mt-2 ml-1">
-                          Showing shops sorted by driving distance from your GPS location.
+                        <p className={`text-xs font-medium mt-2 ml-1 ${hasCoarseLocation ? 'text-amber-600' : 'text-emerald-600'}`}>
+                          Showing shops sorted by driving distance from your GPS location
+                          {locationAccuracy != null ? ` (accuracy about ${locationAccuracy} m).` : '.'}
                         </p>
                       )}
                       {locationError && (

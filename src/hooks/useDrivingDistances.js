@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { enrichShopWithCoordinates, fetchDrivingDistancesKm, getShopCoords, osrmDrivingDistancesKm } from '../utils/location'
+import { enrichShopWithCoordinates, fetchDrivingDistancesKm, getShopCoords, osrmDrivingDistancesKm, distanceKm } from '../utils/location'
 
 function shopsKey(shops) {
   return shops
@@ -92,7 +92,20 @@ export function useDrivingDistances(userLocation, shops) {
 
       if (cancelled) return
 
-      // 3. Sort by OSRM distance and get the Top 3 closest
+      // 3. Fallback: If OSRM completely failed or returned nothing, use straight-line distance locally
+      if (shopDistances.length === 0 && shopsWithCoords.length > 0) {
+        shopsWithCoords.forEach((shop) => {
+          const dest = getShopCoords(shop)
+          const straightKm = distanceKm(originLat, originLng, dest.lat, dest.lng)
+          if (straightKm != null && Number.isFinite(straightKm)) {
+            // We temporarily store the straight-line distance so it sorts correctly
+            next[shop.id] = straightKm 
+            shopDistances.push({ shop, km: straightKm })
+          }
+        })
+      }
+
+      // Sort by whatever distance we found (OSRM or straight-line) and get the Top 3 closest
       shopDistances.sort((a, b) => a.km - b.km)
       const top3Shops = shopDistances.slice(0, 3).map(s => s.shop)
 

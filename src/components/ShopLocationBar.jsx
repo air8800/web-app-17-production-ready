@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { MapPin, Navigation } from 'lucide-react'
 import {
+  distanceKm,
   enrichShopWithCoordinates,
   fetchDrivingDistancesKm,
+  formatDistance,
   getDrivingDistanceLabel,
   getGoogleMapsDirectionsUrl,
   getShopCoords,
@@ -55,9 +57,21 @@ const ShopLocationBar = ({ shop, variant = 'card', className = '' }) => {
   if (!shop) return null
 
   const shopWithCoords = enrichShopWithCoordinates(shop)
-  const distanceLabel = userLocation
-    ? getDrivingDistanceLabel(drivingKm, { loading: loadingDistance })
-    : null
+  const shopCoords = getShopCoords(shopWithCoords)
+  // Try driving distance first; fall back to straight-line Haversine distance
+  let distanceLabel = null
+  if (userLocation) {
+    const drivingLabel = getDrivingDistanceLabel(drivingKm, { loading: loadingDistance })
+    if (drivingLabel) {
+      distanceLabel = drivingLabel
+    } else if (shopCoords) {
+      // Haversine straight-line fallback when driving route is unavailable
+      const straightKm = distanceKm(userLocation.lat, userLocation.lng, shopCoords.lat, shopCoords.lng)
+      if (straightKm != null) {
+        distanceLabel = '~' + formatDistance(straightKm)
+      }
+    }
+  }
   const directionsUrl = getGoogleMapsDirectionsUrl(shopWithCoords, userLocation)
 
   if (!directionsUrl && !distanceLabel) return null

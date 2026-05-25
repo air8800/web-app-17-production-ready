@@ -6,6 +6,7 @@ import {
   isUserLocationStale,
   loadStoredUserLocation,
   LOCATION_COARSE_ACCURACY_M,
+  LOCATION_TARGET_ACCURACY_M,
   queryGeolocationPermission,
   requestAccurateUserLocation,
   storeUserLocation,
@@ -18,11 +19,16 @@ function getFreshStoredLocation() {
 }
 
 function getAccuracyWarning(location) {
-  if (!Number.isFinite(location?.accuracy) || location.accuracy <= LOCATION_COARSE_ACCURACY_M) {
+  if (!Number.isFinite(location?.accuracy)) {
     return null
   }
-
-  return `Location is only accurate within about ${Math.round(location.accuracy)} m. Move near a window and tap Update my location for a better distance.`
+  if (location.accuracy <= LOCATION_TARGET_ACCURACY_M) {
+    return null // Excellent GPS lock, no warning needed
+  }
+  if (location.accuracy <= LOCATION_COARSE_ACCURACY_M) {
+    return null // Acceptable accuracy, no warning
+  }
+  return `Location is only accurate within about ${Math.round(location.accuracy)} m. Move outdoors or near a window and tap Update my location for a better reading.`
 }
 
 /**
@@ -88,26 +94,29 @@ export function useUserLocation({ autoRefresh = true } = {}) {
 
     let cancelled = false
 
-    const maybeRefresh = async (silent) => {
+    const doFreshFix = async () => {
       if (cancelled) return
       const permission = await queryGeolocationPermission()
       const stored = loadStoredUserLocation()
+      // Always request a fresh GPS fix when:
+      // - Permission is already granted (no prompt will appear)
+      // - OR we have a stored location (user consented before)
       if (permission === 'granted' || stored) {
-        await requestLocation({ silent })
+        await requestLocation({ silent: true })
       }
     }
 
-    maybeRefresh(true)
+    // Always get a fresh GPS reading on mount — don't rely on cached location
+    doFreshFix()
 
+    // Also refresh when the tab regains focus (user switches back from another app)
     const onFocus = () => {
-      if (isStoredLocationStale()) {
-        maybeRefresh(true)
-      }
+      doFreshFix()
     }
 
     const onVisibility = () => {
-      if (document.visibilityState === 'visible' && isStoredLocationStale()) {
-        maybeRefresh(true)
+      if (document.visibilityState === 'visible') {
+        doFreshFix()
       }
     }
 

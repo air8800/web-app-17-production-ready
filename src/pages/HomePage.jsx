@@ -2,9 +2,12 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { getAllActiveShops } from '../utils/supabase'
 import {
+  distanceKm,
+  formatDistance,
   getDrivingDistanceKm,
   getDrivingDistanceLabel,
   getGoogleMapsDirectionsUrl,
+  getShopCoords,
   LOCATION_COARSE_ACCURACY_M,
   sortShopsByDrivingDistance,
   enrichShopWithCoordinates,
@@ -49,9 +52,20 @@ const ShopCard = ({ shop, index, glow, userLocation, isNearest, needsLocation, d
   const cardRef = useRef(null)
   const [isVisible, setIsVisible] = useState(false)
   const shopWithCoords = enrichShopWithCoordinates(shop)
-  const distanceLabel = userLocation
-    ? getDrivingDistanceLabel(drivingKm, { loading: distancesLoading })
-    : null
+  const shopCoords = getShopCoords(shopWithCoords)
+  // Prefer driving distance; fall back to Haversine straight-line when route unavailable
+  let distanceLabel = null
+  if (userLocation) {
+    const drivingLabel = getDrivingDistanceLabel(drivingKm, { loading: distancesLoading })
+    if (drivingLabel) {
+      distanceLabel = drivingLabel
+    } else if (shopCoords) {
+      const straightKm = distanceKm(userLocation.lat, userLocation.lng, shopCoords.lat, shopCoords.lng)
+      if (straightKm != null) {
+        distanceLabel = '~' + formatDistance(straightKm)
+      }
+    }
+  }
   const directionsUrl = getGoogleMapsDirectionsUrl(shopWithCoords, userLocation)
 
   useEffect(() => {
@@ -497,9 +511,20 @@ const HomePage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recentShopsEnriched.map((shop, index) => {
                 const drivingKm = getDrivingDistanceKm(distancesByShopId, shop.id)
-                const distanceLabel = userLocation
-                  ? getDrivingDistanceLabel(drivingKm, { loading: distancesLoading })
-                  : null
+                const enrichedShop = enrichShopWithCoordinates(shop)
+                const shopCoords = getShopCoords(enrichedShop)
+                let distanceLabel = null
+                if (userLocation) {
+                  const drivingLabel = getDrivingDistanceLabel(drivingKm, { loading: distancesLoading })
+                  if (drivingLabel) {
+                    distanceLabel = drivingLabel
+                  } else if (shopCoords) {
+                    const straightKm = distanceKm(userLocation.lat, userLocation.lng, shopCoords.lat, shopCoords.lng)
+                    if (straightKm != null) {
+                      distanceLabel = '~' + formatDistance(straightKm)
+                    }
+                  }
+                }
                 const directionsUrl = getGoogleMapsDirectionsUrl(shop, userLocation)
                 return (
                 <Link

@@ -4,10 +4,11 @@ const EARTH_RADIUS_KM = 6371
 const OSRM_TABLE = 'https://router.project-osrm.org/table/v1/driving'
 
 export const USER_LOCATION_STORAGE_KEY = 'printget_user_location'
-export const LOCATION_MAX_AGE_MS = 2 * 60 * 1000
-export const LOCATION_TARGET_ACCURACY_M = 50
-export const LOCATION_COARSE_ACCURACY_M = 250
-export const LOCATION_FIX_TIMEOUT_MS = 25000
+export const LOCATION_MAX_AGE_MS = 5 * 60 * 1000
+export const LOCATION_TARGET_ACCURACY_M = 15
+export const LOCATION_COARSE_ACCURACY_M = 100
+export const LOCATION_FIX_TIMEOUT_MS = 20000
+export const LOCATION_MIN_SAMPLES = 2
 
 /** @returns {{ lat: number, lng: number } | null} */
 export function getShopCoords(shop) {
@@ -164,10 +165,15 @@ function isBetterLocation(next, current) {
   return nextAccuracy < currentAccuracy
 }
 
-/** High-accuracy GPS fix for mobile. Waits briefly for the browser to refine coarse fixes. */
+/**
+ * High-accuracy GPS fix for mobile.
+ * Waits for the GPS chip to warm up and requires multiple consistent
+ * readings before accepting — prevents premature lock on coarse Wi-Fi estimates.
+ */
 export function requestAccurateUserLocation({
   targetAccuracyM = LOCATION_TARGET_ACCURACY_M,
   timeoutMs = LOCATION_FIX_TIMEOUT_MS,
+  minSamples = LOCATION_MIN_SAMPLES,
 } = {}) {
   return new Promise((resolve, reject) => {
     if (!isGeolocationSupported()) {
@@ -179,10 +185,12 @@ export function requestAccurateUserLocation({
     let watchId = null
     let bestLocation = null
     let lastError = null
+    let goodSampleCount = 0
 
     const cleanup = () => {
       if (watchId != null) {
         navigator.geolocation.clearWatch(watchId)
+        watchId = null
       }
       clearTimeout(timeoutId)
     }
@@ -201,18 +209,30 @@ export function requestAccurateUserLocation({
     const timeoutId = setTimeout(() => {
       const timeoutError = new Error('Location timed out')
       timeoutError.code = 3
+      // Even on timeout, return the best location we got (if any)
       finish(bestLocation, lastError || timeoutError)
     }, timeoutMs)
 
     watchId = navigator.geolocation.watchPosition(
       (position) => {
         const location = toUserLocation(position)
+
         if (isBetterLocation(location, bestLocation)) {
           bestLocation = location
         }
 
+        // Only count readings that meet the accuracy threshold
         if (Number.isFinite(location.accuracy) && location.accuracy <= targetAccuracyM) {
-          finish(location)
+          goodSampleCount++
+          // Wait for enough consistent good readings before accepting
+          // This prevents accepting the first coarse Wi-Fi result that
+          // happens to claim < targetAccuracyM accuracy
+          if (goodSampleCount >= minSamples) {
+            finish(location)
+          }
+        } else {
+          // Reset counter when we get a bad reading — GPS hasn't stabilized
+          goodSampleCount = 0
         }
       },
       (err) => {

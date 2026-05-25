@@ -8,6 +8,7 @@ import {
   LOCATION_COARSE_ACCURACY_M,
   sortShopsByDrivingDistance,
   enrichShopWithCoordinates,
+  fetchCityFromCoordinates,
 } from '../utils/location'
 import { useUserLocation } from '../hooks/useUserLocation'
 import { useDrivingDistances } from '../hooks/useDrivingDistances'
@@ -182,6 +183,37 @@ const HomePage = () => {
     requestLocation,
     clearLocation: clearUserLocation,
   } = useUserLocation()
+
+  const [isCitySupported, setIsCitySupported] = useState(true)
+  const [detectedCityName, setDetectedCityName] = useState('')
+  const [hasPromptedLocation, setHasPromptedLocation] = useState(false)
+
+  // Auto-detect location for completely new users
+  useEffect(() => {
+    if (!selectedCity && !userLocation && locationStatus === 'idle' && !hasPromptedLocation) {
+      setHasPromptedLocation(true)
+      requestLocation()
+    }
+  }, [selectedCity, userLocation, locationStatus, requestLocation, hasPromptedLocation])
+
+  // Reverse geocode when location changes
+  useEffect(() => {
+    if (userLocation?.lat && userLocation?.lng) {
+      fetchCityFromCoordinates(userLocation.lat, userLocation.lng).then(city => {
+        if (city) {
+          setDetectedCityName(city)
+          const supportedCities = ['Nashik', 'Pune']
+          if (supportedCities.includes(city)) {
+            setIsCitySupported(true)
+            setSelectedCity(city)
+          } else {
+            setIsCitySupported(false)
+            setSelectedCity(city)
+          }
+        }
+      })
+    }
+  }, [userLocation])
 
   useEffect(() => {
     setVisibleShopsCount(5)
@@ -602,7 +634,7 @@ const HomePage = () => {
                         {isDropdownOpen && (
                           <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-fadeIn">
                             <div className="p-1.5">
-                              {['All Cities', 'Nashik', 'Pune'].map((city) => (
+                              {(isCitySupported ? ['All Cities', 'Nashik', 'Pune'] : ['All Cities', 'Nashik', 'Pune', detectedCityName]).map((city) => (
                                 <button
                                   key={city}
                                   type="button"
@@ -627,61 +659,39 @@ const HomePage = () => {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-gray-100">
-                      <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
-                        Your location
-                        {locationStatus === 'loading' && (
-                          <span className="ml-2 text-blue-600 font-normal">Detecting…</span>
-                        )}
-                      </label>
-                      <div className="flex flex-col sm:flex-row gap-3">
+                    {!isCitySupported && detectedCityName && (
+                      <div className="pt-4 border-t border-gray-100 animate-fadeIn">
+                        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 shadow-sm">
+                          <h3 className="text-lg font-bold text-amber-900 mb-2">
+                            Coming soon to {detectedCityName}!
+                          </h3>
+                          <p className="text-sm text-amber-800">
+                            We are expanding fast and will be in your city soon. In the meantime, here are our nearest printing partners from neighboring cities.
+                          </p>
+                          <button
+                            onClick={() => requestLocation()}
+                            className="mt-3 text-xs font-bold text-amber-700 bg-amber-100 px-3 py-1.5 rounded-lg hover:bg-amber-200 transition-colors"
+                          >
+                            Update My Location
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {isCitySupported && (
+                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+                        <p className="text-xs text-gray-500 ml-1">
+                          {userLocation ? 'Showing nearest shops based on your location.' : 'Select a city or detect location to find nearest shops.'}
+                        </p>
                         <button
-                          type="button"
                           onClick={() => requestLocation()}
                           disabled={locationStatus === 'loading'}
-                          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-70"
+                          className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1"
                         >
-                          {locationStatus === 'loading' ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <LocateFixed className="w-4 h-4" />
-                          )}
-                          {locationStatus === 'ready' ? 'Update my location' : 'Detect my location'}
+                          {locationStatus === 'loading' ? <Loader2 className="w-3 h-3 animate-spin" /> : <LocateFixed className="w-3 h-3" />}
+                          {userLocation ? 'Update Location' : 'Detect Location'}
                         </button>
-                        {userLocation && (
-                          <div className="flex flex-wrap gap-3">
-                            <button
-                              type="button"
-                              onClick={clearUserLocation}
-                              className="inline-flex items-center justify-center px-5 py-3 rounded-2xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
-                            >
-                              Clear location
-                            </button>
-                            <a
-                              href={`https://www.google.com/maps?q=${userLocation.lat},${userLocation.lng}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border border-blue-200 text-blue-700 font-semibold text-sm hover:bg-blue-50 transition-colors"
-                            >
-                              <MapPin className="w-4 h-4" />
-                              View my location
-                            </a>
-                          </div>
-                        )}
                       </div>
-                      {locationStatus === 'ready' && (
-                        <p className={`text-xs font-medium mt-2 ml-1 ${hasCoarseLocation ? 'text-amber-600' : 'text-emerald-600'}`}>
-                          {hasCoarseLocation
-                            ? `Location accuracy is about ${locationAccuracy} m — try moving to an open area with better GPS/network coverage for more accurate distance.`
-                            : `Showing shops sorted by driving distance from your GPS location${locationAccuracy != null ? ` (accuracy ${locationAccuracy} m).` : '.'}`
-                          }
-                        </p>
-                      )}
-
-                      <p className="text-xs text-gray-400 mt-2 ml-1">
-                        Location stays on your device and is only used to sort nearby shops.
-                      </p>
-                    </div>
+                    )}
 
                     {selectedCity && (
                       <div className="animate-fadeIn pt-6 border-t border-gray-100">

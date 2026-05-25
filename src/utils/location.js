@@ -4,7 +4,7 @@ const EARTH_RADIUS_KM = 6371
 const OSRM_TABLE = 'https://router.project-osrm.org/table/v1/driving'
 
 export const USER_LOCATION_STORAGE_KEY = 'printget_user_location'
-export const LOCATION_MAX_AGE_MS = 5 * 60 * 1000
+export const LOCATION_MAX_AGE_MS = 60 * 60 * 1000 // 1 hour
 export const LOCATION_TARGET_ACCURACY_M = 15
 export const LOCATION_COARSE_ACCURACY_M = 100
 export const LOCATION_FIX_TIMEOUT_MS = 20000
@@ -371,5 +371,18 @@ export async function queryGeolocationPermission() {
     return result.state
   } catch {
     return 'unknown'
+  }
+}
+
+/** @returns {Promise<string | null>} */
+export async function fetchCityFromCoordinates(lat, lng) {
+  if (!lat || !lng) return null
+  try {
+    const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`)
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.city || null
+  } catch {
+    return null
   }
 }

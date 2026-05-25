@@ -33,8 +33,7 @@ async function googleDrivingDistancesKm(origin, destinations, apiKey) {
         }
       }
     })),
-    travelMode: 'DRIVE',
-    routingPreference: 'TRAFFIC_AWARE'
+    travelMode: 'DRIVE'
   }
 
   const resp = await fetch(url, {

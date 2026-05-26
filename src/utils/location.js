@@ -201,11 +201,11 @@ export function requestAccurateUserLocation({
       cleanup()
       if (location) {
         // If the best location we found is extremely inaccurate (e.g. > 1000m),
-        // it means the device GPS is likely off and we only got a coarse IP/cell estimate.
+        // it means we only got a coarse IP/cell estimate.
         // We reject it rather than showing completely wrong store distances.
         if (location.accuracy && location.accuracy > 1000) {
-          const err = new Error('Device GPS appears to be turned off')
-          err.code = 4 // Custom code for "too inaccurate / GPS off"
+          const err = new Error('Location is too inaccurate')
+          err.code = 4 // Custom code for "too inaccurate"
           reject(err)
         } else {
           resolve(location)

@@ -31,6 +31,11 @@ function getAccuracyWarning(location) {
   return `Location is only accurate within about ${Math.round(location.accuracy)} m. Move outdoors or near a window and tap Update my location for a better reading.`
 }
 
+function isLikelyMobileDevice() {
+  if (typeof navigator === 'undefined') return false
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '')
+}
+
 /**
  * Accurate user location with silent refresh when permission is already granted.
  */
@@ -73,8 +78,14 @@ export function useUserLocation({ autoRefresh = true } = {}) {
             'Location blocked. Tap the lock icon in your browser address bar → Site settings → Allow location, then try again.'
           )
         } else if (err.code === 2 || err.code === 4) {
-          setError('Device GPS is off or unavailable. Please turn ON your device Location/GPS.')
-          alert('Please turn ON your device Location / GPS in your phone settings to get accurate distances.')
+          if (isLikelyMobileDevice()) {
+            setError('Device GPS is off or unavailable. Please turn ON your device Location/GPS.')
+            alert('Please turn ON your device Location / GPS in your phone settings to get accurate distances.')
+          } else {
+            setError(
+              'Your browser could not get an accurate desktop location. Make sure location access is allowed for this site, Wi-Fi/location services are enabled, or select your city manually.'
+            )
+          }
         } else if (err.code === 3) {
           setError('Location timed out. Try again or move outdoors.')
         } else {

@@ -29,7 +29,7 @@ function getAccuracyWarning(location, { isMobile = isLikelyMobileDevice() } = {}
     return null // Acceptable accuracy, no warning
   }
   if (!isMobile) {
-    return `Precise location could not be identified on this desktop. We are using an approximate location, so shop distances may not be exact. For better accuracy, allow precise location in your browser/system settings or select your city manually.`
+    return 'Desktop location is approximate, so shop distances may not be exact. For the most accurate nearest-shop results, use your phone GPS.'
   }
   return `Location is only accurate within about ${Math.round(location.accuracy)} m. Move outdoors or near a window and tap Update my location for a better reading.`
 }
@@ -69,7 +69,7 @@ export function useUserLocation({ autoRefresh = true } = {}) {
     try {
       const isMobile = isLikelyMobileDevice()
       const loc = await requestAccurateUserLocation({
-        maxAcceptableAccuracyM: isMobile ? 1000 : 50000,
+        maxAcceptableAccuracyM: 1000,
       })
       setUserLocation(loc)
       storeUserLocation(loc)
@@ -89,7 +89,7 @@ export function useUserLocation({ autoRefresh = true } = {}) {
             alert('Please turn ON your device Location / GPS in your phone settings to get accurate distances.')
           } else {
             setError(
-              'Your browser could not get an accurate desktop location. Make sure location access is allowed for this site, Wi-Fi/location services are enabled, or select your city manually.'
+              'Precise location could not be identified on this desktop. PC location can use Wi-Fi/IP and may jump to the wrong city. Please select your city manually, or use your phone for accurate nearest-shop distances.'
             )
           }
         } else if (err.code === 3) {

@@ -710,6 +710,12 @@ const HomePage = () => {
                       </div>
                     )}
 
+                    {locationError && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800 leading-relaxed animate-fadeIn">
+                        {locationError}
+                      </div>
+                    )}
+
                     {selectedCity && (
                       <div className="animate-fadeIn pt-6 border-t border-gray-100">
                         <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Search in {selectedCity}</label>

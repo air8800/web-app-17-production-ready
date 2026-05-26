@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { getJobsByIds } from '../utils/supabase'
 import { Package, ArrowLeft, Clock, MapPin, Search, Trash2, Printer } from 'lucide-react'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { getOrderDisplayNumber } from '../utils/orderDisplay'
 
 const HistoryPage = () => {
   usePageTitle()
@@ -177,8 +178,8 @@ const HistoryPage = () => {
                     <Package className="w-4 h-4 text-gray-500" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-gray-700 truncate" title={order.filename}>
-                      {order.filename}
+                    <p className="text-sm font-semibold text-gray-700 truncate" title={`Order ID: ${getOrderDisplayNumber(order)}`}>
+                      Order ID: <span className="font-mono text-blue-700">{getOrderDisplayNumber(order)}</span>
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5">
                       {formatDate(order.created_at)}

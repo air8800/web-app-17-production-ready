@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS print_jobs (
   color_mode text NOT NULL,
   print_type text NOT NULL,
   pages_per_sheet integer NOT NULL DEFAULT 1 CHECK (pages_per_sheet IN (1, 2)),
-  customer_name text NOT NULL,
+  customer_name text,
   customer_email text,
   customer_phone text,
   total_cost numeric(10, 2) NOT NULL DEFAULT 0,
@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS print_jobs (
   recipe jsonb,
   total_pages integer,
   selected_pages text,
+  order_identification text NOT NULL DEFAULT 'ON_PAGE',
   has_edits boolean NOT NULL DEFAULT false,
   estimated_completion timestamptz,
   phonepe_txn_id text,
@@ -83,6 +84,8 @@ END $$;
 
 -- Add any columns missing on older partial schemas
 ALTER TABLE print_jobs ADD COLUMN IF NOT EXISTS pages_per_sheet integer NOT NULL DEFAULT 1;
+ALTER TABLE print_jobs ADD COLUMN IF NOT EXISTS customer_name text;
+ALTER TABLE print_jobs ALTER COLUMN customer_name DROP NOT NULL;
 ALTER TABLE print_jobs ADD COLUMN IF NOT EXISTS customer_email text;
 ALTER TABLE print_jobs ADD COLUMN IF NOT EXISTS customer_phone text;
 ALTER TABLE print_jobs ADD COLUMN IF NOT EXISTS payment_status text NOT NULL DEFAULT 'pending';
@@ -91,6 +94,7 @@ ALTER TABLE print_jobs ADD COLUMN IF NOT EXISTS job_status text NOT NULL DEFAULT
 ALTER TABLE print_jobs ADD COLUMN IF NOT EXISTS recipe jsonb;
 ALTER TABLE print_jobs ADD COLUMN IF NOT EXISTS total_pages integer;
 ALTER TABLE print_jobs ADD COLUMN IF NOT EXISTS selected_pages text;
+ALTER TABLE print_jobs ADD COLUMN IF NOT EXISTS order_identification text NOT NULL DEFAULT 'ON_PAGE';
 ALTER TABLE print_jobs ADD COLUMN IF NOT EXISTS has_edits boolean NOT NULL DEFAULT false;
 ALTER TABLE print_jobs ADD COLUMN IF NOT EXISTS estimated_completion timestamptz;
 ALTER TABLE print_jobs ADD COLUMN IF NOT EXISTS phonepe_txn_id text;

@@ -7,6 +7,7 @@ import {
   isOnlinePaymentMethod,
 } from '../services/paymentService'
 import { AlertCircle, Loader2, ShieldCheck, CreditCard } from 'lucide-react'
+import { createRecentOrderPayload } from '../utils/orderDisplay'
 
 const PaymentPage = () => {
   const { jobId } = useParams()
@@ -23,12 +24,11 @@ const PaymentPage = () => {
 
   usePageTitle('Checkout')
 
-  const saveToLocalHistory = (id) => {
+  const saveToLocalHistory = (order) => {
     try {
-      localStorage.setItem('printget_recent_order', JSON.stringify({
-        jobId: id,
-        timestamp: Date.now(),
-      }))
+      const jobRecord = typeof order === 'string' ? { id: order } : order
+      const id = jobRecord.id
+      localStorage.setItem('printget_recent_order', JSON.stringify(createRecentOrderPayload(jobRecord)))
       const history = JSON.parse(localStorage.getItem('printget_order_history') || '[]')
       if (!history.includes(id)) {
         history.push(id)
@@ -110,8 +110,8 @@ const PaymentPage = () => {
   const handlePayAtShop = async () => {
     setProcessing(true)
     try {
-      await updatePaymentStatus(jobId, 'paid')
-      saveToLocalHistory(jobId)
+      const result = await updatePaymentStatus(jobId, 'paid')
+      saveToLocalHistory(result.data || job || jobId)
       navigate(`/status/${jobId}`, { replace: true })
     } catch (err) {
       console.error('Error confirming order:', err)

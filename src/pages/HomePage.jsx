@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { getAllActiveShops } from '../utils/supabase'
+import { getAllActiveShops, getJobStatus } from '../utils/supabase'
 import {
   getDrivingDistanceKm,
   getDrivingDistanceLabel,
@@ -13,6 +13,61 @@ import {
 import { useUserLocation } from '../hooks/useUserLocation'
 import { useDrivingDistances } from '../hooks/useDrivingDistances'
 import { Printer, Search, Store, Clock, MapPin, Phone, ArrowRight, Zap, Shield, Globe, Upload, Settings, FileCheck, Package, Mail, ChevronDown, ChevronRight, Check, Navigation, LocateFixed, Loader2 } from 'lucide-react'
+import { createRecentOrderPayload, getOrderDisplayNumber } from '../utils/orderDisplay'
+
+const ALL_CITIES_LABEL = 'All Cities'
+const CITY_STORAGE_KEY = 'printflow_selected_city'
+const NON_CITY_ADDRESS_PARTS = new Set(['india', 'maharashtra', 'mh'])
+
+const normalizeCityName = (city) =>
+  String(city || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+
+const formatCityName = (city) =>
+  String(city || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .map((part) => (part ? `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}` : part))
+    .join(' ')
+
+const cleanAddressPart = (part) =>
+  String(part || '')
+    .replace(/\b\d{5,6}\b/g, '')
+    .replace(/\b(dist\.?|district|taluka)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const isNonCityAddressPart = (part) => {
+  const normalized = normalizeCityName(part)
+  return !normalized || NON_CITY_ADDRESS_PARTS.has(normalized) || /^\d+$/.test(normalized)
+}
+
+const getShopCity = (shop) => {
+  const address = shop?.address
+  if (!address) return null
+
+  const parts = String(address)
+    .split(',')
+    .map(cleanAddressPart)
+    .filter(Boolean)
+
+  const candidates = parts.length > 1 ? [...parts].reverse() : parts
+  const city = candidates.find((part) => !isNonCityAddressPart(part))
+  return city ? formatCityName(city) : null
+}
+
+const shopMatchesCity = (shop, city) => {
+  const normalizedCity = normalizeCityName(city)
+  if (!normalizedCity || normalizedCity === normalizeCityName(ALL_CITIES_LABEL)) return true
+
+  const shopCity = normalizeCityName(getShopCity(shop))
+  if (shopCity && shopCity === normalizedCity) return true
+
+  return normalizeCityName(shop?.address).includes(normalizedCity)
+}
 
 // Helper: Check if a shop is currently open (desktop session overrides scheduled hours)
 const isShopOpen = (shop) => {
@@ -168,11 +223,12 @@ const HomePage = () => {
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCity, setSelectedCity] = useState(() => {
-    return localStorage.getItem('printflow_selected_city') || null
+    return localStorage.getItem(CITY_STORAGE_KEY) || null
   })
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const howItWorksRef = useRef(null)
   const cityRef = useRef(null)
+  const hasManualCitySelectionRef = useRef(false)
   const [cityVisible, setCityVisible] = useState(false)
   const [shouldGlow, setShouldGlow] = useState(false)
   const [visibleShopsCount, setVisibleShopsCount] = useState(5)
@@ -188,6 +244,26 @@ const HomePage = () => {
   const [detectedCityName, setDetectedCityName] = useState('')
   const [hasPromptedLocation, setHasPromptedLocation] = useState(false)
 
+  const availableCities = useMemo(() => {
+    const byKey = new Map()
+
+    shops.forEach((shop) => {
+      const city = getShopCity(shop)
+      const key = normalizeCityName(city)
+      if (key && !byKey.has(key)) {
+        byKey.set(key, city)
+      }
+    })
+
+    return [...byKey.values()].sort((a, b) => a.localeCompare(b))
+  }, [shops])
+
+  const availableCityByKey = useMemo(() => {
+    return new Map(availableCities.map((city) => [normalizeCityName(city), city]))
+  }, [availableCities])
+
+  const cityOptions = useMemo(() => [ALL_CITIES_LABEL, ...availableCities], [availableCities])
+
   // Auto-detect location for completely new users
   useEffect(() => {
     if (!selectedCity && !userLocation && locationStatus === 'idle' && !hasPromptedLocation) {
@@ -198,35 +274,60 @@ const HomePage = () => {
 
   // Reverse geocode when location changes
   useEffect(() => {
+    let cancelled = false
+
     if (userLocation?.lat && userLocation?.lng) {
       fetchCityFromCoordinates(userLocation.lat, userLocation.lng).then(city => {
-        if (city) {
-          setDetectedCityName(city)
-          
-          // Check if any active shop is actually in this city
-          const shopExistsForCity = shops.some(shop => 
-            shop.address.toLowerCase().includes(city.toLowerCase())
-          )
-          
-          if (shopExistsForCity) {
-            setIsCitySupported(true)
-            setSelectedCity(city)
-          } else {
-            setIsCitySupported(false)
-            setSelectedCity(city)
+        if (cancelled) return
+
+        const detectedCity = formatCityName(city)
+        if (detectedCity) {
+          setDetectedCityName(detectedCity)
+
+          if (!hasManualCitySelectionRef.current) {
+            const supportedCity = availableCityByKey.get(normalizeCityName(detectedCity))
+            if (supportedCity) {
+              setIsCitySupported(true)
+              setSelectedCity(supportedCity)
+            } else {
+              setIsCitySupported(false)
+              setSelectedCity(detectedCity)
+            }
           }
         } else {
-          // If reverse geocoding fails to find a city name, but we have GPS,
-          // safely default to All Cities so the nearest shops still load perfectly!
-          setIsCitySupported(true)
-          setSelectedCity('All Cities')
+          setDetectedCityName('')
+          if (!hasManualCitySelectionRef.current) {
+            // If reverse geocoding fails to find a city name, but we have GPS,
+            // safely default to All Cities so the nearest shops still load.
+            setIsCitySupported(true)
+            setSelectedCity(ALL_CITIES_LABEL)
+          }
         }
       })
     } else if (locationStatus === 'error' && !selectedCity) {
       // Fallback if they deny location prompt
-      setSelectedCity('All Cities')
+      setSelectedCity(ALL_CITIES_LABEL)
     }
-  }, [userLocation, locationStatus, selectedCity, shops])
+
+    return () => {
+      cancelled = true
+    }
+  }, [userLocation, locationStatus, selectedCity, availableCityByKey])
+
+  useEffect(() => {
+    if (!selectedCity || selectedCity === ALL_CITIES_LABEL) {
+      setIsCitySupported(true)
+      return
+    }
+
+    if (availableCityByKey.has(normalizeCityName(selectedCity))) {
+      setIsCitySupported(true)
+    } else if (detectedCityName && normalizeCityName(selectedCity) === normalizeCityName(detectedCityName)) {
+      setIsCitySupported(false)
+    } else if (!hasManualCitySelectionRef.current && availableCities.length > 0) {
+      setIsCitySupported(false)
+    }
+  }, [selectedCity, detectedCityName, availableCities.length, availableCityByKey])
 
   useEffect(() => {
     setVisibleShopsCount(5)
@@ -247,6 +348,25 @@ const HomePage = () => {
       return null
     }
   })
+
+  useEffect(() => {
+    if (!recentOrder?.jobId || recentOrder.orderNumber || recentOrder.shopOrderNumber) return undefined
+
+    let cancelled = false
+
+    getJobStatus(recentOrder.jobId).then(({ data }) => {
+      if (cancelled || !data) return
+      const nextRecentOrder = createRecentOrderPayload(data, {
+        shopId: recentOrder.shopId || data.shop_id,
+      })
+      setRecentOrder(nextRecentOrder)
+      localStorage.setItem('printget_recent_order', JSON.stringify(nextRecentOrder))
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [recentOrder?.jobId, recentOrder?.orderNumber, recentOrder?.shopOrderNumber, recentOrder?.shopId])
 
   useEffect(() => {
     loadShops()
@@ -270,9 +390,9 @@ const HomePage = () => {
 
   useEffect(() => {
     if (selectedCity) {
-      localStorage.setItem('printflow_selected_city', selectedCity)
+      localStorage.setItem(CITY_STORAGE_KEY, selectedCity)
     } else {
-      localStorage.removeItem('printflow_selected_city')
+      localStorage.removeItem(CITY_STORAGE_KEY)
     }
   }, [selectedCity])
 
@@ -319,7 +439,7 @@ const HomePage = () => {
   const filteredShops = useMemo(() => {
     return shops.filter(shop => {
       // If the city is unsupported (e.g. Mumbai), don't filter out shops, show all so they can route to nearest
-      if (isCitySupported && selectedCity && selectedCity !== 'All Cities' && !shop.address.toLowerCase().includes(selectedCity.toLowerCase())) {
+      if (isCitySupported && selectedCity && selectedCity !== ALL_CITIES_LABEL && !shopMatchesCity(shop, selectedCity)) {
         return false
       }
       if (searchTerm && !shop.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -383,15 +503,17 @@ const HomePage = () => {
 
   const handleCitySelect = useCallback(
     (city) => {
-      const value = city === 'All Cities' ? 'All Cities' : city
+      const value = city === ALL_CITIES_LABEL ? ALL_CITIES_LABEL : city
+      hasManualCitySelectionRef.current = true
       setSelectedCity(value)
+      setIsCitySupported(value === ALL_CITIES_LABEL || availableCityByKey.has(normalizeCityName(value)))
       setSearchTerm('')
       setIsDropdownOpen(false)
-      if (value && value !== 'All Cities' && !userLocation) {
+      if (value && value !== ALL_CITIES_LABEL && !userLocation) {
         requestLocation()
       }
     },
-    [requestLocation, userLocation]
+    [requestLocation, userLocation, availableCityByKey]
   )
 
   return (
@@ -475,7 +597,7 @@ const HomePage = () => {
               </div>
               <div className="min-w-0">
                 <p className="font-bold text-gray-900 text-sm">You have a recent order</p>
-                <p className="text-gray-500 text-xs truncate">Order ID: <span className="font-mono font-semibold text-blue-600">{recentOrder.jobId?.slice(0, 8)}</span></p>
+                <p className="text-gray-500 text-xs truncate">Order ID: <span className="font-mono font-semibold text-blue-600">{getOrderDisplayNumber(recentOrder)}</span></p>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -650,8 +772,8 @@ const HomePage = () => {
                         {isDropdownOpen && (
                           <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-fadeIn">
                             <div className="p-1.5">
-                              {/* Always show All Cities, plus statically known cities, plus detected city IF supported */}
-                              {Array.from(new Set(['All Cities', 'Nashik', 'Pune', ...(isCitySupported && detectedCityName ? [detectedCityName] : [])])).map((city) => (
+                              {/* Supported cities are derived from active shop addresses. */}
+                              {cityOptions.map((city) => (
                                 <button
                                   key={city}
                                   type="button"
@@ -661,7 +783,7 @@ const HomePage = () => {
                                     : 'hover:bg-gray-50 text-gray-700'
                                     }`}
                                 >
-                                  {city === 'All Cities' ? (
+                                  {city === ALL_CITIES_LABEL ? (
                                     <Globe className={`w-4 h-4 ${selectedCity === city ? 'text-blue-500' : 'text-gray-400'}`} />
                                   ) : (
                                     <MapPin className={`w-4 h-4 ${selectedCity === city ? 'text-blue-500' : 'text-gray-400'}`} />

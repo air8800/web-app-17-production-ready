@@ -482,7 +482,7 @@ export const submitPrintJob = async (jobData) => {
       color_mode: jobData.color_mode,
       print_type: jobData.print_type,
       pages_per_sheet: jobData.pages_per_sheet,
-      customer_name: jobData.customer_name,
+      customer_name: jobData.customer_name || 'Customer',
       customer_email: jobData.customer_email,
       customer_phone: jobData.customer_phone,
       total_cost: jobData.total_cost,
@@ -493,6 +493,7 @@ export const submitPrintJob = async (jobData) => {
       recipe: jobData.recipe || null,
       total_pages: jobData.total_pages || null,
       selected_pages: jobData.selected_pages || null,
+      order_identification: jobData.order_identification || 'ON_PAGE',
       has_edits: jobData.has_edits || false
     }
 
@@ -537,7 +538,7 @@ export const submitPrintJobImmediate = async (jobData) => {
       color_mode: jobData.color_mode,
       print_type: jobData.print_type,
       pages_per_sheet: jobData.pages_per_sheet,
-      customer_name: jobData.customer_name,
+      customer_name: jobData.customer_name || 'Customer',
       customer_email: jobData.customer_email || null,
       customer_phone: jobData.customer_phone || null,
       total_cost: jobData.total_cost,
@@ -547,6 +548,7 @@ export const submitPrintJobImmediate = async (jobData) => {
       recipe: jobData.recipe || null,
       total_pages: jobData.total_pages || null,
       selected_pages: jobData.selected_pages || null,
+      order_identification: jobData.order_identification || 'ON_PAGE',
       has_edits: jobData.has_edits || false
     }
 

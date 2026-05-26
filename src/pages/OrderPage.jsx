@@ -21,6 +21,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import InstallButton from '../components/InstallButton'
 import ShopLocationBar from '../components/ShopLocationBar'
 import { startPhonePeCheckoutForJob } from '../services/paymentService'
+import { createRecentOrderPayload } from '../utils/orderDisplay'
 
 const OrderPage = () => {
   const { shopId } = useParams()
@@ -46,7 +47,8 @@ const OrderPage = () => {
     customerName: '',
     customerEmail: '',
     customerPhone: '',
-    paymentMethod: 'ONLINE'
+    paymentMethod: 'ONLINE',
+    orderIdentification: 'ON_PAGE'
   })
   const [costInfo, setCostInfo] = useState({ cost: 0 })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -128,6 +130,7 @@ const OrderPage = () => {
 
   // Cost breakup collapse state
   const [isCostBreakupExpanded, setIsCostBreakupExpanded] = useState(false)
+  const [isBasicDetailsExpanded, setIsBasicDetailsExpanded] = useState(false)
 
   // Dev preview state - stores final PDF bytes
   const [finalPDFBytes, setFinalPDFBytes] = useState(null)
@@ -295,7 +298,7 @@ const OrderPage = () => {
     if (pricing.length > 0) {
       calculateCost()
     }
-  }, [orderData.copies, orderData.paperSize, orderData.colorMode, orderData.printType, orderData.selectedPages, pdfPageCount, orderData.file, pricing])
+  }, [orderData.copies, orderData.paperSize, orderData.colorMode, orderData.printType, orderData.selectedPages, orderData.orderIdentification, pdfPageCount, orderData.file, pricing])
 
   // Alternate text labels every 4 seconds
   useEffect(() => {
@@ -519,11 +522,19 @@ const OrderPage = () => {
       pages: pageCount
     })
 
-    setCostInfo({ ...result, calculatedForPages: pageCount })
+    const identificationSlipCost = orderData.orderIdentification === 'SEPARATE_SLIP' ? (result.pricePerPage || 0) : 0
+
+    setCostInfo({
+      ...result,
+      cost: (result.cost || 0) + identificationSlipCost,
+      calculatedForPages: pageCount,
+      identificationSlipCost,
+      identificationSlipPages: orderData.orderIdentification === 'SEPARATE_SLIP' ? 1 : 0
+    })
   }
 
-  // Helper to get current effective page count for warning checks
-  const currentEffectivePageCount = orderData.file
+  // Helper to get current page counts for warning checks and pickup slip display
+  const currentDocumentPageCount = orderData.file
     ? (orderData.selectedPages.length > 0 ? orderData.selectedPages.length : (pdfPageCount || 0))
     : 0
 
@@ -1416,10 +1427,6 @@ const OrderPage = () => {
 
   const handleSubmitOrder = async () => {
     // Validate
-    if (!orderData.customerName) {
-      alert('Please enter customer name')
-      return
-    }
     if (orderData.file) {
       if (orderData.file.type === 'application/pdf' && orderData.selectedPages.length === 0) {
         alert('Please select at least one page to print')
@@ -1464,12 +1471,13 @@ const OrderPage = () => {
           color_mode: orderData.colorMode,
           print_type: orderData.printType,
           pages_per_sheet: orderData.pagesPerSheet,
-          customer_name: orderData.customerName,
+          customer_name: orderData.customerName.trim() || null,
           customer_email: orderData.customerEmail || null,
           customer_phone: orderData.customerPhone || null,
           total_cost: costInfo.cost,
           selected_pages: orderData.selectedPages,
           total_pages: pdfPageCount,
+          order_identification: orderData.orderIdentification,
           recipe: recipe ? JSON.stringify(recipe) : null,
           has_edits: hasEdits,
           payment_method: orderData.paymentMethod === 'ONLINE' ? 'PhonePe' : 'Pay at Shop',
@@ -1478,7 +1486,7 @@ const OrderPage = () => {
         if (jobResult.error) throw new Error(jobResult.error.message)
         const jobId = jobResult.data.id
 
-        localStorage.setItem('printget_recent_order', JSON.stringify({ jobId, shopId, timestamp: Date.now() }))
+        localStorage.setItem('printget_recent_order', JSON.stringify(createRecentOrderPayload(jobResult.data, { shopId })))
         try {
           const history = JSON.parse(localStorage.getItem('printget_order_history') || '[]')
           if (!history.includes(jobId)) { history.push(jobId); localStorage.setItem('printget_order_history', JSON.stringify(history)) }
@@ -1535,12 +1543,13 @@ const OrderPage = () => {
         color_mode: orderData.colorMode,
         print_type: orderData.printType,
         pages_per_sheet: orderData.pagesPerSheet,
-        customer_name: orderData.customerName,
+        customer_name: orderData.customerName.trim() || null,
         customer_email: orderData.customerEmail || null,
         customer_phone: orderData.customerPhone || null,
         total_cost: costInfo.cost,
         selected_pages: orderData.selectedPages,
         total_pages: pdfPageCount,
+        order_identification: orderData.orderIdentification,
         recipe: recipe ? JSON.stringify(recipe) : null,
         has_edits: hasEdits,
         payment_method: orderData.paymentMethod === 'ONLINE' ? 'PhonePe' : 'Pay at Shop',
@@ -1562,7 +1571,7 @@ const OrderPage = () => {
       setPendingJobId(jobId)
       startUpload(jobId)
 
-      localStorage.setItem('printget_recent_order', JSON.stringify({ jobId, shopId, timestamp: Date.now() }))
+      localStorage.setItem('printget_recent_order', JSON.stringify(createRecentOrderPayload(jobResult.data, { shopId })))
       try {
         const history = JSON.parse(localStorage.getItem('printget_order_history') || '[]')
         if (!history.includes(jobId)) { history.push(jobId); localStorage.setItem('printget_order_history', JSON.stringify(history)) }
@@ -1759,11 +1768,7 @@ const OrderPage = () => {
       }
 
       // Save order ID for tracking (in case user navigates away)
-      localStorage.setItem('printget_recent_order', JSON.stringify({
-        jobId,
-        shopId,
-        timestamp: Date.now()
-      }))
+      localStorage.setItem('printget_recent_order', JSON.stringify(createRecentOrderPayload(jobResult.data, { shopId })))
 
       // Save to full order history
       try {
@@ -2666,7 +2671,7 @@ const OrderPage = () => {
               <button
                 onClick={() => setIsPageSelectorExpanded(!isPageSelectorExpanded)}
                 id="edit-pages-btn"
-                className={`w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-all relative overflow-hidden group ${buttonAnimationComplete ? 'button-with-arrow-glow' : ''}`}
+                className={`payment-tap-btn w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-all relative overflow-hidden group ${buttonAnimationComplete ? 'button-with-arrow-glow' : ''}`}
               >
                 {/* Animated slide effect - runs twice */}
                 {!buttonAnimationComplete && (
@@ -2695,47 +2700,135 @@ const OrderPage = () => {
               </button>
 
               {/* Expandable Content - Always render but hide when collapsed to preload */}
-              <div className={`bg-white transition-all overflow-hidden ${isPageSelectorExpanded ? 'max-h-[2000px] opacity-100 p-0 sm:p-2' : 'max-h-0 opacity-0 p-0'
-                }`}>
-                <PDFPageSelector
-                  file={orderData.file}
-                  selectedPages={orderData.selectedPages}
-                  onPagesSelected={handlePagesSelected}
-                  pageSize={previewPageSize}
-                  colorMode={orderData.colorMode}
-                  pagesPerSheet={orderData.pagesPerSheet}
-                  onEditPage={handleDirectEditPage}
-                  onEditSheet={handleDirectEditSheet}
-                  onPagesLoaded={handlePagesLoaded}
-                  viewMode="single"
-                />
+              <div className={`payment-grid-container bg-white ${isPageSelectorExpanded ? 'is-expanded' : ''}`}>
+                <div className="payment-grid-content">
+                  <div className="p-0 sm:p-2">
+                    <PDFPageSelector
+                      file={orderData.file}
+                      selectedPages={orderData.selectedPages}
+                      onPagesSelected={handlePagesSelected}
+                      pageSize={previewPageSize}
+                      colorMode={orderData.colorMode}
+                      pagesPerSheet={orderData.pagesPerSheet}
+                      onEditPage={handleDirectEditPage}
+                      onEditSheet={handleDirectEditSheet}
+                      onPagesLoaded={handlePagesLoaded}
+                      viewMode="single"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Customer Info */}
-          <div className="space-y-3 sm:space-y-4">
-            <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2">Your Name *</label>
-              <input
-                type="text"
-                value={orderData.customerName}
-                onChange={(e) => setOrderData(prev => ({ ...prev, customerName: e.target.value }))}
-                className="w-full p-3 border rounded-lg"
-                required
-              />
-            </div>
+          {/* Order Identification */}
+          {(orderData.file || orderData.files.length > 0) && (
+            <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-3 space-y-3">
+              <div className="flex items-start gap-2">
+                <div className="mt-0.5 w-8 h-8 rounded-lg bg-white border border-blue-100 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-gray-900">Pickup safety</h3>
+                  <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
+                    This helps the shop keep your pages separate from other orders.
+                  </p>
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-xs sm:text-sm font-medium mb-2">Phone <span className="text-gray-400 font-normal">(Optional)</span></label>
-              <input
-                type="tel"
-                value={orderData.customerPhone}
-                onChange={(e) => setOrderData(prev => ({ ...prev, customerPhone: e.target.value }))}
-                className="w-full p-3 border rounded-lg"
-              />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setOrderData(prev => ({ ...prev, orderIdentification: 'ON_PAGE' }))}
+                  className={`text-left rounded-xl border p-3 transition-all ${
+                    orderData.orderIdentification === 'ON_PAGE'
+                      ? 'bg-white border-blue-500 shadow-sm ring-2 ring-blue-100'
+                      : 'bg-white/70 border-blue-100 hover:border-blue-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-gray-900">Small Order ID on page</span>
+                    <span className="text-[10px] font-extrabold text-green-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full">Free</span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-1.5 leading-relaxed">
+                    Printed lightly at the bottom corner. Recommended for normal documents.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOrderData(prev => ({ ...prev, orderIdentification: 'SEPARATE_SLIP' }))}
+                  className={`text-left rounded-xl border p-3 transition-all ${
+                    orderData.orderIdentification === 'SEPARATE_SLIP'
+                      ? 'bg-white border-blue-500 shadow-sm ring-2 ring-blue-100'
+                      : 'bg-white/70 border-blue-100 hover:border-blue-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-gray-900">No mark on document</span>
+                    <span className="text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">+1 slip</span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-1.5 leading-relaxed">
+                    Best for resumes, certificates, legal papers, or official forms.
+                  </p>
+                </button>
+              </div>
+
+              {orderData.orderIdentification === 'SEPARATE_SLIP' && (
+                <div className="rounded-lg bg-white border border-amber-100 px-3 py-2 text-[11px] text-amber-800 leading-relaxed">
+                  A separate order slip will be added so your document stays clean. Page count increases by 1.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Basic Details - hidden for now; keep state/submission support for later */}
+          {false && (
+          <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+            <button
+              type="button"
+              onClick={() => setIsBasicDetailsExpanded(!isBasicDetailsExpanded)}
+              className="payment-tap-btn w-full flex items-center justify-between gap-3 p-3 text-left hover:bg-gray-50 transition-colors"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-gray-900">Basic details</span>
+                  <span className="text-[10px] font-extrabold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full uppercase tracking-wide">Optional</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Order ID is enough for pickup. Add name or phone only if you want.
+                </p>
+              </div>
+              <ChevronRight className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${isBasicDetailsExpanded ? 'rotate-90' : ''}`} />
+            </button>
+
+            <div className={`payment-grid-container ${isBasicDetailsExpanded ? 'is-expanded' : ''}`}>
+              <div className="payment-grid-content">
+                <div className="border-t border-gray-100 p-3 space-y-3 sm:space-y-4 bg-gray-50/40">
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium mb-2">Your Name <span className="text-gray-400 font-normal">(Optional)</span></label>
+                    <input
+                      type="text"
+                      value={orderData.customerName}
+                      onChange={(e) => setOrderData(prev => ({ ...prev, customerName: e.target.value }))}
+                      className="w-full p-3 border rounded-lg bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium mb-2">Phone <span className="text-gray-400 font-normal">(Optional)</span></label>
+                    <input
+                      type="tel"
+                      value={orderData.customerPhone}
+                      onChange={(e) => setOrderData(prev => ({ ...prev, customerPhone: e.target.value }))}
+                      className="w-full p-3 border rounded-lg bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+          )}
 
           {/* Cost Display - Collapsible */}
           {costInfo.cost > 0 ? (
@@ -2810,6 +2903,15 @@ const OrderPage = () => {
                       <span className="text-gray-600">{orderData.paymentMethod === 'ONLINE' ? 'Total payable online:' : 'Total payable at shop:'}</span>
                       <span className="font-bold text-gray-900">{formatCurrency(costInfo.cost)}</span>
                     </div>
+
+                    {orderData.orderIdentification === 'SEPARATE_SLIP' && (
+                      <div className="flex items-center justify-between text-[11px] bg-amber-50 p-2 rounded-lg border border-amber-100">
+                        <span className="text-amber-800">Separate order slip</span>
+                        <span className="font-bold text-amber-900">
+                          {costInfo.identificationSlipCost > 0 ? formatCurrency(costInfo.identificationSlipCost) : '+1 page'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2874,7 +2976,6 @@ const OrderPage = () => {
               isSubmitting ||
               !agreedToTerms ||
               (!orderData.file && (!orderData.files || orderData.files.length === 0)) ||
-              !orderData.customerName ||
               costInfo.cost <= 0 ||
               (orderData.file?.type === 'application/pdf' && orderData.selectedPages.length === 0) ||
               (orderData.files?.length > 0 && orderData.selectedImages.length === 0)
@@ -2901,7 +3002,7 @@ const OrderPage = () => {
 
           {(orderData.file || orderData.files.length > 0) && costInfo.cost <= 0 && pricing.length > 0 &&
             (orderData.file?.type !== 'application/pdf' || pdfPageCount > 0) &&
-            costInfo.calculatedForPages === currentEffectivePageCount && (
+            costInfo.calculatedForPages === currentDocumentPageCount && (
               <p className="text-sm text-red-600 text-center">
                 Please select a valid combination of paper size, color mode, and print type
               </p>

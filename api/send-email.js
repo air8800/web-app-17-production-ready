@@ -35,7 +35,7 @@ function buildPreheader(text) {
 /**
  * Generates the HTML for "Order Confirmed" 
  */
-function buildConfirmedHTML(customerName, filename, shopName, orderId, amount, paymentMethod) {
+function buildConfirmedHTML(customerName, filename, shopName, orderId, amount, paymentMethod, displayOrderId) {
   return `
 <!DOCTYPE html>
 <html>
@@ -62,7 +62,7 @@ function buildConfirmedHTML(customerName, filename, shopName, orderId, amount, p
                 Hi <strong>${customerName || 'there'}</strong>,<br><br>
                 Your payment was successful and your print job is now in the queue. We will notify you again as soon as it is ready for pickup!
               </p>
-              ${buildDetailsTable(filename, shopName, orderId, '⏳ In Queue', '#eab308', amount, paymentMethod)}
+              ${buildDetailsTable(filename, shopName, orderId, '⏳ In Queue', '#eab308', amount, paymentMethod, displayOrderId)}
             </td>
           </tr>
           ${buildFooter()}
@@ -77,7 +77,7 @@ function buildConfirmedHTML(customerName, filename, shopName, orderId, amount, p
 /**
  * Generates the HTML for "Print Ready" 
  */
-function buildReadyHTML(customerName, filename, shopName, orderId, amount, paymentMethod) {
+function buildReadyHTML(customerName, filename, shopName, orderId, amount, paymentMethod, displayOrderId) {
   return `
 <!DOCTYPE html>
 <html>
@@ -86,7 +86,7 @@ function buildReadyHTML(customerName, filename, shopName, orderId, amount, payme
   <title>Your Print is Ready!</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-  ${buildPreheader(`Hi ${customerName || 'there'}, your print job for "${filename || 'your document'}" is ready. Please collect it from the shop.`)}
+  ${buildPreheader(`Hi ${customerName || 'there'}, your print job for "${filename || 'your document'}" is ready. Tell the shop ${displayOrderId || `ID - ${orderId ? orderId.slice(0,8) : ''}`} to collect it.`)}
   <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 16px;">
     <tr>
       <td align="center">
@@ -104,7 +104,8 @@ function buildReadyHTML(customerName, filename, shopName, orderId, amount, payme
                 Hi <strong>${customerName || 'there'}</strong>,<br><br>
                 Great news! Your print job has been completed and is waiting for you to collect it.
               </p>
-              ${buildDetailsTable(filename, shopName, orderId, '✅ Ready for Pickup', '#16a34a', amount, paymentMethod)}
+              ${buildDetailsTable(filename, shopName, orderId, '✅ Ready for Pickup', '#16a34a', amount, paymentMethod, displayOrderId)}
+              ${buildPickupInstruction(orderId, displayOrderId)}
             </td>
           </tr>
           ${buildFooter()}
@@ -119,7 +120,7 @@ function buildReadyHTML(customerName, filename, shopName, orderId, amount, payme
 /**
  * Generates the HTML for "Cancelled" 
  */
-function buildCancelledHTML(customerName, filename, shopName, orderId, amount, paymentMethod) {
+function buildCancelledHTML(customerName, filename, shopName, orderId, amount, paymentMethod, displayOrderId) {
   return `
 <!DOCTYPE html>
 <html>
@@ -145,7 +146,7 @@ function buildCancelledHTML(customerName, filename, shopName, orderId, amount, p
                 Hi <strong>${customerName || 'there'}</strong>,<br><br>
                 Unfortunately, your print job has been cancelled by the shop. Please contact them for more details.
               </p>
-              ${buildDetailsTable(filename, shopName, orderId, '❌ Cancelled', '#ef4444', amount, paymentMethod)}
+              ${buildDetailsTable(filename, shopName, orderId, '❌ Cancelled', '#ef4444', amount, paymentMethod, displayOrderId)}
             </td>
           </tr>
           ${buildFooter()}
@@ -157,8 +158,24 @@ function buildCancelledHTML(customerName, filename, shopName, orderId, amount, p
 </html>`;
 }
 
+// Helper: Pickup instruction used when an order is ready
+function buildPickupInstruction(orderId, displayOrderId) {
+  return `
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ecfdf5; border-radius: 12px; border: 1px solid #bbf7d0; margin-bottom: 24px;">
+    <tr>
+      <td style="padding: 16px;">
+        <p style="color: #14532d; font-size: 14px; font-weight: 800; margin: 0 0 6px 0;">How to collect your prints</p>
+        <p style="color: #166534; font-size: 13px; line-height: 1.6; margin: 0;">
+          Tell the shop your Order ID <strong style="font-family: monospace; color: #052e16;">${displayOrderId || (orderId ? `ID - ${orderId.slice(0, 8)}` : '—')}</strong>. The staff will match it with the ready packet and hand over your order.
+        </p>
+      </td>
+    </tr>
+  </table>
+  `;
+}
+
 // Helper: Common Order Details Table
-function buildDetailsTable(filename, shopName, orderId, statusText, statusColor, amount, paymentMethod) {
+function buildDetailsTable(filename, shopName, orderId, statusText, statusColor, amount, paymentMethod, displayOrderId) {
   return `
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 24px;">
     <tr>
@@ -177,7 +194,7 @@ function buildDetailsTable(filename, shopName, orderId, statusText, statusColor,
           </tr>
           <tr>
             <td style="padding: 6px 0;">
-              <table width="100%"><tr><td style="color: #64748b; font-size: 13px;">Order ID</td><td align="right" style="color: #1e293b; font-size: 13px; font-weight: 600; font-family: monospace;">${orderId ? orderId.slice(0, 8) : '—'}</td></tr></table>
+              <table width="100%"><tr><td style="color: #64748b; font-size: 13px;">Order ID</td><td align="right" style="color: #1e293b; font-size: 13px; font-weight: 600; font-family: monospace;">${displayOrderId || (orderId ? `ID - ${orderId.slice(0, 8)}` : '—')}</td></tr></table>
             </td>
           </tr>
           <tr>
@@ -224,7 +241,7 @@ function buildFooter() {
  * Build a clean, human-readable plain-text alternative.
  * A real plaintext body (not stripped HTML) significantly lowers the spam score.
  */
-function buildPlainText({ heading, intro, customerName, filename, shopName, orderId, statusText, amount, paymentMethod }) {
+function buildPlainText({ heading, intro, customerName, filename, shopName, orderId, displayOrderId, statusText, amount, paymentMethod }) {
   const lines = [
     heading,
     '='.repeat(heading.length),
@@ -237,7 +254,7 @@ function buildPlainText({ heading, intro, customerName, filename, shopName, orde
     '-------------',
     `File:           ${filename || 'Document'}`,
     `Shop:           ${shopName || 'PrintGet Partner Shop'}`,
-    `Order ID:       ${orderId ? orderId.slice(0, 8) : '—'}`,
+    `Order ID:       ${displayOrderId || (orderId ? `ID - ${orderId.slice(0, 8)}` : '—')}`,
     `Amount Paid:    Rs. ${amount || '0'}`,
     `Payment:        ${paymentMethod || 'Pay at Shop'}`,
     `Status:         ${statusText}`,
@@ -271,7 +288,7 @@ export default async function handler(req, res) {
   // We will re-enable strict auth after confirming emails work
 
   try {
-    const { type, table, record, old_record } = req.body;
+    const { table, record, old_record } = req.body;
     
     if (table !== 'print_jobs') {
       return res.status(200).json({ message: 'Ignored: not a print_jobs event' });
@@ -285,6 +302,9 @@ export default async function handler(req, res) {
     const customerName = record.customer_name;
     const filename = record.filename;
     const orderId = record.id;
+    const displayOrderId = record.shop_order_number
+      ? `ID - ${record.shop_order_number}`
+      : (orderId ? `ID - ${orderId.slice(0, 8)}` : '—');
     const amount = record.total_cost;
     const paymentMethod = 'Pay at Shop';
 
@@ -297,11 +317,11 @@ export default async function handler(req, res) {
     if (record.job_status === 'pending' && record.payment_status === 'paid' && old_record?.payment_status !== 'paid') {
       subject = `Order received — ${orderId ? orderId.slice(0, 8) : 'PrintGet'}`;
       entityRef = `confirmed-${orderId}`;
-      emailHTML = buildConfirmedHTML(customerName, filename, null, orderId, amount, paymentMethod);
+      emailHTML = buildConfirmedHTML(customerName, filename, null, orderId, amount, paymentMethod, displayOrderId);
       emailText = buildPlainText({
         heading: 'Order received',
         intro: 'Your payment was successful and your print job is now in the queue. We will notify you again as soon as it is ready for pickup.',
-        customerName, filename, shopName: null, orderId, amount, paymentMethod,
+        customerName, filename, shopName: null, orderId, displayOrderId, amount, paymentMethod,
         statusText: 'In Queue',
       });
     } 
@@ -309,11 +329,11 @@ export default async function handler(req, res) {
     else if (record.job_status === 'completed' && old_record?.job_status !== 'completed') {
       subject = `Your print is ready for pickup — ${orderId ? orderId.slice(0, 8) : 'PrintGet'}`;
       entityRef = `ready-${orderId}`;
-      emailHTML = buildReadyHTML(customerName, filename, null, orderId, amount, paymentMethod);
+      emailHTML = buildReadyHTML(customerName, filename, null, orderId, amount, paymentMethod, displayOrderId);
       emailText = buildPlainText({
         heading: 'Your print is ready',
-        intro: 'Great news! Your print job has been completed and is waiting for you to collect it from the shop.',
-        customerName, filename, shopName: null, orderId, amount, paymentMethod,
+        intro: `Great news! Your print job has been completed and is waiting for you to collect it from the shop. Tell the shop ${displayOrderId}; the staff will match it with the ready packet and hand over your order.`,
+        customerName, filename, shopName: null, orderId, displayOrderId, amount, paymentMethod,
         statusText: 'Ready for Pickup',
       });
     }
@@ -321,11 +341,11 @@ export default async function handler(req, res) {
     else if (record.job_status === 'cancelled' && old_record?.job_status !== 'cancelled') {
       subject = `Your order was cancelled — ${orderId ? orderId.slice(0, 8) : 'PrintGet'}`;
       entityRef = `cancelled-${orderId}`;
-      emailHTML = buildCancelledHTML(customerName, filename, null, orderId, amount, paymentMethod);
+      emailHTML = buildCancelledHTML(customerName, filename, null, orderId, amount, paymentMethod, displayOrderId);
       emailText = buildPlainText({
         heading: 'Order cancelled',
         intro: 'Unfortunately, your print job has been cancelled by the shop. Please contact them for more details, or reply to this email and we will help.',
-        customerName, filename, shopName: null, orderId, amount, paymentMethod,
+        customerName, filename, shopName: null, orderId, displayOrderId, amount, paymentMethod,
         statusText: 'Cancelled',
       });
     } 

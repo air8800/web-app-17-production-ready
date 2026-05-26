@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { confirmPhonePeReturn } from '../services/paymentService'
 import { getJobStatus, getShopInfo, subscribeToJobUpdates, startJobStatusPolling, formatCurrency, updatePrintJob, updatePaymentStatus } from '../utils/supabase'
-import { Mail, Upload, AlertCircle, RefreshCw, X, CheckCircle2, Store, Printer, Package, CreditCard, Clock, ArrowLeft, FileText, Hash, Palette, Copy as CopyIcon, User, Wifi, WifiOff, PartyPopper, HandCoins, Home } from 'lucide-react'
+import { Mail, Upload, AlertCircle, RefreshCw, X, CheckCircle2, Store, Printer, Package, CreditCard, Clock, ArrowLeft, FileText, Palette, Copy as CopyIcon, User, Wifi, WifiOff, PartyPopper, HandCoins, Home } from 'lucide-react'
 import useUploadStore from '../stores/uploadStore'
 
 import { usePageTitle } from '../hooks/usePageTitle'
 import InstallButton from '../components/InstallButton'
 import ShopLocationBar from '../components/ShopLocationBar'
+import { createRecentOrderPayload, getOrderDisplayNumber } from '../utils/orderDisplay'
 
 const StatusPage = () => {
   const { jobId } = useParams()
@@ -88,10 +89,7 @@ const StatusPage = () => {
 
         if (result.ok) {
           try {
-            localStorage.setItem('printget_recent_order', JSON.stringify({
-              jobId,
-              timestamp: Date.now(),
-            }))
+            localStorage.setItem('printget_recent_order', JSON.stringify(createRecentOrderPayload({ id: jobId })))
             const history = JSON.parse(localStorage.getItem('printget_order_history') || '[]')
             if (!history.includes(jobId)) {
               history.push(jobId)
@@ -370,6 +368,8 @@ const StatusPage = () => {
   const normalizedJobStatus = normalizeStatus(statusForDisplay)
   const isCancelled = isCancelledStatus(statusForDisplay)
   const isCompleted = normalizedJobStatus === 'completed'
+  const pickupOrderId = getOrderDisplayNumber(job)
+  const pickupOrderLabel = `ID - ${pickupOrderId}`
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/60 via-white to-indigo-50/40">
@@ -439,6 +439,42 @@ const StatusPage = () => {
             Got my prints!
           </button>
         </div>
+
+        {/* Pickup Instruction */}
+        {!isCancelled && (
+          <div className={`mb-5 rounded-2xl p-3.5 shadow-sm border ${
+            isCompleted
+              ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200/70'
+              : 'bg-gradient-to-br from-blue-50 via-white to-indigo-50 border-blue-200/70'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md ${
+                isCompleted
+                  ? 'bg-gradient-to-br from-green-500 to-emerald-600 shadow-green-500/25'
+                  : 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/25'
+              }`}>
+                <Package className="w-4.5 h-4.5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`font-extrabold text-sm ${isCompleted ? 'text-green-900' : 'text-blue-900'}`}>
+                  Your Pickup Order ID
+                </p>
+                <p className={`text-xs sm:text-sm mt-1 leading-relaxed ${isCompleted ? 'text-green-700' : 'text-blue-700'}`}>
+                  {isCompleted
+                    ? 'Tell this Order ID at the shop. They will match it with the ready packet and hand over your prints.'
+                    : 'Keep this Order ID. When your print is ready, tell this number at the shop for pickup.'}
+                </p>
+                <div className={`mt-2 inline-flex items-center bg-white/80 border px-2.5 py-1 rounded-lg ${
+                  isCompleted ? 'border-green-200' : 'border-blue-200'
+                }`}>
+                  <span className={`font-mono text-sm font-extrabold ${isCompleted ? 'text-green-950' : 'text-blue-950'}`}>
+                    {pickupOrderLabel}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Upload Warning Banner */}
         {isThisJobUploading && (
@@ -746,10 +782,10 @@ const StatusPage = () => {
           <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-3 py-2 border-b border-gray-50">
               <div className="flex items-center gap-2 text-gray-500 text-xs flex-shrink-0">
-                <Hash className="w-3.5 h-3.5" />
+                <FileText className="w-3.5 h-3.5" />
                 Order ID
               </div>
-              <span className="font-mono text-xs text-gray-900 bg-gray-50 px-2 py-1 rounded-md truncate">{job.id.slice(0, 8)}</span>
+              <span className="font-mono text-xs text-gray-900 bg-gray-50 px-2 py-1 rounded-md truncate">{pickupOrderLabel}</span>
             </div>
 
             <div className="flex items-center justify-between gap-3 py-2 border-b border-gray-50">
@@ -781,7 +817,7 @@ const StatusPage = () => {
                 <User className="w-3.5 h-3.5" />
                 Customer
               </div>
-              <span className="text-sm text-gray-900 font-medium truncate max-w-[180px] sm:max-w-none">{job.customer_name}</span>
+              <span className="text-sm text-gray-900 font-medium truncate max-w-[180px] sm:max-w-none">{job.customer_name && job.customer_name !== 'Customer' ? job.customer_name : 'Not provided'}</span>
             </div>
 
             <div className="flex items-center justify-between gap-3 py-2 border-b border-gray-50">

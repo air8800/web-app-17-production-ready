@@ -18,7 +18,7 @@ function getFreshStoredLocation() {
   return stored && !isUserLocationStale(stored) ? stored : null
 }
 
-function getAccuracyWarning(location) {
+function getAccuracyWarning(location, { isMobile = isLikelyMobileDevice() } = {}) {
   if (!Number.isFinite(location?.accuracy)) {
     return null
   }
@@ -27,6 +27,9 @@ function getAccuracyWarning(location) {
   }
   if (location.accuracy <= LOCATION_COARSE_ACCURACY_M) {
     return null // Acceptable accuracy, no warning
+  }
+  if (!isMobile) {
+    return `Precise location could not be identified on this desktop. We are using an approximate location, so shop distances may not be exact. For better accuracy, allow precise location in your browser/system settings or select your city manually.`
   }
   return `Location is only accurate within about ${Math.round(location.accuracy)} m. Move outdoors or near a window and tap Update my location for a better reading.`
 }
@@ -64,11 +67,14 @@ export function useUserLocation({ autoRefresh = true } = {}) {
     }
 
     try {
-      const loc = await requestAccurateUserLocation()
+      const isMobile = isLikelyMobileDevice()
+      const loc = await requestAccurateUserLocation({
+        maxAcceptableAccuracyM: isMobile ? 1000 : 50000,
+      })
       setUserLocation(loc)
       storeUserLocation(loc)
       setStatus('ready')
-      setError(getAccuracyWarning(loc))
+      setError(getAccuracyWarning(loc, { isMobile }))
       return loc
     } catch (err) {
       if (!silent) {

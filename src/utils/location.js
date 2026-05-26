@@ -172,6 +172,7 @@ function isBetterLocation(next, current) {
  */
 export function requestAccurateUserLocation({
   targetAccuracyM = LOCATION_TARGET_ACCURACY_M,
+  maxAcceptableAccuracyM = 1000,
   timeoutMs = LOCATION_FIX_TIMEOUT_MS,
   minSamples = LOCATION_MIN_SAMPLES,
 } = {}) {
@@ -203,7 +204,7 @@ export function requestAccurateUserLocation({
         // If the best location we found is extremely inaccurate (e.g. > 1000m),
         // it means we only got a coarse IP/cell estimate.
         // We reject it rather than showing completely wrong store distances.
-        if (location.accuracy && location.accuracy > 1000) {
+        if (location.accuracy && location.accuracy > maxAcceptableAccuracyM) {
           const err = new Error('Location is too inaccurate')
           err.code = 4 // Custom code for "too inaccurate"
           reject(err)

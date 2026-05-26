@@ -93,7 +93,13 @@ export function useUserLocation({ autoRefresh = true } = {}) {
             )
           }
         } else if (err.code === 3) {
-          setError('Location timed out. Try again or move outdoors.')
+          if (isLikelyMobileDevice()) {
+            setError('Location timed out. Try again or move outdoors.')
+          } else {
+            setError(
+              'Precise desktop location could not be detected. PC location may be unavailable or inaccurate. Please select your city manually, or use your phone for accurate nearest-shop distances.'
+            )
+          }
         } else {
           setError('Could not detect your location. Tap the button to try again.')
         }

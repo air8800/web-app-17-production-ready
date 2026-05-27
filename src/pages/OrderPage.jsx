@@ -20,6 +20,7 @@ import { useTour } from '../hooks/useTour'
 import { usePageTitle } from '../hooks/usePageTitle'
 import InstallButton from '../components/InstallButton'
 import ShopLocationBar from '../components/ShopLocationBar'
+import ExpandableAddress from '../components/ExpandableAddress'
 import { startPhonePeCheckoutForJob } from '../services/paymentService'
 import { createRecentOrderPayload } from '../utils/orderDisplay'
 
@@ -1969,7 +1970,12 @@ const OrderPage = () => {
           </div>
 
           {shop.address && (
-            <p className="mt-3 w-full text-sm text-gray-600 leading-relaxed">{shop.address}</p>
+            <ExpandableAddress
+              address={shop.address}
+              className="mt-3 w-full"
+              textClassName="text-sm text-gray-600"
+              fadeFromClass="from-white"
+            />
           )}
           <ShopLocationBar shop={shop} variant="inline" className="mt-2.5 w-full" />
 

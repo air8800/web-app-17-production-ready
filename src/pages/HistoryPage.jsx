@@ -4,6 +4,7 @@ import { getJobsByIds } from '../utils/supabase'
 import { Package, ArrowLeft, Clock, MapPin, Search, Trash2, Printer } from 'lucide-react'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { getOrderDisplayNumber } from '../utils/orderDisplay'
+import ExpandableAddress from '../components/ExpandableAddress'
 
 const HistoryPage = () => {
   usePageTitle()
@@ -162,10 +163,14 @@ const HistoryPage = () => {
                     <h3 className="font-bold text-gray-900 text-base sm:text-lg truncate group-hover:text-blue-700 transition-colors">
                       {order.shops?.name || 'Unknown Shop'}
                     </h3>
-                    <p className="text-xs sm:text-sm text-gray-500 flex items-center gap-1.5 mt-0.5 truncate">
-                      <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span className="truncate">{order.shops?.address || 'Address not available'}</span>
-                    </p>
+                    <div className="flex items-start gap-1.5 mt-0.5">
+                      <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400 mt-0.5" />
+                      <ExpandableAddress
+                        address={order.shops?.address || 'Address not available'}
+                        textClassName="text-xs sm:text-sm text-gray-500"
+                        fadeFromClass="from-white"
+                      />
+                    </div>
                   </div>
                   <div className="flex-shrink-0 flex flex-col items-end gap-2">
                     {getStatusBadge(order)}

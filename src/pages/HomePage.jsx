@@ -12,62 +12,19 @@ import {
 } from '../utils/location'
 import { useUserLocation } from '../hooks/useUserLocation'
 import { useDrivingDistances } from '../hooks/useDrivingDistances'
-import { Printer, Search, Store, Clock, MapPin, Phone, ArrowRight, Zap, Shield, Globe, Upload, Settings, FileCheck, Package, Mail, ChevronDown, ChevronRight, Check, Navigation, LocateFixed, Loader2 } from 'lucide-react'
+import { Printer, Search, Store, Clock, MapPin, Phone, ArrowRight, Zap, Shield, Upload, Settings, FileCheck, Package, Mail, ChevronRight, Navigation, LocateFixed, Loader2 } from 'lucide-react'
 import { createRecentOrderPayload, getOrderDisplayNumber } from '../utils/orderDisplay'
+import {
+  ALL_CITIES_LABEL,
+  formatCityName,
+  getAvailableCities,
+  normalizeCityKey,
+  shopMatchesCity,
+} from '../utils/city'
+import ExpandableAddress from '../components/ExpandableAddress'
+import CitySelectDropdown from '../components/CitySelectDropdown'
 
-const ALL_CITIES_LABEL = 'All Cities'
 const CITY_STORAGE_KEY = 'printflow_selected_city'
-const NON_CITY_ADDRESS_PARTS = new Set(['india', 'maharashtra', 'mh'])
-
-const normalizeCityName = (city) =>
-  String(city || '')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .toLowerCase()
-
-const formatCityName = (city) =>
-  String(city || '')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .split(' ')
-    .map((part) => (part ? `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}` : part))
-    .join(' ')
-
-const cleanAddressPart = (part) =>
-  String(part || '')
-    .replace(/\b\d{5,6}\b/g, '')
-    .replace(/\b(dist\.?|district|taluka)\b/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-
-const isNonCityAddressPart = (part) => {
-  const normalized = normalizeCityName(part)
-  return !normalized || NON_CITY_ADDRESS_PARTS.has(normalized) || /^\d+$/.test(normalized)
-}
-
-const getShopCity = (shop) => {
-  const address = shop?.address
-  if (!address) return null
-
-  const parts = String(address)
-    .split(',')
-    .map(cleanAddressPart)
-    .filter(Boolean)
-
-  const candidates = parts.length > 1 ? [...parts].reverse() : parts
-  const city = candidates.find((part) => !isNonCityAddressPart(part))
-  return city ? formatCityName(city) : null
-}
-
-const shopMatchesCity = (shop, city) => {
-  const normalizedCity = normalizeCityName(city)
-  if (!normalizedCity || normalizedCity === normalizeCityName(ALL_CITIES_LABEL)) return true
-
-  const shopCity = normalizeCityName(getShopCity(shop))
-  if (shopCity && shopCity === normalizedCity) return true
-
-  return normalizeCityName(shop?.address).includes(normalizedCity)
-}
 
 // Helper: Check if a shop is currently open (desktop session overrides scheduled hours)
 const isShopOpen = (shop) => {
@@ -156,9 +113,9 @@ const ShopCard = ({ shop, index, glow, userLocation, isNearest, needsLocation, d
           ) : needsLocation ? (
             <p className="text-sm text-amber-600 mb-1.5">Allow location to see distance</p>
           ) : null}
-          <div className="flex items-center gap-1.5 text-gray-500 mb-2">
-            <MapPin className="w-4 h-4 flex-shrink-0 text-gray-400" />
-            <span className="text-sm font-medium truncate">{shop.address}</span>
+          <div className="flex items-start gap-1.5 text-gray-500 mb-2">
+            <MapPin className="w-4 h-4 flex-shrink-0 text-gray-400 mt-0.5" />
+            <ExpandableAddress address={shop.address} fadeFromClass="from-white" />
           </div>
           <div className="flex items-center gap-1.5 text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md">
             <Phone className="w-3.5 h-3.5" />
@@ -225,7 +182,6 @@ const HomePage = () => {
   const [selectedCity, setSelectedCity] = useState(() => {
     return localStorage.getItem(CITY_STORAGE_KEY) || null
   })
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const howItWorksRef = useRef(null)
   const cityRef = useRef(null)
   const hasManualCitySelectionRef = useRef(false)
@@ -244,22 +200,10 @@ const HomePage = () => {
   const [detectedCityName, setDetectedCityName] = useState('')
   const [hasPromptedLocation, setHasPromptedLocation] = useState(false)
 
-  const availableCities = useMemo(() => {
-    const byKey = new Map()
-
-    shops.forEach((shop) => {
-      const city = getShopCity(shop)
-      const key = normalizeCityName(city)
-      if (key && !byKey.has(key)) {
-        byKey.set(key, city)
-      }
-    })
-
-    return [...byKey.values()].sort((a, b) => a.localeCompare(b))
-  }, [shops])
+  const availableCities = useMemo(() => getAvailableCities(shops), [shops])
 
   const availableCityByKey = useMemo(() => {
-    return new Map(availableCities.map((city) => [normalizeCityName(city), city]))
+    return new Map(availableCities.map((city) => [normalizeCityKey(city), city]))
   }, [availableCities])
 
   const cityOptions = useMemo(() => [ALL_CITIES_LABEL, ...availableCities], [availableCities])
@@ -285,7 +229,7 @@ const HomePage = () => {
           setDetectedCityName(detectedCity)
 
           if (!hasManualCitySelectionRef.current) {
-            const supportedCity = availableCityByKey.get(normalizeCityName(detectedCity))
+            const supportedCity = availableCityByKey.get(normalizeCityKey(detectedCity))
             if (supportedCity) {
               setIsCitySupported(true)
               setSelectedCity(supportedCity)
@@ -320,9 +264,9 @@ const HomePage = () => {
       return
     }
 
-    if (availableCityByKey.has(normalizeCityName(selectedCity))) {
+    if (availableCityByKey.has(normalizeCityKey(selectedCity))) {
       setIsCitySupported(true)
-    } else if (detectedCityName && normalizeCityName(selectedCity) === normalizeCityName(detectedCityName)) {
+    } else if (detectedCityName && normalizeCityKey(selectedCity) === normalizeCityKey(detectedCityName)) {
       setIsCitySupported(false)
     } else if (!hasManualCitySelectionRef.current && availableCities.length > 0) {
       setIsCitySupported(false)
@@ -506,9 +450,8 @@ const HomePage = () => {
       const value = city === ALL_CITIES_LABEL ? ALL_CITIES_LABEL : city
       hasManualCitySelectionRef.current = true
       setSelectedCity(value)
-      setIsCitySupported(value === ALL_CITIES_LABEL || availableCityByKey.has(normalizeCityName(value)))
+      setIsCitySupported(value === ALL_CITIES_LABEL || availableCityByKey.has(normalizeCityKey(value)))
       setSearchTerm('')
-      setIsDropdownOpen(false)
       if (value && value !== ALL_CITIES_LABEL && !userLocation) {
         requestLocation()
       }
@@ -688,9 +631,13 @@ const HomePage = () => {
                       {distanceLabel && (
                         <p className="text-sm font-semibold text-blue-600 mb-1">{distanceLabel}</p>
                       )}
-                      <div className="flex items-center gap-1 text-gray-600 mb-2">
-                        <MapPin className="w-4 h-4 flex-shrink-0" />
-                        <span className="text-sm truncate">{shop.address}</span>
+                      <div className="flex items-start gap-1 text-gray-600 mb-2">
+                        <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        <ExpandableAddress
+                          address={shop.address}
+                          textClassName="text-sm text-gray-600"
+                          fadeFromClass="from-white"
+                        />
                       </div>
                       <div className="flex items-center gap-3 text-sm flex-wrap">
                         {(() => {
@@ -747,55 +694,12 @@ const HomePage = () => {
                     {/* City Selection Logic */}
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Select Your City</label>
-                      <div className="relative group">
-                        <button
-                          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                          className={`w-full flex items-center justify-between pl-16 pr-6 py-4 text-lg font-medium bg-white rounded-2xl cursor-pointer transition-colors ${
-                            !selectedCity && cityVisible
-                              ? 'border-2 border-blue-400 attention-shimmer'
-                              : 'border border-gray-200 shadow-sm'
-                          }`}
-                        >
-                          <span className={selectedCity ? 'text-gray-900 font-semibold' : 'text-gray-400'}>
-                            {selectedCity || 'Choose a location...'}
-                          </span>
-                          <ChevronDown className={`w-5 h-5 text-blue-500 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                        </button>
-
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                          <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
-                            <MapPin className="w-5 h-5 text-blue-600" />
-                          </div>
-                        </div>
-
-                        {/* Custom Dropdown Menu */}
-                        {isDropdownOpen && (
-                          <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-fadeIn">
-                            <div className="p-1.5">
-                              {/* Supported cities are derived from active shop addresses. */}
-                              {cityOptions.map((city) => (
-                                <button
-                                  key={city}
-                                  type="button"
-                                  onClick={() => handleCitySelect(city)}
-                                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left font-medium ${selectedCity === city
-                                    ? 'bg-blue-50 text-blue-600'
-                                    : 'hover:bg-gray-50 text-gray-700'
-                                    }`}
-                                >
-                                  {city === ALL_CITIES_LABEL ? (
-                                    <Globe className={`w-4 h-4 ${selectedCity === city ? 'text-blue-500' : 'text-gray-400'}`} />
-                                  ) : (
-                                    <MapPin className={`w-4 h-4 ${selectedCity === city ? 'text-blue-500' : 'text-gray-400'}`} />
-                                  )}
-                                  {city}
-                                  {selectedCity === city && <Check className="w-4 h-4 ml-auto text-blue-600" />}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <CitySelectDropdown
+                        value={selectedCity}
+                        options={cityOptions}
+                        onChange={handleCitySelect}
+                        highlightEmpty={cityVisible}
+                      />
                     </div>
 
                     {!isCitySupported && detectedCityName && (

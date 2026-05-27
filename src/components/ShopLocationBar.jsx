@@ -10,6 +10,7 @@ import {
   getShopCoords,
 } from '../utils/location'
 import { useUserLocation } from '../hooks/useUserLocation'
+import ExpandableAddress from './ExpandableAddress'
 
 /**
  * Distance + Google Maps directions for a shop (uses live GPS + driving route distance).
@@ -136,7 +137,12 @@ const ShopLocationBar = ({ shop, variant = 'card', className = '' }) => {
           <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Pickup at this shop</p>
           <p className="text-sm font-semibold text-gray-900 mt-0.5 truncate">{shop.name}</p>
           {shop.address && (
-            <p className="text-xs text-gray-600 mt-1 line-clamp-2">{shop.address}</p>
+            <ExpandableAddress
+              address={shop.address}
+              className="mt-1"
+              textClassName="text-xs text-gray-600"
+              fadeFromClass="from-blue-50"
+            />
           )}
           <div className="flex flex-wrap items-center gap-2 mt-2">
             {distanceLabel && (

@@ -62,6 +62,7 @@ import PrintGetLogo from '../components/PrintGetLogo'
 const ShopCard = ({ shop, index, glow, userLocation, isNearest, needsLocation, drivingKm, distancesLoading }) => {
   const cardRef = useRef(null)
   const [isVisible, setIsVisible] = useState(false)
+  const [addressExpanded, setAddressExpanded] = useState(false)
   const shopWithCoords = enrichShopWithCoordinates(shop)
   // Show driving distance from OSRM batch table
   const distanceLabel = userLocation
@@ -87,9 +88,9 @@ const ShopCard = ({ shop, index, glow, userLocation, isNearest, needsLocation, d
     <Link
       ref={cardRef}
       to={`/shop/${shop.id}`}
-      className={`block bg-white rounded-2xl border p-6 transition-all duration-300 active:scale-[0.98] relative overflow-hidden ${
-        glow ? 'animate-boundary-glow' : 'border-gray-100'
-      }`}
+      className={`block bg-white rounded-2xl border p-6 transition-all duration-300 active:scale-[0.98] relative ${
+        addressExpanded ? 'overflow-visible' : 'overflow-hidden'
+      } ${glow ? 'animate-boundary-glow' : 'border-gray-100'}`}
       style={{
         opacity: isVisible ? 1 : 0,
         transform: isVisible ? 'translateY(0)' : 'translateY(40px)',
@@ -114,9 +115,13 @@ const ShopCard = ({ shop, index, glow, userLocation, isNearest, needsLocation, d
           ) : needsLocation ? (
             <p className="text-sm text-amber-600 mb-1.5">Allow location to see distance</p>
           ) : null}
-          <div className="flex items-start gap-1.5 text-gray-500 mb-2">
+          <div className="flex w-full min-w-0 items-start gap-1.5 text-gray-500 mb-2">
             <MapPin className="w-4 h-4 flex-shrink-0 text-gray-400 mt-0.5" />
-            <ExpandableAddress address={shop.address} fadeFromClass="from-white" />
+            <ExpandableAddress
+              address={shop.address}
+              fadeFromClass="from-white"
+              onExpandedChange={setAddressExpanded}
+            />
           </div>
           <div className="flex items-center gap-1.5 text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md">
             <Phone className="w-3.5 h-3.5" />
@@ -634,7 +639,7 @@ const HomePage = () => {
                       {distanceLabel && (
                         <p className="text-sm font-semibold text-blue-600 mb-1">{distanceLabel}</p>
                       )}
-                      <div className="flex items-start gap-1 text-gray-600 mb-2">
+                      <div className="flex w-full min-w-0 items-start gap-1 text-gray-600 mb-2">
                         <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
                         <ExpandableAddress
                           address={shop.address}

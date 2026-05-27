@@ -1,6 +1,30 @@
 {
     "rewrites": [
         {
+            "source": "/api/geocode-address",
+            "destination": "/api/maps?mode=forward"
+        },
+        {
+            "source": "/api/reverse-geocode",
+            "destination": "/api/maps?mode=reverse"
+        },
+        {
+            "source": "/api/partner/auth/request-code",
+            "destination": "/api/partner/auth?action=request-code"
+        },
+        {
+            "source": "/api/partner/auth/verify-code",
+            "destination": "/api/partner/auth?action=verify-code"
+        },
+        {
+            "source": "/api/partner/auth/complete-signup",
+            "destination": "/api/partner/auth?action=complete-signup"
+        },
+        {
+            "source": "/api/phonepe-warm",
+            "destination": "/api/phonepe-initiate?warm=1"
+        },
+        {
             "source": "/((?!api|assets|.*\\.css|.*\\.js|.*\\.ico|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.webp|.*\\.woff|.*\\.woff2|.*\\.xml|.*\\.txt|.*\\.json).*)",
             "destination": "/index.html"
         }

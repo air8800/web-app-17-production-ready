@@ -146,6 +146,35 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Legacy /api/phonepe-warm → rewrite sets ?warm=1
+  if (req.query?.warm === '1') {
+    try {
+      const CLIENT_ID = process.env.PHONEPE_CLIENT_ID;
+      const CLIENT_SECRET = process.env.PHONEPE_CLIENT_SECRET;
+      const CLIENT_VERSION = process.env.PHONEPE_CLIENT_VERSION || '1';
+      const IS_PROD = process.env.PHONEPE_ENV === 'production';
+
+      if (!CLIENT_ID || !CLIENT_SECRET) {
+        return res.status(500).json({ ok: false, error: 'Not configured' });
+      }
+
+      const AUTH_URL = process.env.PHONEPE_AUTH_URL || (IS_PROD
+        ? 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token'
+        : 'https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token');
+
+      await getPhonePeToken({
+        clientId: CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        clientVersion: CLIENT_VERSION,
+        authURL: AUTH_URL,
+      });
+
+      return res.status(200).json({ ok: true });
+    } catch {
+      return res.status(200).json({ ok: false });
+    }
+  }
+
   // ── Security Layer 1: Block requests not from your domain ─────────────────
   // Accepts printget.in, www.printget.in, localhost, and Vercel preview URLs.
   const APP_URL = (process.env.APP_URL || 'https://www.printget.in').replace(/\/$/, '');

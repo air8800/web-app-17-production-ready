@@ -104,12 +104,24 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'origin and destinations are required' })
   }
 
-  const dests = destinations
-    .map((d) => ({ lat: parseFloat(d.lat), lng: parseFloat(d.lng) }))
-    .filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
+  const dests = (destinations || []).map((d, index) => ({
+    shopId: d.shopId || d.id || `idx-${index}`,
+    lat: parseFloat(d.lat),
+    lng: parseFloat(d.lng),
+  }))
 
-  if (dests.length === 0) {
+  const validDests = dests.filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
+
+  if (validDests.length === 0) {
     return res.status(400).json({ error: 'No valid destinations' })
+  }
+
+  const buildResponse = (distancesKm, provider) => {
+    const distancesByShopId = {}
+    validDests.forEach((dest, index) => {
+      distancesByShopId[dest.shopId] = distancesKm[index] ?? null
+    })
+    return res.status(200).json({ distancesKm, distancesByShopId, provider })
   }
 
   const olaKey = process.env.OLA_MAPS_API_KEY
@@ -119,7 +131,7 @@ export default async function handler(req, res) {
   try {
     if (olaKey) {
       let responseProvider = 'ola'
-      let finalDistances = new Array(dests.length).fill(null)
+      let finalDistances = new Array(validDests.length).fill(null)
       let destinationsToFetch = []
       let fetchIndices = [] // To map back which index the fetched dest belongs to
 
@@ -133,7 +145,7 @@ export default async function handler(req, res) {
             .eq('origin_lng_rounded', originLngRounded)
           
           if (!error && cachedData && cachedData.length > 0) {
-            dests.forEach((d, index) => {
+            validDests.forEach((d, index) => {
               const dLatRounded = roundCoord(d.lat)
               const dLngRounded = roundCoord(d.lng)
               const match = cachedData.find(c => 
@@ -149,17 +161,17 @@ export default async function handler(req, res) {
             })
           } else {
             // No cache hit at all, fetch all
-            destinationsToFetch = [...dests]
-            fetchIndices = dests.map((_, i) => i)
+            destinationsToFetch = [...validDests]
+            fetchIndices = validDests.map((_, i) => i)
           }
         } catch (dbError) {
           console.error('Supabase cache read error:', dbError)
-          destinationsToFetch = [...dests]
-          fetchIndices = dests.map((_, i) => i)
+          destinationsToFetch = [...validDests]
+          fetchIndices = validDests.map((_, i) => i)
         }
       } else {
-        destinationsToFetch = [...dests]
-        fetchIndices = dests.map((_, i) => i)
+        destinationsToFetch = [...validDests]
+        fetchIndices = validDests.map((_, i) => i)
       }
 
       // 2. Fetch missing routes from the configured paid routing provider.
@@ -203,15 +215,15 @@ export default async function handler(req, res) {
         }
       }
 
-      return res.status(200).json({ distancesKm: finalDistances, provider: `${responseProvider}_cached` })
+      return buildResponse(finalDistances, `${responseProvider}_cached`)
     }
 
     // Fallback to OSRM if no paid routing key is configured.
     const distancesKm = await osrmDrivingDistancesKm(
       { lat: originLat, lng: originLng },
-      dests
+      validDests
     )
-    return res.status(200).json({ distancesKm, provider: 'osrm' })
+    return buildResponse(distancesKm, 'osrm')
   } catch (err) {
     console.error('driving-distances error:', err)
     return res.status(502).json({ error: 'Could not compute driving distances' })

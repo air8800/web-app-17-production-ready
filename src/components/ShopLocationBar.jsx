@@ -37,10 +37,10 @@ const ShopLocationBar = ({ shop, variant = 'card', className = '' }) => {
     let cancelled = false
     setLoadingDistance(true)
 
-    fetchDrivingDistancesKm(userLocation, [coords])
-      .then((distances) => {
+    fetchDrivingDistancesKm(userLocation, [{ shopId: shop.id, ...coords }])
+      .then(({ distancesByShopId }) => {
         if (cancelled) return
-        const km = distances?.[0]
+        const km = distancesByShopId?.[shop.id]
         setDrivingKm(Number.isFinite(km) ? km : null)
       })
       .catch(() => {

@@ -176,7 +176,7 @@ const HomePage = () => {
     path: '/'
   })
   const [shops, setShops] = useState([])
-  const { shopsWithCoords: shopsResolved } = useResolvedShopCoordinates(shops)
+  const { shopsWithCoords: shopsResolved, resolving: coordsResolving } = useResolvedShopCoordinates(shops)
   const [recentShops, setRecentShops] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -415,7 +415,8 @@ const HomePage = () => {
   const { distancesByShopId, loading: distancesLoading } = useDrivingDistances(
     userLocation,
     shopsForDistance,
-    exactDistanceLimit
+    exactDistanceLimit,
+    { coordsReady: !coordsResolving }
   )
 
   const sortedFilteredShops = useMemo(

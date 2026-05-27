@@ -2,21 +2,23 @@ import { useEffect, useMemo, useState } from 'react'
 import { fetchDrivingDistancesKm, getShopCoords, distanceKm } from '../utils/location'
 
 const INITIAL_EXACT_DISTANCE_LIMIT = 50
+const DISTANCE_CACHE_PREFIX = 'printget_distances_v3'
 
 function shopsKey(shops) {
   return shops
     .map((s) => {
       const c = getShopCoords(s)
       return c
-        ? `${s.id}:${roundCoord(c.lat)},${roundCoord(c.lng)}`
+        ? `${s.id}:${roundCoord(c.lat, 4)},${roundCoord(c.lng, 4)}`
         : String(s.id)
     })
     .sort()
     .join(',')
 }
 
-function roundCoord(num) {
-  return Math.round(num * 100) / 100
+function roundCoord(num, decimals = 2) {
+  const factor = 10 ** decimals
+  return Math.round(num * factor) / factor
 }
 
 /**
@@ -27,12 +29,17 @@ function roundCoord(num) {
  * 4. Expands that exact-distance batch when the UI reveals more shops.
  * 5. Saves final combined distances to localStorage.
  */
-export function useDrivingDistances(userLocation, shops, exactDistanceLimit = INITIAL_EXACT_DISTANCE_LIMIT) {
+export function useDrivingDistances(
+  userLocation,
+  shops,
+  exactDistanceLimit = INITIAL_EXACT_DISTANCE_LIMIT,
+  { coordsReady = true } = {}
+) {
   const [distancesByShopId, setDistancesByShopId] = useState({})
   const [loading, setLoading] = useState(false)
 
   const shopsWithCoords = useMemo(
-    () => (shops || []).filter((shop) => getShopCoords(shop)),
+    () => (shops || []).filter((shop) => shop?.id && getShopCoords(shop)),
     [shops]
   )
 
@@ -42,19 +49,25 @@ export function useDrivingDistances(userLocation, shops, exactDistanceLimit = IN
   const paidLimit = Math.max(INITIAL_EXACT_DISTANCE_LIMIT, Number(exactDistanceLimit) || 0)
 
   useEffect(() => {
-    if (!Number.isFinite(originLat) || !Number.isFinite(originLng) || shopsWithCoords.length === 0) {
-      setDistancesByShopId({})
-      setLoading(false)
+    if (
+      !coordsReady ||
+      !Number.isFinite(originLat) ||
+      !Number.isFinite(originLng) ||
+      shopsWithCoords.length === 0
+    ) {
+      if (!coordsReady) setLoading(true)
+      else {
+        setDistancesByShopId({})
+        setLoading(false)
+      }
       return
     }
 
-    // 1. Check frontend localStorage Cache
-    const cacheKey = `printget_distances_v2_${roundCoord(originLat)}_${roundCoord(originLng)}_${paidLimit}_${key}`
+    const cacheKey = `${DISTANCE_CACHE_PREFIX}_${roundCoord(originLat)}_${roundCoord(originLng)}_${paidLimit}_${key}`
     try {
       const cached = localStorage.getItem(cacheKey)
       if (cached) {
         const parsed = JSON.parse(cached)
-        // 1-hour expiration AND ensure it actually has valid calculated distances
         if (Date.now() - parsed.timestamp < 60 * 60 * 1000 && Object.keys(parsed.distances).length > 0) {
           setDistancesByShopId(parsed.distances)
           setLoading(false)
@@ -73,8 +86,6 @@ export function useDrivingDistances(userLocation, shops, exactDistanceLimit = IN
       const origin = { lat: originLat, lng: originLng }
       const shopDistances = []
 
-      // 2. Free straight-line distance for every shop. This gives us a cheap
-      // nearby-first order before spending paid matrix requests.
       shopsWithCoords.forEach((shop) => {
         const dest = getShopCoords(shop)
         const straightKm = distanceKm(originLat, originLng, dest.lat, dest.lng)
@@ -86,27 +97,28 @@ export function useDrivingDistances(userLocation, shops, exactDistanceLimit = IN
 
       if (cancelled) return
 
-      // Sort by free distance and refine the nearest batch with Ola/paid matrix.
       shopDistances.sort((a, b) => a.km - b.km)
-      const exactShops = shopDistances.slice(0, paidLimit).map(s => s.shop)
+      const exactShops = shopDistances.slice(0, paidLimit).map((s) => s.shop)
 
-      // Show and sort by free straight-line distance immediately while exact
-      // road distances are being refined for the nearest batch.
       if (!cancelled && Object.keys(next).length > 0) {
         setDistancesByShopId({ ...next })
       }
 
-      // 3. Fetch paid provider exact distance only for shops the user is likely to see.
       if (exactShops.length > 0) {
         try {
-          const exactDestinations = exactShops.map((shop) => getShopCoords(shop))
-          const exactDistancesKm = await fetchDrivingDistancesKm(origin, exactDestinations)
-          
+          const exactDestinations = exactShops.map((shop) => {
+            const coords = getShopCoords(shop)
+            return { shopId: shop.id, lat: coords.lat, lng: coords.lng }
+          })
+          const { distancesByShopId: paidByShopId } = await fetchDrivingDistancesKm(
+            origin,
+            exactDestinations
+          )
+
           if (cancelled) return
 
-          exactShops.forEach((shop, idx) => {
-            const km = exactDistancesKm?.[idx]
-            // Overwrite the straight-line distance with the exact paid-provider distance.
+          exactShops.forEach((shop) => {
+            const km = paidByShopId?.[shop.id]
             if (km != null && Number.isFinite(km)) {
               next[shop.id] = km
             }
@@ -120,13 +132,15 @@ export function useDrivingDistances(userLocation, shops, exactDistanceLimit = IN
         setDistancesByShopId(next)
         setLoading(false)
 
-        // 5. Save combined distances to frontend cache ONLY if we successfully calculated routes
         if (Object.keys(next).length > 0) {
           try {
-            localStorage.setItem(cacheKey, JSON.stringify({
-              timestamp: Date.now(),
-              distances: next
-            }))
+            localStorage.setItem(
+              cacheKey,
+              JSON.stringify({
+                timestamp: Date.now(),
+                distances: next,
+              })
+            )
           } catch (e) {
             console.warn('Frontend distance cache write failed', e)
           }
@@ -145,7 +159,7 @@ export function useDrivingDistances(userLocation, shops, exactDistanceLimit = IN
     return () => {
       cancelled = true
     }
-  }, [originLat, originLng, key, paidLimit, shopsWithCoords])
+  }, [originLat, originLng, key, paidLimit, shopsWithCoords, coordsReady])
 
   return { distancesByShopId, loading }
 }

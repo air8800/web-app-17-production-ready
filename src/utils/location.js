@@ -20,6 +20,17 @@ export function getShopCoords(shop) {
   return { lat, lng }
 }
 
+function roundCoordKey(num) {
+  return Math.round(num * 100) / 100
+}
+
+function normalizeAddressKey(address) {
+  return String(address || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
 function coordsMatchCatchall(lat, lng) {
   return (
     Math.abs(lat - NASHIK_CATCHALL_COORDS.latitude) < 0.0001 &&
@@ -27,14 +38,40 @@ function coordsMatchCatchall(lat, lng) {
   )
 }
 
+/** Groups of 2+ shops sharing the same rounded coordinates. */
+export function findDuplicateCoordinateGroups(shops) {
+  const byCoord = new Map()
+
+  for (const shop of shops || []) {
+    const coords = getShopCoords(shop)
+    if (!coords || !shop?.id) continue
+    const key = `${roundCoordKey(coords.lat)},${roundCoordKey(coords.lng)}`
+    if (!byCoord.has(key)) byCoord.set(key, [])
+    byCoord.get(key).push(shop)
+  }
+
+  return [...byCoord.values()].filter((group) => group.length > 1)
+}
+
 /** True when we should geocode from address instead of trusting stored coords. */
-export function shopNeedsAddressGeocode(shop) {
+export function shopNeedsAddressGeocode(shop, allShops = []) {
   if (!shop?.id || !shop?.address) return false
   const coords = getShopCoords(shop)
   if (!coords) return true
   // Legacy SQL assigned this point to every new Nashik shop without coords.
   if (coordsMatchCatchall(coords.lat, coords.lng) && !SHOP_COORDINATE_FALLBACKS[shop.id]) {
     return true
+  }
+  // Multiple shops saved with identical coordinates but different addresses
+  // (common when signup copies the same Maps link or SQL catch-all was used).
+  const duplicateGroup = findDuplicateCoordinateGroups(allShops).find((group) =>
+    group.some((s) => s.id === shop.id)
+  )
+  if (duplicateGroup && !SHOP_COORDINATE_FALLBACKS[shop.id]) {
+    const uniqueAddresses = new Set(
+      duplicateGroup.map((s) => normalizeAddressKey(s.address)).filter(Boolean)
+    )
+    if (uniqueAddresses.size > 1) return true
   }
   return false
 }
@@ -130,7 +167,7 @@ export function distanceKm(userLat, userLng, shopLat, shopLng) {
 export function formatDistance(km) {
   if (km == null || !Number.isFinite(km)) return null
   if (km < 1) return `${Math.max(1, Math.round(km * 1000))} m away`
-  if (km < 10) return `${km.toFixed(1)} km away`
+  if (km < 10) return `${km.toFixed(2)} km away`
   return `${Math.round(km)} km away`
 }
 
@@ -388,28 +425,48 @@ export async function fetchSingleDrivingDistanceKm(origin, destination) {
 
 /**
  * Road driving distances in km (same driving mode used by the directions link).
- * @returns {Promise<(number | null)[]>}
+ * Destinations may include optional shopId for stable mapping.
+ * @returns {Promise<{ distancesKm: (number|null)[], distancesByShopId: Record<string, number|null> }>}
  */
 export async function fetchDrivingDistancesKm(origin, destinations) {
-  if (!origin || !destinations?.length) return []
+  if (!origin || !destinations?.length) {
+    return { distancesKm: [], distancesByShopId: {} }
+  }
+
+  const normalizedDestinations = destinations.map((dest, index) => ({
+    shopId: dest.shopId || dest.id || `idx-${index}`,
+    lat: dest.lat,
+    lng: dest.lng,
+  }))
 
   try {
     const resp = await fetch('/api/driving-distances', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ origin, destinations }),
+      body: JSON.stringify({ origin, destinations: normalizedDestinations }),
     })
     if (resp.ok) {
       const data = await resp.json()
-      if (Array.isArray(data.distancesKm)) {
-        return data.distancesKm
-      }
+      const distancesKm = Array.isArray(data.distancesKm) ? data.distancesKm : []
+      const distancesByShopId =
+        data.distancesByShopId && typeof data.distancesByShopId === 'object'
+          ? data.distancesByShopId
+          : Object.fromEntries(
+              normalizedDestinations.map((dest, index) => [dest.shopId, distancesKm[index] ?? null])
+            )
+      return { distancesKm, distancesByShopId }
     }
   } catch {
     // fall through to direct OSRM (local dev without /api)
   }
 
-  return osrmDrivingDistancesKm(origin, destinations)
+  const osrmDistances = await osrmDrivingDistancesKm(origin, normalizedDestinations)
+  return {
+    distancesKm: osrmDistances,
+    distancesByShopId: Object.fromEntries(
+      normalizedDestinations.map((dest, index) => [dest.shopId, osrmDistances[index] ?? null])
+    ),
+  }
 }
 
 export function sortShopsByDrivingDistance(shops, distancesByShopId) {

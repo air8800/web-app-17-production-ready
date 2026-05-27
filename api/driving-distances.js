@@ -1,27 +1,53 @@
 /**
  * POST /api/driving-distances
- * Body: { origin: { lat, lng }, destinations: [{ lat, lng }, ...] }
+ * Body: { origin: { lat, lng }, destinations: [{ shopId?, lat, lng }, ...] }
  * Returns road driving distances in km.
- * Implements Supabase Database caching to save paid routing API costs.
+ * Provider priority: Google Distance Matrix → Ola → OSRM.
  */
 
 import { createClient } from '@supabase/supabase-js'
 
+const GOOGLE_DISTANCE_MATRIX = 'https://maps.googleapis.com/maps/api/distancematrix/json'
 const OLA_DISTANCE_MATRIX = 'https://api.olamaps.io/routing/v1/distanceMatrix'
 const OSRM_TABLE = 'https://router.project-osrm.org/table/v1/driving'
-const configuredMaxDestinations = Number.parseInt(process.env.DISTANCE_MATRIX_MAX_DESTINATIONS || '50', 10)
-const MAX_DESTINATIONS = Number.isFinite(configuredMaxDestinations) && configuredMaxDestinations > 0
-  ? configuredMaxDestinations
-  : 50
+const configuredMaxDestinations = Number.parseInt(process.env.DISTANCE_MATRIX_MAX_DESTINATIONS || '25', 10)
+const GOOGLE_MAX_DESTINATIONS = 25
+const OLA_MAX_DESTINATIONS = Number.parseInt(process.env.OLA_MATRIX_MAX_DESTINATIONS || '50', 10)
 
-// Initialize Supabase (Using standard process.env for Vercel backend)
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
-const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null
 
-// Round to 2 decimal places (~1.1 kilometers accuracy) to group neighborhood requests
 function roundCoord(num) {
   return Math.round(num * 100) / 100
+}
+
+async function googleDrivingDistancesKm(origin, destinations, apiKey) {
+  const params = new URLSearchParams({
+    origins: `${origin.lat},${origin.lng}`,
+    destinations: destinations.map((d) => `${d.lat},${d.lng}`).join('|'),
+    mode: 'driving',
+    key: apiKey,
+  })
+
+  const resp = await fetch(`${GOOGLE_DISTANCE_MATRIX}?${params.toString()}`)
+  const data = await resp.json()
+
+  if (data.status !== 'OK') {
+    throw new Error(`Google Distance Matrix failed: ${data.status} ${data.error_message || ''}`.trim())
+  }
+
+  const elements = data?.rows?.[0]?.elements
+  if (!Array.isArray(elements)) {
+    throw new Error('Google Distance Matrix did not return rows[0].elements')
+  }
+
+  return destinations.map((_, index) => {
+    const el = elements[index]
+    if (el?.status !== 'OK') return null
+    const meters = Number(el?.distance?.value)
+    return Number.isFinite(meters) ? meters / 1000 : null
+  })
 }
 
 async function olaDrivingDistancesKm(origin, destinations, apiKey) {
@@ -30,14 +56,14 @@ async function olaDrivingDistancesKm(origin, destinations, apiKey) {
     destinations: destinations.map((d) => `${d.lat},${d.lng}`).join('|'),
     mode: 'driving',
     route_preference: 'fastest',
-    api_key: apiKey
+    api_key: apiKey,
   })
 
   const resp = await fetch(`${OLA_DISTANCE_MATRIX}?${params.toString()}`, {
     headers: {
       'x-request-id': `printget-${Date.now()}`,
-      'x-correlation-id': 'printget-driving-distances'
-    }
+      'x-correlation-id': 'printget-driving-distances',
+    },
   })
 
   if (!resp.ok) {
@@ -77,16 +103,40 @@ async function osrmDrivingDistancesKm(origin, destinations) {
   )
 }
 
-async function fetchPaidDistancesKm(origin, destinations, { olaKey }) {
+async function fetchPaidDistancesKm(origin, destinations, { googleKey, olaKey }) {
   const distances = []
 
-  for (let i = 0; i < destinations.length; i += MAX_DESTINATIONS) {
-    const chunk = destinations.slice(i, i + MAX_DESTINATIONS)
-    const chunkDistances = await olaDrivingDistancesKm(origin, chunk, olaKey)
-    distances.push(...chunkDistances)
+  if (googleKey) {
+    const chunkSize = Math.min(
+      GOOGLE_MAX_DESTINATIONS,
+      Number.isFinite(configuredMaxDestinations) && configuredMaxDestinations > 0
+        ? configuredMaxDestinations
+        : GOOGLE_MAX_DESTINATIONS
+    )
+    for (let i = 0; i < destinations.length; i += chunkSize) {
+      const chunk = destinations.slice(i, i + chunkSize)
+      const chunkDistances = await googleDrivingDistancesKm(origin, chunk, googleKey)
+      distances.push(...chunkDistances)
+    }
+    return { distances, provider: 'google' }
   }
 
-  return { distances, provider: 'ola' }
+  if (olaKey) {
+    const chunkSize = Math.min(
+      OLA_MAX_DESTINATIONS,
+      Number.isFinite(configuredMaxDestinations) && configuredMaxDestinations > 0
+        ? configuredMaxDestinations
+        : OLA_MAX_DESTINATIONS
+    )
+    for (let i = 0; i < destinations.length; i += chunkSize) {
+      const chunk = destinations.slice(i, i + chunkSize)
+      const chunkDistances = await olaDrivingDistancesKm(origin, chunk, olaKey)
+      distances.push(...chunkDistances)
+    }
+    return { distances, provider: 'ola' }
+  }
+
+  throw new Error('No paid routing key configured')
 }
 
 export default async function handler(req, res) {
@@ -104,13 +154,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'origin and destinations are required' })
   }
 
-  const dests = (destinations || []).map((d, index) => ({
-    shopId: d.shopId || d.id || `idx-${index}`,
-    lat: parseFloat(d.lat),
-    lng: parseFloat(d.lng),
-  }))
-
-  const validDests = dests.filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
+  const validDests = (destinations || [])
+    .map((d, index) => ({
+      shopId: d.shopId || d.id || `idx-${index}`,
+      lat: parseFloat(d.lat),
+      lng: parseFloat(d.lng),
+    }))
+    .filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
 
   if (validDests.length === 0) {
     return res.status(400).json({ error: 'No valid destinations' })
@@ -124,33 +174,38 @@ export default async function handler(req, res) {
     return res.status(200).json({ distancesKm, distancesByShopId, provider })
   }
 
+  const googleKey = process.env.GOOGLE_MAPS_API_KEY
   const olaKey = process.env.OLA_MAPS_API_KEY
+  const routingProvider = googleKey ? 'google' : olaKey ? 'ola' : null
   const originLatRounded = roundCoord(originLat)
   const originLngRounded = roundCoord(originLng)
 
   try {
-    if (olaKey) {
-      let responseProvider = 'ola'
+    if (routingProvider) {
+      let responseProvider = routingProvider
       let finalDistances = new Array(validDests.length).fill(null)
       let destinationsToFetch = []
-      let fetchIndices = [] // To map back which index the fetched dest belongs to
+      let fetchIndices = []
 
-      // 1. Try to fetch from Supabase cache first
       if (supabase) {
         try {
-          const { data: cachedData, error } = await supabase
+          let query = supabase
             .from('distance_cache')
             .select('*')
             .eq('origin_lat_rounded', originLatRounded)
             .eq('origin_lng_rounded', originLngRounded)
-          
+            .eq('routing_provider', routingProvider)
+
+          const { data: cachedData, error } = await query
+
           if (!error && cachedData && cachedData.length > 0) {
             validDests.forEach((d, index) => {
               const dLatRounded = roundCoord(d.lat)
               const dLngRounded = roundCoord(d.lng)
-              const match = cachedData.find(c => 
-                c.destination_lat_rounded === dLatRounded && 
-                c.destination_lng_rounded === dLngRounded
+              const match = cachedData.find(
+                (c) =>
+                  c.destination_lat_rounded === dLatRounded &&
+                  c.destination_lng_rounded === dLngRounded
               )
               if (match) {
                 finalDistances[index] = Number(match.distance_km)
@@ -160,7 +215,6 @@ export default async function handler(req, res) {
               }
             })
           } else {
-            // No cache hit at all, fetch all
             destinationsToFetch = [...validDests]
             fetchIndices = validDests.map((_, i) => i)
           }
@@ -174,13 +228,29 @@ export default async function handler(req, res) {
         fetchIndices = validDests.map((_, i) => i)
       }
 
-      // 2. Fetch missing routes from the configured paid routing provider.
       if (destinationsToFetch.length > 0) {
-        const fetched = await fetchPaidDistancesKm(
-          { lat: originLat, lng: originLng },
-          destinationsToFetch,
-          { olaKey }
-        )
+        let fetched
+        try {
+          fetched = await fetchPaidDistancesKm(
+            { lat: originLat, lng: originLng },
+            destinationsToFetch,
+            { googleKey, olaKey }
+          )
+        } catch (primaryError) {
+          // Google failed → try Ola before giving up
+          if (googleKey && olaKey) {
+            console.warn('Google Distance Matrix failed, falling back to Ola:', primaryError.message)
+            fetched = await fetchPaidDistancesKm(
+              { lat: originLat, lng: originLng },
+              destinationsToFetch,
+              { googleKey: null, olaKey }
+            )
+            responseProvider = 'ola'
+          } else {
+            throw primaryError
+          }
+        }
+
         const fetchedDistances = fetched.distances
         responseProvider = fetched.provider
 
@@ -193,32 +263,33 @@ export default async function handler(req, res) {
           if (dist !== null && supabase) {
             const dest = destinationsToFetch[i]
             recordsToInsert.push({
+              routing_provider: responseProvider,
               origin_lat_rounded: originLatRounded,
               origin_lng_rounded: originLngRounded,
               destination_lat_rounded: roundCoord(dest.lat),
               destination_lng_rounded: roundCoord(dest.lng),
-              distance_km: roundCoord(dist)
+              distance_km: roundCoord(dist),
             })
           }
         })
 
-        // 3. Save new distances to Supabase cache asynchronously
         if (recordsToInsert.length > 0) {
-          // Fire and forget (don't await) so we don't slow down the user response
           supabase
             .from('distance_cache')
-            .upsert(recordsToInsert, { onConflict: 'origin_lat_rounded,origin_lng_rounded,destination_lat_rounded,destination_lng_rounded' })
+            .upsert(recordsToInsert, {
+              onConflict:
+                'routing_provider,origin_lat_rounded,origin_lng_rounded,destination_lat_rounded,destination_lng_rounded',
+            })
             .then(({ error }) => {
               if (error) console.error('Supabase cache write error:', error)
             })
-            .catch(err => console.error('Supabase cache write exception:', err))
+            .catch((err) => console.error('Supabase cache write exception:', err))
         }
       }
 
       return buildResponse(finalDistances, `${responseProvider}_cached`)
     }
 
-    // Fallback to OSRM if no paid routing key is configured.
     const distancesKm = await osrmDrivingDistancesKm(
       { lat: originLat, lng: originLng },
       validDests

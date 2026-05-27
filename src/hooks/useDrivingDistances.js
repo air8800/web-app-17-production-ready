@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { fetchDrivingDistancesKm, getShopCoords, distanceKm } from '../utils/location'
 
 const INITIAL_EXACT_DISTANCE_LIMIT = 50
-const DISTANCE_CACHE_PREFIX = 'printget_distances_v3'
+const DISTANCE_CACHE_PREFIX = 'printget_distances_v4_google'
 
 function shopsKey(shops) {
   return shops

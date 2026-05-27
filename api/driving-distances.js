@@ -3,8 +3,8 @@
  * Body: { origin: { lat, lng }, destinations: [{ shopId?, lat, lng }, ...] }
  * Returns road driving distances in km.
  *
- * Ola is OFF for distances (debug). Uses Google → OSRM only.
- * Set DISTANCE_ROUTING_PROVIDER=ola only if you need to test Ola again.
+ * Default: Ola Distance Matrix. Fallback: Google → OSRM (only if Ola/key missing or fails).
+ * Override with DISTANCE_ROUTING_PROVIDER=google|ola|osrm
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -12,7 +12,7 @@ import { createClient } from '@supabase/supabase-js'
 const GOOGLE_DISTANCE_MATRIX = 'https://maps.googleapis.com/maps/api/distancematrix/json'
 const OLA_DISTANCE_MATRIX = 'https://api.olamaps.io/routing/v1/distanceMatrix'
 const OSRM_TABLE = 'https://router.project-osrm.org/table/v1/driving'
-const CACHE_VERSION = 2
+const CACHE_VERSION = 3
 const configuredMaxDestinations = Number.parseInt(process.env.DISTANCE_MATRIX_MAX_DESTINATIONS || '25', 10)
 const GOOGLE_MAX_DESTINATIONS = 25
 const OLA_MAX_DESTINATIONS = Number.parseInt(process.env.OLA_MATRIX_MAX_DESTINATIONS || '50', 10)
@@ -25,12 +25,13 @@ function roundCoord(num) {
   return Math.round(num * 100) / 100
 }
 
-/** Google first; OSRM when no Google key. Ola only if explicitly forced. */
+/** Ola first when key is set; Google if Ola key missing; OSRM only via explicit env or failure. */
 function resolvePrimaryProvider(googleKey, olaKey) {
-  const forced = String(process.env.DISTANCE_ROUTING_PROVIDER || 'google').toLowerCase()
+  const forced = String(process.env.DISTANCE_ROUTING_PROVIDER || 'ola').toLowerCase()
   if (forced === 'osrm') return null
-  if (forced === 'ola' && olaKey) return 'ola'
   if (forced === 'google' && googleKey) return 'google'
+  if (forced === 'ola' && olaKey) return 'ola'
+  if (olaKey) return 'ola'
   if (googleKey) return 'google'
   return null
 }
@@ -266,12 +267,31 @@ export default async function handler(req, res) {
             { googleKey, olaKey }
           )
         } catch (primaryError) {
-          console.warn(`${primaryProvider} routing failed, using OSRM:`, primaryError.message)
-          const osrmDistances = await osrmDrivingDistancesKm(
-            { lat: originLat, lng: originLng },
-            destinationsToFetch
-          )
-          fetched = { distances: osrmDistances, provider: 'osrm' }
+          if (primaryProvider === 'ola' && googleKey) {
+            try {
+              console.warn('Ola routing failed, trying Google:', primaryError.message)
+              fetched = await fetchPaidDistancesKm(
+                { lat: originLat, lng: originLng },
+                destinationsToFetch,
+                'google',
+                { googleKey, olaKey }
+              )
+            } catch (googleError) {
+              console.warn('Google routing failed, using OSRM:', googleError.message)
+              const osrmDistances = await osrmDrivingDistancesKm(
+                { lat: originLat, lng: originLng },
+                destinationsToFetch
+              )
+              fetched = { distances: osrmDistances, provider: 'osrm' }
+            }
+          } else {
+            console.warn(`${primaryProvider} routing failed, using OSRM:`, primaryError.message)
+            const osrmDistances = await osrmDrivingDistancesKm(
+              { lat: originLat, lng: originLng },
+              destinationsToFetch
+            )
+            fetched = { distances: osrmDistances, provider: 'osrm' }
+          }
         }
 
         responseProvider = fetched.provider

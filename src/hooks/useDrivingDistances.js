@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { fetchDrivingDistancesKm, getShopCoords, distanceKm } from '../utils/location'
 
 const INITIAL_EXACT_DISTANCE_LIMIT = 50
-const DISTANCE_CACHE_PREFIX = 'printget_distances_v6_noola'
-const DISTANCE_CACHE_VERSION = 3
+const DISTANCE_CACHE_PREFIX = 'printget_distances_v7_ola'
+const DISTANCE_CACHE_VERSION = 4
 
 function shopsKey(shops) {
   return shops
@@ -23,7 +23,7 @@ function roundCoord(num, decimals = 2) {
 }
 
 /**
- * Road driving distances for shop cards (Google or OSRM on server; Ola disabled).
+ * Road driving distances for shop cards (Ola on server by default).
  * Straight-line is used only to pick which shops to refine — not shown as final distance.
  */
 export function useDrivingDistances(

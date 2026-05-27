@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { enrichShopWithCoordinates, fetchDrivingDistancesKm, getShopCoords, distanceKm } from '../utils/location'
+import { fetchDrivingDistancesKm, getShopCoords, distanceKm } from '../utils/location'
 
 const INITIAL_EXACT_DISTANCE_LIMIT = 50
 
 function shopsKey(shops) {
   return shops
-    .map((s) => s.id)
+    .map((s) => {
+      const c = getShopCoords(s)
+      return c
+        ? `${s.id}:${roundCoord(c.lat)},${roundCoord(c.lng)}`
+        : String(s.id)
+    })
     .sort()
     .join(',')
 }
@@ -27,10 +32,7 @@ export function useDrivingDistances(userLocation, shops, exactDistanceLimit = IN
   const [loading, setLoading] = useState(false)
 
   const shopsWithCoords = useMemo(
-    () =>
-      (shops || [])
-        .map(enrichShopWithCoordinates)
-        .filter((shop) => getShopCoords(shop)),
+    () => (shops || []).filter((shop) => getShopCoords(shop)),
     [shops]
   )
 

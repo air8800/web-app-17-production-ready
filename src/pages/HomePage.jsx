@@ -12,6 +12,7 @@ import {
 } from '../utils/location'
 import { useUserLocation } from '../hooks/useUserLocation'
 import { useDrivingDistances } from '../hooks/useDrivingDistances'
+import { useResolvedShopCoordinates } from '../hooks/useResolvedShopCoordinates'
 import { Printer, Search, Store, Clock, MapPin, Phone, ArrowRight, Zap, Shield, Upload, Settings, FileCheck, Package, Mail, ChevronRight, Navigation, LocateFixed, Loader2 } from 'lucide-react'
 import { createRecentOrderPayload, getOrderDisplayNumber } from '../utils/orderDisplay'
 import {
@@ -175,6 +176,7 @@ const HomePage = () => {
     path: '/'
   })
   const [shops, setShops] = useState([])
+  const { shopsWithCoords: shopsResolved } = useResolvedShopCoordinates(shops)
   const [recentShops, setRecentShops] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -381,7 +383,7 @@ const HomePage = () => {
   }
 
   const filteredShops = useMemo(() => {
-    return shops.filter(shop => {
+    return shopsResolved.filter(shop => {
       // If the city is unsupported (e.g. Mumbai), don't filter out shops, show all so they can route to nearest
       if (isCitySupported && selectedCity && selectedCity !== ALL_CITIES_LABEL && !shopMatchesCity(shop, selectedCity)) {
         return false
@@ -392,14 +394,14 @@ const HomePage = () => {
       }
       return true
     })
-  }, [shops, selectedCity, searchTerm, isCitySupported])
+  }, [shopsResolved, selectedCity, searchTerm, isCitySupported])
 
   const recentShopsMerged = useMemo(() => {
     return recentShops.map((recent) => {
-      const full = shops.find((s) => s.id === recent.id)
+      const full = shopsResolved.find((s) => s.id === recent.id)
       return full ? { ...recent, ...full } : recent
     })
-  }, [recentShops, shops])
+  }, [recentShops, shopsResolved])
 
   const shopsForDistance = useMemo(() => {
     const byId = new Map()

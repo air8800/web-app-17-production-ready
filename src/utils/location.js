@@ -1,4 +1,6 @@
-import { SHOP_COORDINATE_FALLBACKS } from '../data/shopCoordinates'
+import { NASHIK_CATCHALL_COORDS, SHOP_COORDINATE_FALLBACKS } from '../data/shopCoordinates'
+
+const SHOP_GEOCODE_CACHE_KEY = 'printget_shop_geocode_v1'
 
 const EARTH_RADIUS_KM = 6371
 const OSRM_TABLE = 'https://router.project-osrm.org/table/v1/driving'
@@ -18,13 +20,89 @@ export function getShopCoords(shop) {
   return { lat, lng }
 }
 
-/** Merge DB coords or known fallbacks so distance/maps work before SQL seed runs. */
-export function enrichShopWithCoordinates(shop) {
+function coordsMatchCatchall(lat, lng) {
+  return (
+    Math.abs(lat - NASHIK_CATCHALL_COORDS.latitude) < 0.0001 &&
+    Math.abs(lng - NASHIK_CATCHALL_COORDS.longitude) < 0.0001
+  )
+}
+
+/** True when we should geocode from address instead of trusting stored coords. */
+export function shopNeedsAddressGeocode(shop) {
+  if (!shop?.id || !shop?.address) return false
+  const coords = getShopCoords(shop)
+  if (!coords) return true
+  // Legacy SQL assigned this point to every new Nashik shop without coords.
+  if (coordsMatchCatchall(coords.lat, coords.lng) && !SHOP_COORDINATE_FALLBACKS[shop.id]) {
+    return true
+  }
+  return false
+}
+
+/** Merge DB coords, geocoded coords, or known per-shop fallbacks. */
+export function enrichShopWithCoordinates(shop, geocodedCoords = null) {
   if (!shop) return shop
-  if (getShopCoords(shop)) return shop
+  if (geocodedCoords?.lat != null && geocodedCoords?.lng != null) {
+    return { ...shop, latitude: geocodedCoords.lat, longitude: geocodedCoords.lng }
+  }
+  if (getShopCoords(shop) && !shopNeedsAddressGeocode(shop)) return shop
   const fallback = SHOP_COORDINATE_FALLBACKS[shop.id]
   if (!fallback) return shop
   return { ...shop, latitude: fallback.latitude, longitude: fallback.longitude }
+}
+
+export function buildShopGeocodeQuery(shop) {
+  const address = String(shop?.address || '').trim()
+  if (!address) return null
+  if (/\bindia\b/i.test(address)) return address
+  return `${address}, India`
+}
+
+function readGeocodeCache() {
+  try {
+    const raw = localStorage.getItem(SHOP_GEOCODE_CACHE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeGeocodeCacheEntry(shopId, entry) {
+  try {
+    const cache = readGeocodeCache()
+    cache[shopId] = entry
+    localStorage.setItem(SHOP_GEOCODE_CACHE_KEY, JSON.stringify(cache))
+  } catch {
+    // ignore quota errors
+  }
+}
+
+/**
+ * Resolve coordinates from shop address (cached in localStorage).
+ * @returns {Promise<{ lat: number, lng: number } | null>}
+ */
+export async function geocodeShopAddress(shop) {
+  const query = buildShopGeocodeQuery(shop)
+  if (!shop?.id || !query) return null
+
+  const cache = readGeocodeCache()
+  const cached = cache[shop.id]
+  if (cached?.query === query && Number.isFinite(cached.lat) && Number.isFinite(cached.lng)) {
+    return { lat: cached.lat, lng: cached.lng }
+  }
+
+  try {
+    const res = await fetch(`/api/geocode-address?${new URLSearchParams({ address: query })}`)
+    if (!res.ok) return null
+    const data = await res.json()
+    const lat = parseFloat(data.lat)
+    const lng = parseFloat(data.lng)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    writeGeocodeCacheEntry(shop.id, { query, lat, lng, at: Date.now() })
+    return { lat, lng }
+  } catch {
+    return null
+  }
 }
 
 /** @returns {number | null} straight-line distance in km (legacy fallback only) */

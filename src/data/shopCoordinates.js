@@ -2,6 +2,10 @@
  * Fallback coordinates when Supabase latitude/longitude are not set yet.
  * Matched to each shop's Nashik / Pune area (not geocoded from "Near SBI" text).
  */
+
+/** Applied to any Nashik shop missing coords by legacy SQL — not a real shop location. */
+export const NASHIK_CATCHALL_COORDS = { latitude: 19.9975, longitude: 73.7898 }
+
 export const SHOP_COORDINATE_FALLBACKS = {
   '4f536e1d-10cb-4713-b28a-26cb634f7a98': { latitude: 19.9975, longitude: 73.7898 },
   'f82fc288-ada6-49b8-80ce-c0336d4e60e2': { latitude: 19.9528, longitude: 73.7512 },

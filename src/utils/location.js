@@ -454,7 +454,11 @@ export async function fetchDrivingDistancesKm(origin, destinations) {
           : Object.fromEntries(
               normalizedDestinations.map((dest, index) => [dest.shopId, distancesKm[index] ?? null])
             )
-      return { distancesKm, distancesByShopId }
+      return {
+        distancesKm,
+        distancesByShopId,
+        provider: data.provider || null,
+      }
     }
   } catch {
     // fall through to direct OSRM (local dev without /api)
@@ -466,6 +470,7 @@ export async function fetchDrivingDistancesKm(origin, destinations) {
     distancesByShopId: Object.fromEntries(
       normalizedDestinations.map((dest, index) => [dest.shopId, osrmDistances[index] ?? null])
     ),
+    provider: 'osrm',
   }
 }
 

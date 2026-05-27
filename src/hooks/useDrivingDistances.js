@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { fetchDrivingDistancesKm, getShopCoords, distanceKm } from '../utils/location'
 
 const INITIAL_EXACT_DISTANCE_LIMIT = 50
-const DISTANCE_CACHE_PREFIX = 'printget_distances_v4_google'
+const DISTANCE_CACHE_PREFIX = 'printget_distances_v6_noola'
+const DISTANCE_CACHE_VERSION = 3
 
 function shopsKey(shops) {
   return shops
@@ -22,12 +23,8 @@ function roundCoord(num, decimals = 2) {
 }
 
 /**
- * Straight-line first + paid matrix refinement:
- * 1. Checks localStorage for a fresh (1 hour) route cache for the user's neighborhood.
- * 2. Calculates free straight-line distances for all shops to rank nearby shops.
- * 3. Uses the paid matrix provider for the nearest batch only.
- * 4. Expands that exact-distance batch when the UI reveals more shops.
- * 5. Saves final combined distances to localStorage.
+ * Road driving distances for shop cards (Google or OSRM on server; Ola disabled).
+ * Straight-line is used only to pick which shops to refine — not shown as final distance.
  */
 export function useDrivingDistances(
   userLocation,
@@ -37,6 +34,7 @@ export function useDrivingDistances(
 ) {
   const [distancesByShopId, setDistancesByShopId] = useState({})
   const [loading, setLoading] = useState(false)
+  const [routingProvider, setRoutingProvider] = useState(null)
 
   const shopsWithCoords = useMemo(
     () => (shops || []).filter((shop) => shop?.id && getShopCoords(shop)),
@@ -58,18 +56,23 @@ export function useDrivingDistances(
       if (!coordsReady) setLoading(true)
       else {
         setDistancesByShopId({})
+        setRoutingProvider(null)
         setLoading(false)
       }
       return
     }
 
     const cacheKey = `${DISTANCE_CACHE_PREFIX}_${roundCoord(originLat)}_${roundCoord(originLng)}_${paidLimit}_${key}`
+
     try {
       const cached = localStorage.getItem(cacheKey)
       if (cached) {
         const parsed = JSON.parse(cached)
-        if (Date.now() - parsed.timestamp < 60 * 60 * 1000 && Object.keys(parsed.distances).length > 0) {
+        const fresh = Date.now() - parsed.timestamp < 60 * 60 * 1000
+        const versionOk = parsed.cacheVersion === DISTANCE_CACHE_VERSION
+        if (fresh && versionOk && Object.keys(parsed.distances || {}).length > 0) {
           setDistancesByShopId(parsed.distances)
+          setRoutingProvider(parsed.provider || null)
           setLoading(false)
           return
         }
@@ -80,9 +83,9 @@ export function useDrivingDistances(
 
     let cancelled = false
     setLoading(true)
+    setRoutingProvider(null)
 
     const run = async () => {
-      const next = {}
       const origin = { lat: originLat, lng: originLng }
       const shopDistances = []
 
@@ -90,7 +93,6 @@ export function useDrivingDistances(
         const dest = getShopCoords(shop)
         const straightKm = distanceKm(originLat, originLng, dest.lat, dest.lng)
         if (straightKm != null && Number.isFinite(straightKm)) {
-          next[shop.id] = straightKm
           shopDistances.push({ shop, km: straightKm })
         }
       })
@@ -100,9 +102,7 @@ export function useDrivingDistances(
       shopDistances.sort((a, b) => a.km - b.km)
       const exactShops = shopDistances.slice(0, paidLimit).map((s) => s.shop)
 
-      if (!cancelled && Object.keys(next).length > 0) {
-        setDistancesByShopId({ ...next })
-      }
+      const next = {}
 
       if (exactShops.length > 0) {
         try {
@@ -110,10 +110,8 @@ export function useDrivingDistances(
             const coords = getShopCoords(shop)
             return { shopId: shop.id, lat: coords.lat, lng: coords.lng }
           })
-          const { distancesByShopId: paidByShopId } = await fetchDrivingDistancesKm(
-            origin,
-            exactDestinations
-          )
+          const { distancesByShopId: paidByShopId, provider: routeProvider } =
+            await fetchDrivingDistancesKm(origin, exactDestinations)
 
           if (cancelled) return
 
@@ -123,28 +121,37 @@ export function useDrivingDistances(
               next[shop.id] = km
             }
           })
+
+          if (!cancelled) {
+            setRoutingProvider(routeProvider || null)
+            if (import.meta.env.DEV && routeProvider) {
+              console.info('[PrintGet] Driving distances from:', routeProvider, next)
+            }
+
+            if (Object.keys(next).length > 0) {
+              try {
+                localStorage.setItem(
+                  cacheKey,
+                  JSON.stringify({
+                    timestamp: Date.now(),
+                    cacheVersion: DISTANCE_CACHE_VERSION,
+                    provider: routeProvider,
+                    distances: next,
+                  })
+                )
+              } catch (e) {
+                console.warn('Frontend distance cache write failed', e)
+              }
+            }
+          }
         } catch (e) {
-          console.warn('Paid matrix batch fetch failed, keeping straight-line distances', e)
+          console.warn('Driving distance API failed', e)
         }
       }
 
       if (!cancelled) {
         setDistancesByShopId(next)
         setLoading(false)
-
-        if (Object.keys(next).length > 0) {
-          try {
-            localStorage.setItem(
-              cacheKey,
-              JSON.stringify({
-                timestamp: Date.now(),
-                distances: next,
-              })
-            )
-          } catch (e) {
-            console.warn('Frontend distance cache write failed', e)
-          }
-        }
       }
     }
 
@@ -152,6 +159,7 @@ export function useDrivingDistances(
       console.error('Hybrid routing error:', e)
       if (!cancelled) {
         setDistancesByShopId({})
+        setRoutingProvider(null)
         setLoading(false)
       }
     })
@@ -161,5 +169,5 @@ export function useDrivingDistances(
     }
   }, [originLat, originLng, key, paidLimit, shopsWithCoords, coordsReady])
 
-  return { distancesByShopId, loading }
+  return { distancesByShopId, loading, routingProvider }
 }

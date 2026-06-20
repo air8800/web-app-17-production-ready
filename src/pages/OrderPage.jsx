@@ -153,7 +153,7 @@ const OrderPage = () => {
   })
 
   // Limits and Warning states
-  const MAX_FILE_SIZE = 300 * 1024 * 1024 // 300MB
+  const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
   const MAX_IMAGES = 30
   const [sizeWarning, setSizeWarning] = useState({ show: false, type: null }) // type: 'size' or 'count'
 
@@ -3060,7 +3060,7 @@ const OrderPage = () => {
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
                   {sizeWarning.type === 'size'
-                    ? 'Currently, the file size limit is 300MB. Soon the file size limit will be increased. Please select a file size less than 300MB.'
+                    ? 'File size limit is 50MB. Please select a smaller file or compress it before uploading.'
                     : 'You can select up to 30 images at once. Please reduce the number of images to proceed.'}
                 </p>
               </div>

@@ -12,10 +12,13 @@ const InstallPrompt = () => {
             window.navigator.standalone === true
         if (isStandalone) return
 
-        // Wait for the exact moment Chrome finishes the background installation
+        // Wait for Chrome to fire appinstalled, but then delay by 8 seconds 
+        // because some Android devices fire this event instantly before the background install is actually done.
         const handleAppInstalled = () => {
             window.deferredPrompt = null
-            setShowSuccess(true)
+            setTimeout(() => {
+                setShowSuccess(true)
+            }, 8000)
         }
 
         // Listen for the event fired by our index.html script when Chrome finishes installing

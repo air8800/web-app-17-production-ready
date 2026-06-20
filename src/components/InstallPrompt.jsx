@@ -3,7 +3,6 @@ import { Loader2 } from 'lucide-react'
 
 /**
  * InstallPrompt — invisible component.
- * - Captures beforeinstallprompt so InstallButton can use window.deferredPrompt
  * - Manages a two-step overlay: "Installing..." -> "Installed! Open App"
  */
 const InstallPrompt = () => {
@@ -16,34 +15,23 @@ const InstallPrompt = () => {
             window.navigator.standalone === true
         if (isStandalone) return
 
-        // pwa-prompt-ready is fired by the inline script in index.html
-        // which captures beforeinstallprompt before React even mounts.
-        // We don't need to re-listen for beforeinstallprompt here.
+        // We ignore the browser's 'appinstalled' event because on some Android devices 
+        // it fires the millisecond the user taps "Install", bypassing our loading state entirely.
+        // Instead, we use a strict 8-second timer to guarantee Android has time to install the APK.
 
-        // pwa-app-installed is fired by the inline script when Chrome confirms install
-        const handleAppInstalled = () => {
-            window.deferredPrompt = null
-            setInstallState('installed')
-        }
-
-        // Fired by InstallButton immediately when user taps "Install"
         const handleInstallAccepted = () => {
             window.deferredPrompt = null
             setInstallState('installing')
             
-            // Safety fallback: if appinstalled never fires, show Open App after 6s
+            // Strict 8 second delay before allowing the user to click "Open App"
             setTimeout(() => {
                 setInstallState(prev => prev === 'installing' ? 'installed' : prev)
-            }, 6000)
+            }, 8000)
         }
 
-        window.addEventListener('pwa-app-installed', handleAppInstalled)
-        window.addEventListener('appinstalled', handleAppInstalled)
         window.addEventListener('pwa-install-accepted', handleInstallAccepted)
 
         return () => {
-            window.removeEventListener('pwa-app-installed', handleAppInstalled)
-            window.removeEventListener('appinstalled', handleAppInstalled)
             window.removeEventListener('pwa-install-accepted', handleInstallAccepted)
         }
     }, [])
@@ -114,7 +102,7 @@ const InstallPrompt = () => {
                                 width: 22,
                                 height: 22,
                                 borderRadius: '50%',
-                                background: '#16a34a',
+                                background: '#3b82f6',
                                 border: '2.5px solid #fff',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -152,7 +140,7 @@ const InstallPrompt = () => {
                         margin: '0 0 6px',
                         lineHeight: 1.25,
                     }}>
-                        {installState === 'installed' ? 'App Installed! 🎉' : 'Installing App... ⏳'}
+                        {installState === 'installed' ? 'App Installed' : 'Installing App...'}
                     </p>
 
                     {/* Body */}
@@ -164,7 +152,7 @@ const InstallPrompt = () => {
                         minHeight: 42,
                     }}>
                         {installState === 'installed' 
-                            ? 'PrintGet is now on your home screen. Open the app for a faster, full-screen experience.'
+                            ? 'PrintGet is now on your home screen. Open the app for a full-screen experience.'
                             : 'Please wait a moment while PrintGet is being added to your home screen...'}
                     </p>
 
@@ -178,7 +166,7 @@ const InstallPrompt = () => {
                                     padding: '14px 20px',
                                     borderRadius: 14,
                                     border: 'none',
-                                    background: '#111827',
+                                    background: '#2563eb',
                                     color: '#fff',
                                     fontWeight: 600,
                                     fontSize: 15,
@@ -202,8 +190,8 @@ const InstallPrompt = () => {
                                 width: '100%',
                                 padding: '14px 20px',
                                 borderRadius: 14,
-                                background: '#f3f4f6',
-                                color: '#9ca3af',
+                                background: '#eff6ff',
+                                color: '#3b82f6',
                                 fontWeight: 600,
                                 fontSize: 15,
                                 display: 'flex',

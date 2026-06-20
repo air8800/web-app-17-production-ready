@@ -24,13 +24,28 @@ const InstallButton = ({ className = "", fullOnMobile = false }) => {
 
     const handleInstall = async () => {
         if (!window.deferredPrompt) return;
-        window.deferredPrompt.prompt();
-        const { outcome } = await window.deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            setCanInstall(false);
+        
+        try {
+            // Show the native Chrome install prompt
+            await window.deferredPrompt.prompt();
+            
+            // Wait for the user to respond to the prompt
+            const { outcome } = await window.deferredPrompt.userChoice;
+            
+            // The deferredPrompt can only be used ONCE. 
+            // We must clear it regardless of whether they accepted or dismissed it.
             window.deferredPrompt = null;
-            // appinstalled event is deprecated in Chrome 91+, so we fire our own
-            window.dispatchEvent(new Event('pwa-install-accepted'));
+            setCanInstall(false);
+            
+            if (outcome === 'accepted') {
+                // Trigger our success overlay
+                window.dispatchEvent(new Event('pwa-install-accepted'));
+            }
+        } catch (error) {
+            console.error('PWA Install Error:', error);
+            // If the prompt fails (e.g. was already called), clear the stale event
+            window.deferredPrompt = null;
+            setCanInstall(false);
         }
     };
 

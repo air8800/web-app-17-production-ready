@@ -16,35 +16,33 @@ const InstallPrompt = () => {
             window.navigator.standalone === true
         if (isStandalone) return
 
-        const handleBeforeInstall = (e) => {
-            e.preventDefault()
-            window.deferredPrompt = e
-        }
+        // pwa-prompt-ready is fired by the inline script in index.html
+        // which captures beforeinstallprompt before React even mounts.
+        // We don't need to re-listen for beforeinstallprompt here.
 
-        // Fired by Chrome when installation is fully complete
+        // pwa-app-installed is fired by the inline script when Chrome confirms install
         const handleAppInstalled = () => {
             window.deferredPrompt = null
             setInstallState('installed')
         }
 
-        // Fired by our InstallButton immediately when user taps "Install"
+        // Fired by InstallButton immediately when user taps "Install"
         const handleInstallAccepted = () => {
             window.deferredPrompt = null
             setInstallState('installing')
             
-            // Safety fallback: if Chrome fails to fire 'appinstalled', 
-            // we assume installation finishes after 6 seconds.
+            // Safety fallback: if appinstalled never fires, show Open App after 6s
             setTimeout(() => {
                 setInstallState(prev => prev === 'installing' ? 'installed' : prev)
             }, 6000)
         }
 
-        window.addEventListener('beforeinstallprompt', handleBeforeInstall)
+        window.addEventListener('pwa-app-installed', handleAppInstalled)
         window.addEventListener('appinstalled', handleAppInstalled)
         window.addEventListener('pwa-install-accepted', handleInstallAccepted)
 
         return () => {
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
+            window.removeEventListener('pwa-app-installed', handleAppInstalled)
             window.removeEventListener('appinstalled', handleAppInstalled)
             window.removeEventListener('pwa-install-accepted', handleInstallAccepted)
         }

@@ -506,11 +506,6 @@ const HomePage = () => {
 
 
             {/* Main Heading */}
-            {/* VERCEL TEST BANNER — remove after confirming deploy */}
-            <div style={{ background: '#ef4444', color: '#fff', fontWeight: 700, fontSize: 13, padding: '6px 16px', borderRadius: 8, marginBottom: 16, display: 'inline-block' }}>
-              ✅ NEW CODE — v{Date.now().toString().slice(-4)}
-            </div>
-
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
               Print Anywhere,
               <span className="gradient-text block">Anytime</span>

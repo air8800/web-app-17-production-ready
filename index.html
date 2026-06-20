@@ -216,6 +216,20 @@
 </head>
 
 <body>
+  <!-- Capture beforeinstallprompt BEFORE React loads — the event fires very early -->
+  <script>
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault();
+      window.deferredPrompt = e;
+      // Signal React once it's ready
+      window.dispatchEvent(new Event('pwa-prompt-ready'));
+    });
+    window.addEventListener('appinstalled', function() {
+      window.deferredPrompt = null;
+      window.dispatchEvent(new Event('pwa-app-installed'));
+    });
+  </script>
+
   <div id="root"></div>
   <noscript>
     <h1>PrintGet - Online Document Printing Service in Nashik &amp; Pune</h1>

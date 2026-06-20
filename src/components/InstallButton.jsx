@@ -5,21 +5,24 @@ const InstallButton = ({ className = "", fullOnMobile = false }) => {
     const [canInstall, setCanInstall] = useState(false);
 
     useEffect(() => {
-        // Check periodically if deferredPrompt is available
-        const interval = setInterval(() => {
-            if (window.deferredPrompt) {
-                setCanInstall(true);
-                clearInterval(interval);
-            }
-        }, 1000);
-
-        // Also check immediately
+        // Show button if prompt was already captured by the inline script in index.html
         if (window.deferredPrompt) {
             setCanInstall(true);
-            clearInterval(interval);
         }
 
-        return () => clearInterval(interval);
+        // pwa-prompt-ready fires when beforeinstallprompt is captured (even if React wasn't ready)
+        const handlePromptReady = () => {
+            if (window.deferredPrompt) setCanInstall(true);
+        };
+
+        window.addEventListener('pwa-prompt-ready', handlePromptReady);
+        // Also catch it directly in case timing works out
+        window.addEventListener('beforeinstallprompt', handlePromptReady);
+
+        return () => {
+            window.removeEventListener('pwa-prompt-ready', handlePromptReady);
+            window.removeEventListener('beforeinstallprompt', handlePromptReady);
+        };
     }, []);
 
     const handleInstall = async () => {

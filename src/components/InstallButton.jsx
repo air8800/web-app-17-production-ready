@@ -29,8 +29,8 @@ const InstallButton = ({ className = "", fullOnMobile = false }) => {
         if (outcome === 'accepted') {
             setCanInstall(false);
             window.deferredPrompt = null;
-            // Tell InstallPrompt to show the "App Installed" success overlay
-            window.dispatchEvent(new Event('pwa-install-accepted'))
+            // InstallPrompt listens for the browser's 'appinstalled' event
+            // and shows the "Open App" overlay automatically — nothing else needed here.
         }
     };
 

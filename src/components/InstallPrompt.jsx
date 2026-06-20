@@ -1,39 +1,42 @@
 import { useEffect, useState } from 'react'
+import { Loader2 } from 'lucide-react'
 
 /**
  * InstallPrompt — invisible component.
  * - Captures beforeinstallprompt so InstallButton can use window.deferredPrompt
- * - Shows a clean "App Installed!" overlay ONLY after the browser fires `appinstalled`
- *   (i.e. after Chrome has actually finished installing — not on button click)
+ * - Manages a two-step overlay: "Installing..." -> "Installed! Open App"
  */
 const InstallPrompt = () => {
-    const [showSuccess, setShowSuccess] = useState(false)
+    // 'hidden' | 'installing' | 'installed'
+    const [installState, setInstallState] = useState('hidden')
 
     useEffect(() => {
-        // Already inside the installed PWA — nothing to do
         const isStandalone =
             window.matchMedia('(display-mode: standalone)').matches ||
             window.navigator.standalone === true
         if (isStandalone) return
 
-        // Capture install prompt for InstallButton to use
         const handleBeforeInstall = (e) => {
             e.preventDefault()
             window.deferredPrompt = e
         }
 
-        // Show overlay ONLY when the browser confirms the app is installed.
-        // This fires after Chrome actually adds it to the home screen/taskbar.
+        // Fired by Chrome when installation is fully complete
         const handleAppInstalled = () => {
             window.deferredPrompt = null
-            setShowSuccess(true)
+            setInstallState('installed')
         }
 
-        // Chrome 91+ deprecated the appinstalled event — it may never fire.
-        // InstallButton dispatches this custom event after userChoice === 'accepted'.
+        // Fired by our InstallButton immediately when user taps "Install"
         const handleInstallAccepted = () => {
             window.deferredPrompt = null
-            setShowSuccess(true)
+            setInstallState('installing')
+            
+            // Safety fallback: if Chrome fails to fire 'appinstalled', 
+            // we assume installation finishes after 6 seconds.
+            setTimeout(() => {
+                setInstallState(prev => prev === 'installing' ? 'installed' : prev)
+            }, 6000)
         }
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstall)
@@ -48,20 +51,19 @@ const InstallPrompt = () => {
     }, [])
 
     const handleOpenApp = () => {
-        // On Android Chrome: navigation to start_url is intercepted → opens PWA window
-        // On Desktop Chrome/Edge: opens the installed app window
+        // This works if Android has fully finished installing the APK
         window.open(window.location.origin, '_blank', 'noopener')
     }
 
     const handleContinueInBrowser = () => {
-        setShowSuccess(false)
+        setInstallState('hidden')
     }
 
-    if (!showSuccess) return null
+    if (installState === 'hidden') return null
 
     return (
         <>
-            {/* Full-screen backdrop — neutral dark, NOT blue */}
+            {/* Full-screen backdrop */}
             <div
                 style={{
                     position: 'fixed',
@@ -93,7 +95,7 @@ const InstallPrompt = () => {
                         animation: 'pgSlideUp 0.4s cubic-bezier(0.16,1,0.3,1) forwards',
                     }}
                 >
-                    {/* Icon — small and clean, no ring */}
+                    {/* Icon */}
                     <div style={{ position: 'relative', marginBottom: 20 }}>
                         <img
                             src="/icon-192.png"
@@ -105,25 +107,43 @@ const InstallPrompt = () => {
                                 display: 'block',
                             }}
                         />
-                        {/* Green checkmark badge */}
-                        <div style={{
-                            position: 'absolute',
-                            bottom: -4,
-                            right: -4,
-                            width: 22,
-                            height: 22,
-                            borderRadius: '50%',
-                            background: '#16a34a',
-                            border: '2.5px solid #fff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            animation: 'pgPopIn 0.4s 0.25s cubic-bezier(0.16,1,0.3,1) both',
-                        }}>
-                            <svg width="11" height="11" viewBox="0 0 13 13" fill="none">
-                                <path d="M2.5 6.5L5.5 9.5L10.5 4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        </div>
+                        {/* Status Badge */}
+                        {installState === 'installed' ? (
+                            <div style={{
+                                position: 'absolute',
+                                bottom: -4,
+                                right: -4,
+                                width: 22,
+                                height: 22,
+                                borderRadius: '50%',
+                                background: '#16a34a',
+                                border: '2.5px solid #fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                animation: 'pgPopIn 0.4s cubic-bezier(0.16,1,0.3,1) both',
+                            }}>
+                                <svg width="11" height="11" viewBox="0 0 13 13" fill="none">
+                                    <path d="M2.5 6.5L5.5 9.5L10.5 4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </div>
+                        ) : (
+                            <div style={{
+                                position: 'absolute',
+                                bottom: -4,
+                                right: -4,
+                                width: 22,
+                                height: 22,
+                                borderRadius: '50%',
+                                background: '#f59e0b',
+                                border: '2.5px solid #fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}>
+                                <Loader2 className="w-3 h-3 text-white animate-spin" />
+                            </div>
+                        )}
                     </div>
 
                     {/* Heading */}
@@ -134,7 +154,7 @@ const InstallPrompt = () => {
                         margin: '0 0 6px',
                         lineHeight: 1.25,
                     }}>
-                        App Installed! 🎉
+                        {installState === 'installed' ? 'App Installed! 🎉' : 'Installing App... ⏳'}
                     </p>
 
                     {/* Body */}
@@ -143,38 +163,61 @@ const InstallPrompt = () => {
                         color: '#6b7280',
                         lineHeight: 1.55,
                         margin: '0 0 24px',
+                        minHeight: 42,
                     }}>
-                        PrintGet is on your home screen. Open the app for a faster, full-screen experience.
+                        {installState === 'installed' 
+                            ? 'PrintGet is now on your home screen. Open the app for a faster, full-screen experience.'
+                            : 'Please wait a moment while PrintGet is being added to your home screen...'}
                     </p>
 
-                    {/* Open App CTA — dark button, not blue-on-blue */}
-                    <button
-                        onClick={handleOpenApp}
-                        style={{
-                            width: '100%',
-                            padding: '14px 20px',
-                            borderRadius: 14,
-                            border: 'none',
-                            background: '#111827',
-                            color: '#fff',
-                            fontWeight: 600,
-                            fontSize: 15,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 8,
-                            marginBottom: 12,
-                        }}
-                    >
-                        {/* External link icon */}
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                            <polyline points="15 3 21 3 21 9" />
-                            <line x1="10" y1="14" x2="21" y2="3" />
-                        </svg>
-                        Open PrintGet App
-                    </button>
+                    {/* Action Area */}
+                    <div style={{ width: '100%', minHeight: 48, marginBottom: 12 }}>
+                        {installState === 'installed' ? (
+                            <button
+                                onClick={handleOpenApp}
+                                style={{
+                                    width: '100%',
+                                    padding: '14px 20px',
+                                    borderRadius: 14,
+                                    border: 'none',
+                                    background: '#111827',
+                                    color: '#fff',
+                                    fontWeight: 600,
+                                    fontSize: 15,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 8,
+                                    animation: 'pgFadeIn 0.3s ease',
+                                }}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                    <polyline points="15 3 21 3 21 9" />
+                                    <line x1="10" y1="14" x2="21" y2="3" />
+                                </svg>
+                                Open PrintGet App
+                            </button>
+                        ) : (
+                            <div style={{
+                                width: '100%',
+                                padding: '14px 20px',
+                                borderRadius: 14,
+                                background: '#f3f4f6',
+                                color: '#9ca3af',
+                                fontWeight: 600,
+                                fontSize: 15,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 8,
+                            }}>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Installing...
+                            </div>
+                        )}
+                    </div>
 
                     {/* Stay in browser */}
                     <button
@@ -189,7 +232,7 @@ const InstallPrompt = () => {
                             fontWeight: 500,
                         }}
                     >
-                        Continue in browser
+                        {installState === 'installed' ? 'Continue in browser' : 'Close'}
                     </button>
                 </div>
             </div>

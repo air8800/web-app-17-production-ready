@@ -29,6 +29,10 @@ const InstallButton = ({ className = "", fullOnMobile = false }) => {
         if (outcome === 'accepted') {
             setCanInstall(false);
             window.deferredPrompt = null;
+            // Redirect into the installed PWA on the same visit
+            setTimeout(() => {
+                window.location.href = window.location.href;
+            }, 1500);
         }
     };
 

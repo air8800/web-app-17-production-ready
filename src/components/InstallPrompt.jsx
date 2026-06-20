@@ -29,12 +29,21 @@ const InstallPrompt = () => {
             setShowSuccess(true)
         }
 
+        // Chrome 91+ deprecated the appinstalled event — it may never fire.
+        // InstallButton dispatches this custom event after userChoice === 'accepted'.
+        const handleInstallAccepted = () => {
+            window.deferredPrompt = null
+            setShowSuccess(true)
+        }
+
         window.addEventListener('beforeinstallprompt', handleBeforeInstall)
         window.addEventListener('appinstalled', handleAppInstalled)
+        window.addEventListener('pwa-install-accepted', handleInstallAccepted)
 
         return () => {
             window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
             window.removeEventListener('appinstalled', handleAppInstalled)
+            window.removeEventListener('pwa-install-accepted', handleInstallAccepted)
         }
     }, [])
 

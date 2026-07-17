@@ -186,7 +186,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { jobId } = req.body || {};
+    const { jobId } = req.query || {};
 
     if (!jobId) {
       return res.status(400).json({ error: 'Missing required field: jobId' });

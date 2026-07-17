@@ -1,0 +1,222 @@
+import { createClient } from '@supabase/supabase-js';
+
+// Build marker — bump this string in every code change so you can verify which
+// deployment Vercel is serving. Echoed in every response from this handler.
+const BUILD_VERSION = 'phonepe-v2-mobile-redirect-2026-05-16';
+
+function isMobileUserAgent(ua = '') {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
+}
+
+/**
+ * Mobile: block desktop-style UPI QR only — keep INTENT/COLLECT and all apps.
+ * Do NOT use enabledPaymentModes on mobile; that allowlist hides UPI entirely
+ * when INTENT is not enabled on the merchant account.
+ */
+function buildPaymentModeConfig(isMobile) {
+  if (!isMobile) return undefined;
+
+  return {
+    version: 'V2',
+    disabledPaymentModes: [{ type: 'UPI', flows: ['QR'] }],
+  };
+}
+
+function resolveIsMobile(req) {
+  const platform = req.body?.platform;
+  if (platform === 'mobile') return true;
+  if (platform === 'desktop') return false;
+  return isMobileUserAgent(req.headers['user-agent'] || '');
+}
+
+// ── PhonePe OAuth Token Cache ───────────────────────────────────────────────
+let cachedToken = null;
+let tokenExpiresAt = 0;
+
+/**
+ * PhonePe Standard Checkout v2 OAuth token.
+ *
+ * IMPORTANT: PhonePe puts OAuth on a SEPARATE base path from the /checkout/v2/* APIs:
+ *   - Production:  https://api.phonepe.com/apis/identity-manager/v1/oauth/token
+ *   - UAT/Sandbox: https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token
+ *
+ * The request is form-encoded with client_id / client_version / client_secret / grant_type
+ * (NOT HTTP Basic auth). The response includes `expires_at` as an absolute epoch (seconds).
+ *
+ * Override the URL with PHONEPE_AUTH_URL env var if PhonePe rotates endpoints.
+ */
+async function getPhonePeToken({ clientId, clientSecret, clientVersion, authURL }) {
+  const now = Date.now();
+  if (cachedToken && now < tokenExpiresAt) return cachedToken;
+
+  const body = new URLSearchParams({
+    client_id: clientId,
+    client_version: String(clientVersion),
+    client_secret: clientSecret,
+    grant_type: 'client_credentials',
+  });
+
+  const res = await fetch(authURL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+
+  const rawText = await res.text();
+  let data = {};
+  try { data = JSON.parse(rawText); } catch { /* non-JSON body */ }
+
+  if (!res.ok || !data.access_token) {
+    console.error('❌ PhonePe OAuth token error:', {
+      authURL,
+      status: res.status,
+      statusText: res.statusText,
+      body: data && Object.keys(data).length ? data : rawText?.slice(0, 500),
+    });
+    const err = new Error(
+      data.error_description ||
+      data.message ||
+      data.error ||
+      `PhonePe OAuth token request failed (HTTP ${res.status})`
+    );
+    err.status = res.status;
+    err.body = data;
+    err.authURL = authURL;
+    throw err;
+  }
+
+  cachedToken = data.access_token;
+  // PhonePe v2 returns `expires_at` as absolute epoch seconds.
+  // Fall back to `expires_in` (seconds-from-now) if present, else 25 min.
+  if (typeof data.expires_at === 'number') {
+    tokenExpiresAt = data.expires_at * 1000 - 60_000;
+  } else if (typeof data.expires_in === 'number') {
+    tokenExpiresAt = now + (data.expires_in - 60) * 1000;
+  } else {
+    tokenExpiresAt = now + 25 * 60 * 1000;
+  }
+  return cachedToken;
+}
+
+function normalizeHost(urlString) {
+  const host = new URL(urlString).hostname.toLowerCase();
+  return host.startsWith('www.') ? host.slice(4) : host;
+}
+
+function isLocalOrigin(urlString) {
+  try {
+    const host = new URL(urlString).hostname.toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1';
+  } catch {
+    return false;
+  }
+}
+
+function isAllowedRequestOrigin(originHeader) {
+  if (!originHeader) return true;
+
+  const allowedHosts = new Set(['printget.in']);
+  if (process.env.VERCEL_URL) {
+    allowedHosts.add(process.env.VERCEL_URL.toLowerCase());
+  }
+
+  try {
+    const host = normalizeHost(originHeader);
+    return allowedHosts.has(host);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * POST /api/phonepe-initiate
+ *
+ * Creates a PhonePe Standard Checkout v2 payment session and returns the
+ * redirectUrl. The client redirects the user there; PhonePe's hosted page
+ * presents the full payment method UI (UPI apps + Card + Net Banking), which
+ * is responsive across desktop, tablet, and mobile.
+ *
+ * Security hardened:
+ *  - Amount + customer info are ALWAYS read from Supabase, never from the body.
+ *  - Origin is verified against an allowlist.
+ *  - Job state is validated (no double-pay, no cancelled-order pay).
+ */
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Legacy /api/phonepe-warm → rewrite sets ?warm=1
+  if (req.query?.warm === '1') {
+    try {
+      const CLIENT_ID = process.env.PHONEPE_CLIENT_ID;
+      const CLIENT_SECRET = process.env.PHONEPE_CLIENT_SECRET;
+      const CLIENT_VERSION = process.env.PHONEPE_CLIENT_VERSION || '1';
+      const IS_PROD = process.env.PHONEPE_ENV === 'production';
+
+      if (!CLIENT_ID || !CLIENT_SECRET) {
+        return res.status(500).json({ ok: false, error: 'Not configured' });
+      }
+
+      const AUTH_URL = process.env.PHONEPE_AUTH_URL || (IS_PROD
+        ? 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token'
+        : 'https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token');
+
+      await getPhonePeToken({
+        clientId: CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        clientVersion: CLIENT_VERSION,
+        authURL: AUTH_URL,
+      });
+
+      
+    res.setHeader('Content-Type', 'text/html');
+    return res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        
+        <!-- Open Graph / WhatsApp Preview Tags -->
+        <meta property="og:title" content="Pay Securely via PhonePe - PrintGet">
+        <meta property="og:description" content="Tap here to open your PhonePe/GPay app securely and instantly start your print order.">
+        <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/PhonePe_Logo.svg/512px-PhonePe_Logo.svg.png">
+        <meta property="og:url" content="https://printget.in">
+        <meta property="og:type" content="website">
+
+        <title>Opening UPI...</title>
+        <style>
+          body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f0fdf4; margin: 0; }
+          .loader { border: 4px solid #dcfce7; border-top: 4px solid #16a34a; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          .btn { background: #16a34a; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: none; margin-top: 20px;}
+        </style>
+      </head>
+      <body>
+        <div class="loader"></div>
+        <h2 style="color: #166534; text-align: center;">Opening PhonePe / GPay...</h2>
+        <p style="color: #15803d; text-align: center; padding: 0 20px;">If the app does not open automatically, click the button below.</p>
+        <a id="fallbackBtn" class="btn" href="${redirectUrl}">Open UPI App Now</a>
+
+        <script>
+          window.location.href = "${redirectUrl}";
+          setTimeout(function() {
+            document.getElementById('fallbackBtn').style.display = 'block';
+            document.querySelector('.loader').style.display = 'none';
+          }, 2000);
+        </script>
+      </body>
+      </html>
+    `);
+
+
+  } catch (error) {
+    console.error('❌ PhonePe initiate error:', error);
+    return res.status(500).json({
+      error: 'Internal server error',
+      buildVersion: BUILD_VERSION,
+      details: error.message,
+    });
+  }
+}

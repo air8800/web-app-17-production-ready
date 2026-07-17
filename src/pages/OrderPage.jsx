@@ -61,6 +61,38 @@ const OrderPage = () => {
   const [initialEditPageIndex, setInitialEditPageIndex] = useState(0) // 'pdf' or 'image'
   const [isDirectPageEdit, setIsDirectPageEdit] = useState(false) // Track if editing specific page from preview
 
+  // WhatsApp Zero-Storage Link Mode
+  const [waJobId, setWaJobId] = useState(searchParams.get('wa_job_id'))
+  const [waJobFilename, setWaJobFilename] = useState(null)
+  const [isWaJobMode, setIsWaJobMode] = useState(false)
+
+  // Fetch WA job on mount
+  useEffect(() => {
+    if (waJobId) {
+      import('../utils/supabase').then(({ supabase }) => {
+        supabase.from('print_jobs').select('*').eq('id', waJobId).single().then(({ data }) => {
+          if (data && data.file_url === '__whatsapp__') {
+            setWaJobFilename(data.filename)
+            setIsWaJobMode(true)
+            
+            // Auto apply settings from WA job
+            setOrderData(prev => ({
+              ...prev,
+              copies: data.copies || prev.copies,
+              paperSize: data.paper_size || prev.paperSize,
+              colorMode: data.color_mode || prev.colorMode,
+              printType: data.print_type || prev.printType,
+              pagesPerSheet: data.pages_per_sheet || prev.pagesPerSheet || 1,
+              customerName: data.customer_name || prev.customerName,
+              customerEmail: data.customer_email || prev.customerEmail,
+              customerPhone: data.customer_phone || prev.customerPhone
+            }))
+          }
+        })
+      })
+    }
+  }, [waJobId])
+
   const [showPdfEditorModal, setShowPdfEditorModal] = useState(false)
   const [pdfEditorModalPageIndex, setPdfEditorModalPageIndex] = useState(0)
 
@@ -641,6 +673,14 @@ const OrderPage = () => {
     // Handle both single file and multiple files
     const fileList = filesOrFile.length ? Array.from(filesOrFile) : [filesOrFile]
     const firstFile = fileList[0]
+
+    // CHECK WHATSAPP LINK VALIDATION
+    if (isWaJobMode && waJobFilename) {
+      if (firstFile.name !== waJobFilename) {
+        alert(`🚨 ERROR: File Mismatch!\n\nThe file you selected ("${firstFile.name}") is different from the one sent on WhatsApp ("${waJobFilename}").\n\nPlease select the correct file to avoid printing errors.`);
+        return
+      }
+    }
 
     // CHECK LIMITS
     const totalSize = fileList.reduce((sum, f) => sum + f.size, 0)
@@ -1460,6 +1500,42 @@ const OrderPage = () => {
         hasEdits = Object.keys(editedPages).length > 0
       }
 
+      // ── WHATSAPP ZERO-STORAGE LINK MODE ──
+      if (isWaJobMode && waJobId) {
+        setShowSubmitPopup(true)
+        setSubmitPopupMessage('Applying configurations to WhatsApp file...')
+        
+        await updatePrintJob(waJobId, {
+          copies: orderData.copies,
+          paper_size: orderData.paperSize,
+          color_mode: orderData.colorMode,
+          print_type: orderData.printType,
+          pages_per_sheet: orderData.pagesPerSheet,
+          customer_name: orderData.customerName.trim() || null,
+          customer_email: orderData.customerEmail || null,
+          customer_phone: orderData.customerPhone || null,
+          total_cost: costInfo.cost,
+          selected_pages: orderData.selectedPages,
+          total_pages: pdfPageCount,
+          order_identification: orderData.orderIdentification,
+          recipe: recipe ? JSON.stringify(recipe) : null,
+          has_edits: hasEdits,
+          payment_method: orderData.paymentMethod === 'ONLINE' ? 'PhonePe' : 'Pay at Shop',
+          job_status: 'pending' // Moves it out of 'configuring' state so Desktop App will print it
+        })
+
+        if (orderData.paymentMethod === 'ONLINE') {
+          try {
+            await startPhonePeCheckoutForJob(waJobId)
+          } catch (payErr) {
+            navigate(`/payment/${waJobId}`)
+          }
+        } else {
+          navigate(`/status/${waJobId}`)
+        }
+        return
+      }
+
       // ── Case A: Background upload already finished ──
       // The file has been uploading since the user selected it.
       // If it's done by now, we can use the real URL immediately.
@@ -1486,6 +1562,12 @@ const OrderPage = () => {
         })
         if (jobResult.error) throw new Error(jobResult.error.message)
         const jobId = jobResult.data.id
+
+        if (isWaJobMode && waJobId) {
+          import('../utils/supabase').then(({ supabase }) => {
+            supabase.from('print_jobs').delete().eq('id', waJobId).then(() => console.log('Deleted old WA job'))
+          })
+        }
 
         localStorage.setItem('printget_recent_order', JSON.stringify(createRecentOrderPayload(jobResult.data, { shopId })))
         try {
@@ -1558,6 +1640,12 @@ const OrderPage = () => {
       })
       if (jobResult.error) throw new Error(jobResult.error.message)
       const jobId = jobResult.data.id
+
+      if (isWaJobMode && waJobId) {
+        import('../utils/supabase').then(({ supabase }) => {
+          supabase.from('print_jobs').delete().eq('id', waJobId).then(() => console.log('Deleted old WA job'))
+        })
+      }
 
       const activeFileName = localStorage.getItem('printget_active_upload_name')
       if (activeFileName) {
@@ -1757,8 +1845,13 @@ const OrderPage = () => {
         has_edits: hasEdits
       })
       if (jobResult.error) throw new Error('Failed to submit order: ' + jobResult.error.message)
-
       const jobId = jobResult.data.id
+
+      if (isWaJobMode && waJobId) {
+        import('../utils/supabase').then(({ supabase }) => {
+          supabase.from('print_jobs').delete().eq('id', waJobId).then(() => console.log('Deleted old WA job'))
+        })
+      }
 
       // Ensure popup shows for at least 1.5 seconds for visual feedback
       const popupElapsed = performance.now() - popupStartTime

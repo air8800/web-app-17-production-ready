@@ -378,8 +378,7 @@ export default async function handler(req, res) {
       amount: amountPaise,
       expireAfter: 1200, // 20 minutes
       paymentFlow: {
-        type: 'B2B_PG_INTENT',
-        instrumentType: 'UPI_INTENT',
+        type: 'PG_CHECKOUT',
         message: 'PrintGet Print Order',
         merchantUrls: {
           redirectUrl: `${APP_URL}/status/${jobId}?orderId=${merchantOrderId}`,

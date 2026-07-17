@@ -169,7 +169,280 @@ export default async function handler(req, res) {
         authURL: AUTH_URL,
       });
 
-      
+      return res.status(200).json({ ok: true });
+    } catch {
+      return res.status(200).json({ ok: false });
+    }
+  }
+
+  // ── Security Layer 1: Block requests not from your domain ─────────────────
+  // Accepts printget.in, www.printget.in, localhost, and Vercel preview URLs.
+  const APP_URL = (process.env.APP_URL || 'https://www.printget.in').replace(/\/$/, '');
+  const origin  = req.headers['origin'] || req.headers['referer'] || '';
+
+  if (origin && !isLocalOrigin(origin) && !isAllowedRequestOrigin(origin)) {
+    console.warn('🚫 Blocked unauthorized origin:', origin);
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  try {
+    const { jobId } = req.body || {};
+
+    if (!jobId) {
+      return res.status(400).json({ error: 'Missing required field: jobId' });
+    }
+
+    const isMobileCheckout = resolveIsMobile(req);
+
+    const CLIENT_ID      = process.env.PHONEPE_CLIENT_ID;
+    const CLIENT_SECRET  = process.env.PHONEPE_CLIENT_SECRET;
+    const CLIENT_VERSION = process.env.PHONEPE_CLIENT_VERSION || '1';
+    const IS_PROD        = process.env.PHONEPE_ENV === 'production';
+
+    if (!CLIENT_ID || !CLIENT_SECRET) {
+      return res.status(500).json({ error: 'PhonePe credentials not configured' });
+    }
+
+    // ── Security Layer 2: Amount ALWAYS from Supabase — client cannot manipulate price ──
+    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    // Extract project ref (e.g. "abcd1234" from https://abcd1234.supabase.co) for diagnostics.
+    // Safe to expose: it's already visible in the frontend's network tab via VITE_SUPABASE_URL.
+    const serverProjectRef =
+      (SUPABASE_URL || '').match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] || 'unset';
+
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('❌ Supabase server env missing', {
+        hasUrl: !!SUPABASE_URL,
+        hasServiceKey: !!SUPABASE_SERVICE_ROLE_KEY,
+      });
+      return res.status(500).json({
+        error: 'Server Supabase env not configured',
+        hint: 'Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel and redeploy.',
+      });
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Decode a couple of public fields from the service role JWT so we can tell, in production logs,
+    // whether the env var is the right key for this project. We never log the signature.
+    let serviceKeyDiagnostics = { keyProjectRef: 'unknown', role: 'unknown' };
+    try {
+      const payloadB64 = (SUPABASE_SERVICE_ROLE_KEY || '').split('.')[1] || '';
+      const padded = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
+      const json = Buffer.from(padded, 'base64').toString('utf8');
+      const payload = JSON.parse(json);
+      serviceKeyDiagnostics = {
+        keyProjectRef: payload.ref || 'unknown',
+        role: payload.role || 'unknown',
+      };
+    } catch {
+      // Not a JWT at all — likely an invalid value pasted into the env var.
+    }
+
+    const projectsMatch = serviceKeyDiagnostics.keyProjectRef === serverProjectRef;
+    const roleIsServiceRole = serviceKeyDiagnostics.role === 'service_role';
+
+    const { data: job, error: jobError } = await supabase
+      .from('print_jobs')
+      .select('*')
+      .eq('id', jobId)
+      .maybeSingle();
+
+    if (jobError) {
+      console.error('❌ Supabase job lookup error:', {
+        jobId,
+        serverProjectRef,
+        serviceKeyDiagnostics,
+        projectsMatch,
+        roleIsServiceRole,
+        error: jobError,
+      });
+
+      const reasons = [];
+      if (!projectsMatch) {
+        reasons.push(
+          `SUPABASE_SERVICE_ROLE_KEY belongs to project "${serviceKeyDiagnostics.keyProjectRef}" but SUPABASE_URL points to "${serverProjectRef}". They must match.`
+        );
+      }
+      if (!roleIsServiceRole) {
+        reasons.push(
+          `The JWT role is "${serviceKeyDiagnostics.role}" — it must be "service_role" (not "anon").`
+        );
+      }
+
+      return res.status(500).json({
+        error: 'Failed to load order',
+        buildVersion: BUILD_VERSION,
+        details: jobError.message || jobError.hint || jobError.code || JSON.stringify(jobError),
+        code: jobError.code,
+        hint: jobError.hint,
+        name: jobError.name,
+        serverProjectRef,
+        keyProjectRef: serviceKeyDiagnostics.keyProjectRef,
+        role: serviceKeyDiagnostics.role,
+        projectsMatch,
+        roleIsServiceRole,
+        likelyCauses: reasons.length ? reasons : undefined,
+      });
+    }
+
+    if (!job) {
+      console.warn(
+        '⚠️ Order not found in Supabase:',
+        jobId,
+        'on project:',
+        serverProjectRef,
+        '— check that this matches VITE_SUPABASE_URL.'
+      );
+      return res.status(404).json({
+        error: 'Order not found',
+        buildVersion: BUILD_VERSION,
+        jobId,
+        serverProjectRef,
+        hint:
+          'The server queried this Supabase project and got 0 rows. ' +
+          'Confirm SUPABASE_URL (server) and VITE_SUPABASE_URL (client) point to the SAME project, ' +
+          'and that SUPABASE_SERVICE_ROLE_KEY is the service_role key from that same project. ' +
+          'Then redeploy.',
+      });
+    }
+
+    // ── Security Layer 3: Validate job state — prevent duplicate/invalid payments ──
+    if (job.payment_status === 'paid') {
+      return res.status(400).json({ error: 'This order has already been paid' });
+    }
+    const jobStatus = job.job_status ?? job.status;
+    if (jobStatus === 'cancelled') {
+      return res.status(400).json({ error: 'This order has been cancelled' });
+    }
+
+    if (job.total_cost == null || Number.isNaN(Number(job.total_cost))) {
+      return res.status(400).json({ error: 'Order has no valid amount' });
+    }
+
+    // Use DB values — client has zero control over amount.
+    const amount = job.total_cost;
+
+    const baseURL = IS_PROD
+      ? 'https://api.phonepe.com/apis/pg'
+      : 'https://api-preprod.phonepe.com/apis/pg-sandbox';
+
+    // OAuth token endpoint lives on a DIFFERENT base path than /checkout/v2/*.
+    // See PhonePe Standard Checkout v2 docs → Authorization.
+    const AUTH_URL = process.env.PHONEPE_AUTH_URL || (IS_PROD
+      ? 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token'
+      : 'https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token');
+
+    // ── Get OAuth token ─────────────────────────────────────────────────────
+    let token;
+    try {
+      token = await getPhonePeToken({
+        clientId: CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        clientVersion: CLIENT_VERSION,
+        authURL: AUTH_URL,
+      });
+    } catch (oauthErr) {
+      console.error('❌ PhonePe OAuth failed in handler:', oauthErr);
+      return res.status(502).json({
+        error: 'PhonePe authentication failed',
+        buildVersion: BUILD_VERSION,
+        details: oauthErr.message,
+        phonepeStatus: oauthErr.status,
+        phonepeBody: oauthErr.body,
+        authURL: oauthErr.authURL,
+        env: IS_PROD ? 'production' : 'sandbox',
+        clientVersionUsed: CLIENT_VERSION,
+        hint:
+          'Common causes: (1) PHONEPE_CLIENT_ID / PHONEPE_CLIENT_SECRET / PHONEPE_CLIENT_VERSION ' +
+          'do not match what PhonePe issued, (2) PHONEPE_ENV=production but the credentials are ' +
+          'for UAT (or vice-versa), (3) credentials not yet activated by PhonePe. ' +
+          'Check Vercel env vars for stray whitespace and confirm the exact values in PhonePe ' +
+          'Business Dashboard → Developer Settings → API Keys.',
+      });
+    }
+
+    // ── Create unique merchant order ID ─────────────────────────────────────
+    // PhonePe constraint: max 63 chars, only [a-zA-Z0-9_-].
+    const merchantOrderId = `PG-${jobId.replace(/-/g, '').slice(0, 20)}-${Date.now().toString().slice(-8)}`;
+
+    // PhonePe expects amount in paise (₹1 = 100 paise)
+    const amountPaise = Math.round(parseFloat(amount) * 100);
+
+    const mobilePaymentModeConfig = buildPaymentModeConfig(isMobileCheckout);
+
+    const payload = {
+      merchantOrderId,
+      amount: amountPaise,
+      expireAfter: 1200, // 20 minutes
+      paymentFlow: {
+        type: 'B2B_PG_INTENT',
+        instrumentType: 'UPI_INTENT',
+        message: 'PrintGet Print Order',
+        merchantUrls: {
+          redirectUrl: `${APP_URL}/status/${jobId}?orderId=${merchantOrderId}`,
+        },
+        ...(mobilePaymentModeConfig
+          ? { paymentModeConfig: mobilePaymentModeConfig }
+          : {}),
+      },
+      // Skip the PhonePe login screen when we have the customer's phone on file.
+      // Schema column is `customer_phone` (NOT customer_mobile).
+      ...(job.customer_phone
+        ? { prefillUserLoginDetails: { phoneNumber: String(job.customer_phone) } }
+        : {}),
+      // Stash the internal jobId for traceability via PhonePe's status/webhook payloads.
+      metaInfo: { udf1: `jobId:${jobId}` },
+    };
+
+    const pgRes = await fetch(`${baseURL}/checkout/v2/pay`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `O-Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const pgRawText = await pgRes.text();
+    let pgData = {};
+    try { pgData = JSON.parse(pgRawText); } catch { /* non-JSON */ }
+
+    if (!pgRes.ok || pgData.state === 'FAILED') {
+      console.error('❌ PhonePe initiation failed:', {
+        status: pgRes.status,
+        body: pgData && Object.keys(pgData).length ? pgData : pgRawText?.slice(0, 500),
+      });
+      return res.status(502).json({
+        error: 'PhonePe payment initiation failed',
+        buildVersion: BUILD_VERSION,
+        code: pgData.code,
+        message: pgData.message,
+        phonepeStatus: pgRes.status,
+        phonepeBody: pgData,
+      });
+    }
+
+    const redirectUrl = pgData?.redirectUrl;
+
+    if (!redirectUrl) {
+      console.error('❌ No redirectUrl in PhonePe response:', pgData);
+      return res.status(502).json({
+        error: 'No redirect URL returned from PhonePe',
+        buildVersion: BUILD_VERSION,
+        phonepeBody: pgData,
+      });
+    }
+
+    // ── Save merchantOrderId to Supabase for webhook lookup ─────────────────
+    await supabase
+      .from('print_jobs')
+      .update({ phonepe_merchant_txn_id: merchantOrderId, payment_method: 'PhonePe' })
+      .eq('id', jobId);
+
+    
     res.setHeader('Content-Type', 'text/html');
     return res.status(200).send(`
       <!DOCTYPE html>

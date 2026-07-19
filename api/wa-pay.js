@@ -450,9 +450,8 @@ export default async function handler(req, res) {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         
-        <!-- Open Graph / WhatsApp Preview Tags -->
         <meta property="og:title" content="Pay Securely via PhonePe - PrintGet">
-        <meta property="og:description" content="Tap here to open your PhonePe/GPay app securely and instantly start your print order.">
+        <meta property="og:description" content="Tap here to complete your print order securely.">
         <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/PhonePe_Logo.svg/512px-PhonePe_Logo.svg.png">
         <meta property="og:url" content="https://printget.in">
         <meta property="og:type" content="website">
@@ -468,8 +467,8 @@ export default async function handler(req, res) {
       <body>
         <div class="loader"></div>
         <h2 style="color: #166534; text-align: center;">Opening PhonePe / GPay...</h2>
-        <p style="color: #15803d; text-align: center; padding: 0 20px;">If the app does not open automatically, click the button below.</p>
-        <a id="fallbackBtn" class="btn" href="${redirectUrl}">Open UPI App Now</a>
+        <p style="color: #15803d; text-align: center; padding: 0 20px;">If the payment page does not load, click the button below.</p>
+        <a id="fallbackBtn" class="btn" href="${redirectUrl}">Continue to Payment</a>
 
         <script>
           window.location.href = "${redirectUrl}";
